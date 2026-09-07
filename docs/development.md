@@ -38,6 +38,7 @@ printf '%s  %s\n' 3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d99
 mkdir -p "$HOME/Library/Java/JavaVirtualMachines"
 tar -xzf /tmp/astrolabe-jdk.tar.gz -C "$HOME/Library/Java/JavaVirtualMachines"
 export JAVA_HOME="$HOME/Library/Java/JavaVirtualMachines/jdk-21.0.12.1+1/Contents/Home"
+unset ANDROID_SDK_ROOT
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
 ```
