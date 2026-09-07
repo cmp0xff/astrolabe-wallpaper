@@ -29,7 +29,7 @@ level supported by AGP 9.3. Physical A57 behavior and firmware qualification rem
 
 ## Local setup
 
-Android Studio is optional. Install the pinned JDK, `curl`, `unzip`, Python 3, and ripgrep (`rg`).
+Android Studio is optional. Install the pinned JDK, `curl`, `unzip`, and Python 3.
 On Apple Silicon macOS, download and verify the official Temurin archive:
 
 ```sh

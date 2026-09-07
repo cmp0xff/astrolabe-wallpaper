@@ -29,5 +29,5 @@ print('APK application ID, SDK levels, debug flag, permissions, and wallpaper de
 PY
 "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee build/reports/apk-signature.txt
 # The certificate identity distinguishes the disposable Android debug key from a release key.
-rg --quiet 'Signer #1 certificate DN: .*CN=Android Debug' build/reports/apk-signature.txt
+grep -Eq 'Signer #1 certificate DN: .*CN=Android Debug' build/reports/apk-signature.txt
 shasum -a 256 "$apk" | tee build/reports/apk-sha256.txt
