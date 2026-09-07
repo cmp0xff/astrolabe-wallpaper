@@ -1,0 +1,48 @@
+# Android and Gradle outputs/caches
+.gradle/
+.kotlin/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.hprof
+
+# Machine-specific configuration and IDE state
+local.properties
+gradle-local.properties
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# APK signing keys, passwords, and local credentials
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.key
+*.pem
+key.properties
+keystore.properties
+signing.properties
+secrets.properties
+*.local.properties
+.env
+.env.*
+!.env.example
+signing/
+keystores/
+
+# Keep the Gradle wrapper JAR and shared gradle.properties tracked when added.
+
+# Project guidance is versioned even when a contributor globally ignores it.
+!AGENTS.md
