@@ -45,7 +45,8 @@ export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
 Use the matching Linux x64 archive from the
 [Temurin release](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1)
 on Linux, verify its published SHA-256, and set `JAVA_HOME` to the extracted JDK and `ANDROID_HOME` to
-`$HOME/Android/Sdk`. CI installs the same exact JDK through the pinned setup-java action.
+`$HOME/Android/Sdk`. CI downloads and checksum-verifies the exact Linux JDK archive; setup-java does not
+accept this release's four-part version string.
 Keep these exports in your own shell configuration; do not commit local SDK paths.
 
 From the checkout:

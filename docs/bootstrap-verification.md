@@ -40,6 +40,8 @@ During initial configuration, deprecated AGP Lint report properties also failed 
 Kotlin DSL compilation with warnings-as-errors. The deprecated configuration was removed;
 AGP now always generates these reports.
 
-The draft PR records the final fresh-checkout build and CI run/artifact links. Physical
+A fresh detached worktree also passes the documented setup, gate, APK build, and
+verification with no project outputs or local configuration copied in (shared SDK and
+Gradle download caches only). The draft PR records CI run/artifact links. Physical
 Galaxy A57 testing, lit lock-screen behavior, wake/surface/process recovery, moving clock,
 and battery qualification remain unrun acceptance work for #2.
