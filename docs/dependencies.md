@@ -24,3 +24,23 @@ The detekt wrapper shades ktlint; the pinned upstream
 [version catalog](https://github.com/detekt/detekt/blob/v2.0.0-alpha.6/gradle/libs.versions.toml)
 records ktlint 1.8.0. Upstream artifacts retain their embedded notices. Review the full resolved graph and packaging
 notices again when adding runtime dependencies or preparing distribution in #7/#8.
+
+## Astronomy Engine maintenance assessment
+
+Checked 2026-09-09 against the GitHub API for
+[cosinekitty/astronomy](https://github.com/cosinekitty/astronomy):
+
+- Not archived, not disabled, MIT licensed.
+- Last release `v2.1.19` (2023-12-14); last commit on `master` 2025-01-27; 36 open issues.
+- Upstream author publicly active on other repositories as of 2026-09-07 — dormant, not retired.
+- Kotlin/JVM is distributed through [JitPack](https://jitpack.io/#cosinekitty/astronomy)
+  (build-on-demand from the GitHub repo), not Maven Central.
+
+Mitigation already required by [AGENTS.md](../AGENTS.md) and #4: astronomy calculations sit
+behind a small calculation interface with no Android imports, and the engine is pinned by
+version or source revision. Because Astronomy Engine is MIT, its Kotlin source can be vendored
+at a pinned revision if JitPack or upstream becomes unavailable — preferred over switching
+engines, since the JVM/Kotlin astronomical-calculation field is otherwise thin.
+
+Recheck this assessment at #4 before integration; if upstream is archived by then, vendor the
+source at its last MIT-licensed revision instead of switching engines.

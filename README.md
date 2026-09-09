@@ -31,9 +31,11 @@ independent and is not affiliated with Samsung.
 
 - Kotlin, Android Canvas, and `WallpaperService`, plus a small settings app.
 - Stable release application ID: `io.github.cmp0xff.astrolabewallpaper`.
-- [Astronomy Engine](https://github.com/cosinekitty/astronomy) for astronomical
-  calculations, retaining upstream license and dependency notices when integrated.
-  Any bundled star or city data must have documented provenance and licensing.
+- [Astronomy Engine](https://github.com/cosinekitty/astronomy) (MIT) for astronomical
+  calculations, retaining upstream license and dependency notices when integrated. See
+  [dependency provenance](docs/dependencies.md#astronomy-engine-maintenance-assessment)
+  for its maintenance status. Any bundled star or city data must have documented
+  provenance and licensing.
 - Pinned JDK 21, Gradle 9.6.1, AGP 9.3.2, Kotlin 2.4.10, and Android API 37,
   with minimum API 26. See [development setup](docs/development.md) for exact versions.
 - Stop rendering while hidden, release resources with the wallpaper lifecycle,
