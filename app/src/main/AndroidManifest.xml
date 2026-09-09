@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
+  <!-- Wallpaper support is the core feature; devices lacking it cannot run this app. -->
+  <uses-feature android:name="android.software.live_wallpaper" android:required="true"
+    tools:ignore="UnsupportedChromeOsHardware" />
+  <application
+    android:allowBackup="false"
+    android:fullBackupContent="false"
+    android:dataExtractionRules="@xml/data_extraction_rules"
+    android:icon="@drawable/ic_astrolabe"
+    android:label="@string/app_name"
+    android:supportsRtl="true"
+    android:theme="@style/AppTheme">
+    <activity android:name=".SettingsActivity" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+    <service
+      android:name=".AstrolabeWallpaperService"
+      android:exported="true"
+      android:label="@string/app_name"
+      android:permission="android.permission.BIND_WALLPAPER">
+      <intent-filter>
+        <action android:name="android.service.wallpaper.WallpaperService" />
+      </intent-filter>
+      <meta-data android:name="android.service.wallpaper" android:resource="@xml/wallpaper" />
+    </service>
+  </application>
+</manifest>

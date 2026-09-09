@@ -1,0 +1,76 @@
+name: Android quality gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ANDROID_HOME: ${{ github.workspace }}/.android-sdk
+      # Ubuntu runners predefine this legacy alias; keep it consistent with ANDROID_HOME.
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install pinned Temurin JDK
+        run: |
+          archive=OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz
+          curl --fail --location --silent --show-error \
+            "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/$archive" \
+            -o "$RUNNER_TEMP/$archive"
+          printf '%s  %s\n' \
+            ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94 \
+            "$RUNNER_TEMP/$archive" | sha256sum --check
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP"
+          echo "JAVA_HOME=$RUNNER_TEMP/jdk-21.0.12.1+1" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/jdk-21.0.12.1+1/bin" >> "$GITHUB_PATH"
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - name: Install pinned Android SDK
+        run: scripts/setup-android-sdk.sh
+      - name: Record source and toolchain
+        run: |
+          mkdir -p build/reports
+          {
+            git rev-parse HEAD
+            java -version 2>&1
+            ./gradlew --version
+            ./gradlew :app:dependencies --configuration kotlinCompilerClasspath
+            ./gradlew :app:dependencies --configuration detektPlugins
+            cat "$ANDROID_HOME/platforms/android-37.0/source.properties"
+            cat "$ANDROID_HOME/build-tools/36.0.0/source.properties"
+          } | tee build/reports/toolchain.txt
+      - name: Check and build
+        run: ./gradlew qualityGate :app:assembleDebug
+      - name: Verify debug APK
+        run: scripts/verify-apk.sh
+      - name: Upload debug APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: debug-apk-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            build/reports/apk-*
+            build/reports/toolchain.txt
+          if-no-files-found: error
+      - name: Upload check reports
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: check-reports-${{ github.sha }}
+          path: |
+            build/reports/
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: warn
