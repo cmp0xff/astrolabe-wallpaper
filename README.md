@@ -1,12 +1,12 @@
 # Astrolabe Wallpaper
 
 An independent Android live wallpaper with an original astrolabe-style astronomical
-clock, initially targeting a Samsung Galaxy A57. The first delivery is a signed
+clock, initially targeting a personal Android device. The first delivery is a signed
 personal APK; F-Droid distribution is a later evaluation.
 
 **Status: Android bootstrap.** The app provides a static Canvas wallpaper and a
 settings activity that opens Android's wallpaper preview. Strict local and CI checks
-produce a debug APK. Galaxy A57 home-screen and lit lock-screen behavior must be
+produce a debug APK. Home-screen and lit lock-screen behavior must be
 verified on the installed firmware in #2 before compatibility is claimed.
 
 ## Planned experience
@@ -25,7 +25,7 @@ verified on the installed firmware in #2 before compatibility is claimed.
 
 The first release covers the home screen and **lit** lock screen. Always On
 Display and interactive sky exploration are outside its scope. This project is
-independent and is not affiliated with Samsung.
+independent.
 
 ## Technical direction
 
@@ -69,8 +69,8 @@ an issue; preparatory work may overlap where practical.
 
 | Milestone | Issue | Depends on |
 | --- | --- | --- |
-| v0.1 — A57 feasibility | #1 Bootstrap Android project and CI | None |
-| v0.1 — A57 feasibility | #2 Verify live wallpaper on Galaxy A57 | #1 |
+| v0.1 — Device feasibility | #1 Bootstrap Android project and CI | None |
+| v0.1 — Device feasibility | #2 Verify live wallpaper on the physical device | #1 |
 | v0.2 — Functional astrolabe | #3 Implement current location and manual fallback | #2 |
 | v0.2 — Functional astrolabe | #4 Implement astronomical calculations | #1 |
 | v0.2 — Functional astrolabe | #5 Build the dial and display settings | #2, #3, #4 |
@@ -99,7 +99,7 @@ Submission is deferred to a later decision after #8.
 Read [AGENTS.md](AGENTS.md) for issue-linked worktrees, Conventional Commits,
 verification, and AI attribution. Use the issue and pull request templates.
 Record physical-device evidence separately from emulator or automated results,
-including Android/One UI versions and firmware build; omit personal identifiers
+including the Android version and firmware build; omit personal identifiers
 and precise personal locations from public reports.
 
 ## License

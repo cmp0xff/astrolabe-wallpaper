@@ -25,7 +25,7 @@ for build scripts is independent of the application's compiler; `./gradlew --ver
 Java and Kotlin produce Java 17 bytecode while Gradle runs on JDK 21.
 
 API 26 is a conservative initial minimum, not a device compatibility claim. API 37 is the compile/target
-level supported by AGP 9.3. Physical A57 behavior and firmware qualification remain in #2.
+level supported by AGP 9.3. Physical-device behavior and firmware qualification remain in #2.
 
 ## Local setup
 
@@ -108,7 +108,7 @@ See [bootstrap-verification.md](bootstrap-verification.md) for the local positiv
 ## Tests and artifacts
 
 Robolectric tests use API 26 and API 36 environments. They are JVM simulations and do not establish
-physical A57, lit lock-screen, or actual wallpaper surface behavior. API 37 compilation and Android
+physical-device, lit lock-screen, or actual wallpaper surface behavior. API 37 compilation and Android
 Lint additionally check against the selected target. The placeholder never schedules animation work.
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`, with application ID

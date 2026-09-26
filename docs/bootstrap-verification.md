@@ -42,6 +42,6 @@ AGP now always generates these reports.
 
 A fresh detached worktree also passes the documented setup, gate, APK build, and
 verification with no project outputs or local configuration copied in (shared SDK and
-Gradle download caches only). The draft PR records CI run/artifact links. Physical
-Galaxy A57 testing, lit lock-screen behavior, wake/surface/process recovery, moving clock,
+Gradle download caches only). The draft PR records CI run/artifact links. Physical-device
+testing, lit lock-screen behavior, wake/surface/process recovery, moving clock,
 and battery qualification remain unrun acceptance work for #2.
