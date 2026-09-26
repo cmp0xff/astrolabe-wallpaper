@@ -1,9 +1,10 @@
 # Astrolabe Wallpaper agent guidance
 
 Read [README.md](README.md) for scope and the live issue backlog. This is an
-independent Android project targeting a Samsung Galaxy A57, with a personal APK
-first and possible F-Droid distribution later. The bootstrap contains no Android
-implementation; build commands and checks will be established in #1.
+independent Android project targeting a personal Android device, with a personal APK
+first and possible F-Droid distribution later. The bootstrap contains a static Android
+wallpaper; [docs/development.md](docs/development.md) defines the pinned toolchain,
+strict checking policy, and individually justified exceptions.
 
 ## Working defaults
 
@@ -34,10 +35,10 @@ implementation; build commands and checks will be established in #1.
   continuous background location tracking.
 - The clock follows the phone timezone; astronomy uses the saved location.
   Runtime calculations and manual setup must work offline.
-- Support home and lit lock screens, subject to physical A57 verification. Always
+- Support home and lit lock screens, subject to physical-device verification. Always
   On Display and interactive sky exploration are outside the first release.
 - Render only while visible. Verify wake, surface recreation, process recreation,
-  and time/timezone changes. Record actual firmware when testing the A57.
+  and time/timezone changes. Record actual firmware when testing on the physical device.
 - Keep signing keys, passwords, local SDK paths, and private device data out of
   Git. Retain and privately back up the first durable APK release key. Do not
   promise F-Droid signature continuity before reproducibility is verified.
@@ -99,12 +100,14 @@ with Android conventions replacing the upstream project's domain-specific rules.
 
 ## Verification
 
-Until #1 supplies the pinned toolchain and CI, check documentation, issue links,
-template structure, ignore rules, and commit metadata. Do not imply that a build,
-test APK, or physical-device test exists.
+Run `./gradlew qualityGate :app:assembleDebug` and `scripts/verify-apk.sh` for Android
+changes. `./gradlew check` includes the quality gate; `./gradlew formatKotlin` is
+the explicit formatter. Keep compilation, type-resolved detekt, ktlint, Android
+Lint, and tests strict. Record narrow rule exceptions in docs/development.md and
+the PR; do not add baselines or blanket suppressions.
 
 For Android work, run the documented checks appropriate to the change. Astronomy
 tests must cite independent reference data, units, coordinate frames, and
 tolerances, including hemisphere and polar cases. Device reports must distinguish
-physical A57 results from emulator checks. Record limitations and unresolved
+physical-device results from emulator checks. Record limitations and unresolved
 failures in the issue and PR; do not silently weaken acceptance criteria.
