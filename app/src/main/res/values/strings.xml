@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Astrolabe Wallpaper</string>
+  <string name="wallpaper_description">A quiet, static astrolabe dial.</string>
+  <string name="open_preview">Open wallpaper preview</string>
+  <string name="preview_unavailable">Wallpaper preview is unavailable on this device.</string>
+</resources>
