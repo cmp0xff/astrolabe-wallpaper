@@ -2,7 +2,8 @@
 
 An independent Android live wallpaper with an original astrolabe-style astronomical
 clock, initially targeting a personal Android device. The first delivery is a signed
-personal APK; F-Droid distribution is a later evaluation.
+personal APK; store distribution (F-Droid, Galaxy Store, Play Store) is a later
+evaluation.
 
 **Status: Android bootstrap.** The app provides a static Canvas wallpaper and a
 settings activity that opens Android's wallpaper preview. Strict local and CI checks
@@ -76,7 +77,12 @@ an issue; preparatory work may overlap where practical.
 | v0.2 — Functional astrolabe | #5 Build the dial and display settings | #2, #3, #4 |
 | v0.3 — Personal APK | #6 Qualify lifecycle, accuracy and battery behavior | #5 |
 | v0.3 — Personal APK | #7 Package a signed personal release | #6 |
-| Future — F-Droid evaluation | #8 Prepare F-Droid packaging and evaluate reproducibility | #7 |
+| Future — distribution | #8 Prepare F-Droid packaging and evaluate reproducibility | #7 |
+| Future — distribution | #14 Evaluate Galaxy Store distribution | #7 |
+| Future — distribution | #15 Evaluate Play Store distribution | #7 |
+
+A future iOS presence is a separate project — an astronomy clock app with
+Lock/Home-Screen widgets in Swift/SwiftUI — not part of this roadmap (#16).
 
 ## Distribution and signing
 
@@ -86,13 +92,36 @@ the source tag and publish the APK checksum and signing-certificate fingerprint;
 installation and upgrades must preserve settings. Git commit signing and APK
 release signing are separate concerns.
 
+The same Android APK can reach F-Droid, Galaxy Store, and Play Store; the stores
+differ in signing and policy rather than the app itself.
+
 Future F-Droid work will audit dependencies and assets against its
 [inclusion policy](https://f-droid.org/en/docs/Inclusion_Policy/) and investigate
 reproducible builds. F-Droid can distribute a developer-signed APK after verifying
-reproducibility; otherwise its signing key can differ. Do not promise seamless
-updates between personal/GitHub APKs and F-Droid before this is verified. See the
+reproducibility; otherwise its signing key can differ. See the
 [F-Droid signing guidance](https://f-droid.org/en/docs/FAQ_-_App_Developers/#what-about-signing).
-Submission is deferred to a later decision after #8.
+
+Galaxy Store distributes standard live-wallpaper APKs and can reuse the retained
+personal key; it requires a Samsung Seller Portal account (Commercial Seller,
+D-U-N-S, bank/PayPal details) and the Android identity-verification rollout.
+Samsung's Galaxy Themes is a separate proprietary theme ecosystem and is not the
+path for this `WallpaperService` APK.
+
+Play Store is a normal live-wallpaper category; a $25 one-time developer fee and
+Play App Signing apply. Under Play App Signing Google holds the distribution key
+and the project uploads with an upload key, so the Play signature differs from the
+personal/Galaxy key. Target-API, policy, Data-safety, and privacy-policy compliance
+apply.
+
+Because personal and Galaxy Store builds can share one key while Play App Signing
+and F-Droid use different keys, updates are not seamless across stores. Do not
+promise cross-store signature continuity before each path is verified. Submission
+is deferred to the later decisions in #8, #14, and #15.
+
+The App Store is not a live-wallpaper target: iOS exposes no public API for
+third-party live wallpapers. A future iOS presence would be a separate product — an
+astronomy clock app with Lock/Home-Screen widgets in Swift/SwiftUI — not a port of
+this wallpaper. See #16.
 
 ## Contributing
 
