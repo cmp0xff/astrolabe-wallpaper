@@ -25,3 +25,17 @@ if [[ ! -x "$sdk_tools/bin/sdkmanager" ]]; then
 fi
 "$sdk_tools/bin/android" --sdk="$ANDROID_HOME" --no-metrics sdk install \
   'platforms;android-37.0' 'build-tools;36.0.0' 'platform-tools'
+# The package names above resolve to "latest", so assert the exact revisions
+# recorded in docs/development.md and fail loudly instead of silently drifting.
+assert_sdk_revision() {
+  local props="$1" expected="$2" actual
+  [[ -f "$props" ]] || { echo "Missing SDK component: $props" >&2; exit 1; }
+  actual=$(sed -n 's/^Pkg\.Revision=//p' "$props" | tail -n 1)
+  if [[ "$actual" != "$expected" ]]; then
+    echo "Pinned SDK revision mismatch: $props has Pkg.Revision=${actual:-<missing>}, expected $expected." >&2
+    echo "Update the recorded revision in docs/development.md, then re-run." >&2
+    exit 1
+  fi
+}
+assert_sdk_revision "$ANDROID_HOME/platforms/android-37.0/source.properties" 2
+assert_sdk_revision "$ANDROID_HOME/platform-tools/source.properties" 37.0.1

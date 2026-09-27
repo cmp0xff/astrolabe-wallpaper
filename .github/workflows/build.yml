@@ -59,6 +59,7 @@ jobs:
             ./gradlew :app:dependencies --configuration detektPlugins
             cat "$ANDROID_HOME/platforms/android-37.0/source.properties"
             cat "$ANDROID_HOME/build-tools/36.0.0/source.properties"
+            cat "$ANDROID_HOME/platform-tools/source.properties"
           } | tee build/reports/toolchain.txt
       - name: Check and build
         run: ./gradlew qualityGate :app:assembleDebug

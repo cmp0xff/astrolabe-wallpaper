@@ -10,8 +10,9 @@
 | Kotlin compiler and standard library | 2.4.10 |
 | detekt plugin, engine, ktlint wrapper | 2.0.0-alpha.6 |
 | Wrapped ktlint | 1.8.0 |
-| Android compile/target SDK | API 37 (`platforms;android-37.0`) |
+| Android compile/target SDK | API 37 (`platforms;android-37.0`, revision 2) |
 | Android Build Tools | 36.0.0 |
+| Android platform-tools | 37.0.1 |
 | Android command-line tools | 23.0, archive build 16111833 |
 | JUnit | 4.13.2 |
 | Robolectric | 4.17 |
