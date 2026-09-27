@@ -112,11 +112,11 @@ Android App Bundle upload requirement, and Play App Signing key behavior (upload
 retained personal key) are items to confirm in #15, not established here.
 Target-API, policy, Data-safety, and privacy-policy compliance apply.
 
-Personal and Galaxy Store builds can share the retained key. Play App Signing uses a
-separate key by default (unless the personal key is enrolled), and F-Droid signs with its
-own key, so updates are not seamless across stores. Do not promise cross-store signature
-continuity before each path is verified. Submission is deferred to the later decisions in
-#8, #14, and #15.
+Cross-store updates may not be seamless: whether the retained key serves Galaxy
+Store, how Play App Signing treats the upload vs app-signing key, and whether
+F-Droid re-signs or republishes a developer-signed APK remain open in #8, #14,
+and #15. Do not promise cross-store signature continuity before each path is
+verified; submission is deferred to those decisions.
 
 The App Store is not a live-wallpaper target: iOS exposes no public API for
 third-party live wallpapers. A future iOS presence would be a separate product — an
