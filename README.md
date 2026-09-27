@@ -92,8 +92,8 @@ the source tag and publish the APK checksum and signing-certificate fingerprint;
 installation and upgrades must preserve settings. Git commit signing and APK
 release signing are separate concerns.
 
-The same Android APK can reach F-Droid, Galaxy Store, and Play Store; the stores
-differ in signing and policy rather than the app itself.
+The same application can reach F-Droid, Galaxy Store, and Play Store, but each store
+packages and signs it differently, so the distributed artifacts are not the same binary.
 
 Future F-Droid work will audit dependencies and assets against its
 [inclusion policy](https://f-droid.org/en/docs/Inclusion_Policy/) and investigate
@@ -107,16 +107,17 @@ D-U-N-S, bank/PayPal details) and the Android identity-verification rollout.
 Galaxy Themes is a separate proprietary theme ecosystem and is not the path for
 this `WallpaperService` APK.
 
-Play Store is a normal live-wallpaper category; a $25 one-time developer fee and
-Play App Signing apply. Under Play App Signing Google holds the distribution key
-and the project uploads with an upload key, so the Play signature differs from the
-personal/Galaxy key. Target-API, policy, Data-safety, and privacy-policy compliance
-apply.
+Play Store is a normal live-wallpaper category; a $25 one-time developer fee and Play App
+Signing apply. New Play apps upload an Android App Bundle rather than an APK. Under Play
+App Signing the project uploads with an upload key, and Google signs with an app-signing
+key — a newly generated one by default, or the retained personal key if enrolled with it.
+Target-API, policy, Data-safety, and privacy-policy compliance apply.
 
-Because personal and Galaxy Store builds can share one key while Play App Signing
-and F-Droid use different keys, updates are not seamless across stores. Do not
-promise cross-store signature continuity before each path is verified. Submission
-is deferred to the later decisions in #8, #14, and #15.
+Personal and Galaxy Store builds can share the retained key. Play App Signing uses a
+separate key by default (unless the personal key is enrolled), and F-Droid signs with its
+own key, so updates are not seamless across stores. Do not promise cross-store signature
+continuity before each path is verified. Submission is deferred to the later decisions in
+#8, #14, and #15.
 
 The App Store is not a live-wallpaper target: iOS exposes no public API for
 third-party live wallpapers. A future iOS presence would be a separate product — an

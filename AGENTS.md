@@ -2,7 +2,8 @@
 
 Read [README.md](README.md) for scope and the live issue backlog. This is an
 independent Android project targeting a personal Android device, with a personal APK
-first and possible F-Droid distribution later. The bootstrap contains a static Android
+first and possible store distribution (F-Droid, Galaxy Store, Play Store) later. The
+bootstrap contains a static Android
 wallpaper; [docs/development.md](docs/development.md) defines the pinned toolchain,
 strict checking policy, and individually justified exceptions.
 
@@ -41,7 +42,8 @@ strict checking policy, and individually justified exceptions.
   and time/timezone changes. Record actual firmware when testing on the physical device.
 - Keep signing keys, passwords, local SDK paths, and private device data out of
   Git. Retain and privately back up the first durable APK release key. Do not
-  promise F-Droid signature continuity before reproducibility is verified.
+  promise cross-store signature continuity before each store's signing path is
+  verified.
 
 ## Commit metadata and signing
 
