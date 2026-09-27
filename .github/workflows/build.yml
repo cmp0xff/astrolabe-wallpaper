@@ -33,6 +33,7 @@ jobs:
       # 27 requires Gradle 9.8.0 (this pins 9.6.1), and 26 is a non-LTS feature release.
       - name: Install pinned Temurin JDK
         run: |
+          set -euo pipefail
           archive=OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz
           curl --fail --location --silent --show-error \
             "https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/$archive" \
@@ -48,6 +49,7 @@ jobs:
         run: scripts/setup-android-sdk.sh
       - name: Record source and toolchain
         run: |
+          set -euo pipefail
           mkdir -p build/reports
           {
             git rev-parse HEAD
