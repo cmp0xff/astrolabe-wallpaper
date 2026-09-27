@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+  <!-- Keep the explicit, compatibility-tested Gradle pin; review upgrades separately. -->
+  <issue id="AndroidGradlePluginVersion">
+    <ignore path="../gradle/wrapper/gradle-wrapper.properties" />
+  </issue>
+
+  <!-- Keep dependency upgrades deliberate, not on CI's clock. These two checks live-query
+       Maven Central on every run, so a "newer version available" result depends on the
+       network's current state rather than the pinned, reproducible toolchain. Dependencies
+       are reviewed and bumped explicitly (Robolectric 4.17 here) instead of erroring the
+       hermetic gate the moment a later release ships. -->
+  <issue id="NewerVersionAvailable" severity="ignore" />
+  <issue id="GradleDependency" severity="ignore" />
+</lint>

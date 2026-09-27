@@ -1,0 +1,42 @@
+config:
+  validation: true
+  warningsAsErrors: true
+ktlint:
+  active: true
+  code_style: ktlint_official
+  indentStyle: space
+  WhenEntryBracing:
+    active: true
+  TryCatchFinallySpacing:
+    active: true
+  StringTemplateIndent:
+    active: true
+  NoSingleLineBlockComment:
+    active: true
+  NoEmptyFirstLineInClassBody:
+    active: true
+  NoConsecutiveComments:
+    active: true
+  NoBlankLineInList:
+    active: true
+  MultilineExpressionWrapping:
+    active: true
+  IfElseWrapping:
+    active: true
+  IfElseBracing:
+    active: true
+  FunctionName:
+    active: true
+  ExpressionOperandWrapping:
+    active: true
+  ClassName:
+    active: true
+  ChainMethodContinuation:
+    active: true
+  BlankLineBeforeDeclaration:
+    active: true
+  MaximumLineLength:
+    maxLineLength: 120
+style:
+  MaxLineLength:
+    maxLineLength: 120
