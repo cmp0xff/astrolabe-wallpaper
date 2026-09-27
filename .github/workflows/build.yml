@@ -14,10 +14,11 @@ concurrency:
 
 jobs:
   build:
-    # Pin the current GA LTS runner. The runner OS does not affect APK reproducibility
-    # (the JDK and SDK are self-provisioned and checksum-verified), so this is a soft pin;
-    # revisit when 24.04 is deprecated or 26.04 is GA. `ubuntu-latest` would silently roll
-    # to preview 26.04 in Oct-Nov 2026 (runner-images#14226).
+    # Pin the current GA LTS runner. The runner OS is isolated from the build inputs: the
+    # JDK and command-line-tools archives are self-provisioned and SHA-256-verified, and the
+    # SDK packages are revision-checked, so this is a soft pin; revisit when 24.04 is
+    # deprecated or 26.04 is GA. `ubuntu-latest` would silently roll to preview 26.04 in
+    # Oct-Nov 2026 (runner-images#14226).
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
