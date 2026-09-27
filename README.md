@@ -101,16 +101,15 @@ reproducible builds. F-Droid can distribute a developer-signed APK after verifyi
 reproducibility; otherwise its signing key can differ. See the
 [F-Droid signing guidance](https://f-droid.org/en/docs/FAQ_-_App_Developers/#what-about-signing).
 
-Galaxy Store distributes standard live-wallpaper APKs and can reuse the retained
-personal key; it requires a seller-portal account (Commercial Seller status,
-D-U-N-S, bank/PayPal details) and the Android identity-verification rollout.
-Galaxy Themes is a separate proprietary theme ecosystem and is not the path for
-this `WallpaperService` APK.
+Whether Galaxy Store accepts standard live-wallpaper APKs, reuses the retained
+personal key, or requires seller-portal specifics (Commercial Seller status,
+D-U-N-S, bank/PayPal details, Android identity verification) is evaluated in
+#14, not established here. Galaxy Themes is a separate proprietary theme
+ecosystem and is not the path for this `WallpaperService` APK.
 
-Play Store is a normal live-wallpaper category; a $25 one-time developer fee and Play App
-Signing apply. New Play apps upload an Android App Bundle rather than an APK. Under Play
-App Signing the project uploads with an upload key, and Google signs with an app-signing
-key — a newly generated one by default, or the retained personal key if enrolled with it.
+Play Store's normal live-wallpaper category, the current one-time developer fee, the
+Android App Bundle upload requirement, and Play App Signing key behavior (upload key vs
+retained personal key) are items to confirm in #15, not established here.
 Target-API, policy, Data-safety, and privacy-policy compliance apply.
 
 Personal and Galaxy Store builds can share the retained key. Play App Signing uses a
