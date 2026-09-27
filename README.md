@@ -102,10 +102,10 @@ reproducibility; otherwise its signing key can differ. See the
 [F-Droid signing guidance](https://f-droid.org/en/docs/FAQ_-_App_Developers/#what-about-signing).
 
 Galaxy Store distributes standard live-wallpaper APKs and can reuse the retained
-personal key; it requires a Samsung Seller Portal account (Commercial Seller,
+personal key; it requires a seller-portal account (Commercial Seller status,
 D-U-N-S, bank/PayPal details) and the Android identity-verification rollout.
-Samsung's Galaxy Themes is a separate proprietary theme ecosystem and is not the
-path for this `WallpaperService` APK.
+Galaxy Themes is a separate proprietary theme ecosystem and is not the path for
+this `WallpaperService` APK.
 
 Play Store is a normal live-wallpaper category; a $25 one-time developer fee and
 Play App Signing apply. Under Play App Signing Google holds the distribution key
