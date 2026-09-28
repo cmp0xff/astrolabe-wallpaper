@@ -98,7 +98,7 @@ PR. Removing a finding by lowering global severity or excluding production/test 
 
 | Rule ID | Example and reason | Scope |
 | --- | --- | --- |
-| detekt `UnnecessaryInnerClass` | `StaticEngine : WallpaperService.Engine()` needs its enclosing service because the superclass is a Java non-static inner class. detekt does not recognize that implicit outer-instance use. | Only `StaticEngine`, annotated in source |
+| detekt `UnnecessaryInnerClass` | `ClockEngine : WallpaperService.Engine()` needs its enclosing service because the superclass is a Java non-static inner class. detekt does not recognize that implicit outer-instance use. | Only `ClockEngine`, annotated in source |
 | Kotlin `DEPRECATION` | The preview test reads a `ComponentName` with the legacy `getParcelableExtra` overload because the typed overload is unavailable on its API 26 test environment. | Only the local test value reading this extra |
 | Lint `QueryPermissionsNeeded` | `queryIntentServices` in the manifest test restricts the query to its own package, which is always visible. Adding external package queries would misstate app needs. | Only `wallpaperDeclaration` test method |
 | Lint `UnsupportedChromeOsHardware` | `android.software.live_wallpaper` is required because wallpaper rendering is the app's core feature; devices lacking it cannot provide that feature. | Only that manifest `uses-feature` element |
@@ -117,7 +117,8 @@ See [bootstrap-verification.md](bootstrap-verification.md) for the local positiv
 
 Robolectric tests use API 26 and API 36 environments. They are JVM simulations and do not establish
 physical-device, lit lock-screen, or actual wallpaper surface behavior. API 37 compilation and Android
-Lint additionally check against the selected target. The placeholder never schedules animation work.
+Lint additionally check against the selected target. The `ClockEngine` schedules one redraw per whole
+second while visible and cancels the pending tick when hidden or destroyed.
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`, with application ID
 `io.github.cmp0xff.astrolabewallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
@@ -132,5 +133,5 @@ revision, recorded in the artifact name and `toolchain.txt`. Check reports uploa
 the APK uploads only after a successful gate and APK verification. No release credentials are used.
 
 Install a downloaded debug APK with `adb install -r app-debug.apk`, open **Astrolabe Wallpaper**, and
-tap **Open wallpaper preview**. Device testing is deliberately left to #2, including actual firmware,
-wake/surface/process recreation, home/lock-screen behavior, and battery observation.
+tap **Open wallpaper preview**. See [device-testing.md](device-testing.md) for the physical-device
+procedure and the #2 acceptance results.

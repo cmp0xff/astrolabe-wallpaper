@@ -5,10 +5,11 @@ clock, initially targeting a personal Android device. The first delivery is a si
 personal APK; store distribution (F-Droid, Galaxy Store, Play Store) is a later
 evaluation.
 
-**Status: Android bootstrap.** The app provides a static Canvas wallpaper and a
-settings activity that opens Android's wallpaper preview. Strict local and CI checks
-produce a debug APK. Home-screen and lit lock-screen behavior must be
-verified on the installed firmware in #2 before compatibility is claimed.
+**Status: Android bootstrap.** The app provides an animated clock wallpaper — an
+astrolabe-style dial with hour, minute, and second hands — and a settings activity that
+opens Android's wallpaper preview. Strict local and CI checks produce a debug APK.
+Home-screen and lit lock-screen behavior on the installed firmware is tracked in #2;
+see [device testing](docs/device-testing.md) for progress and results.
 
 ## Planned experience
 
