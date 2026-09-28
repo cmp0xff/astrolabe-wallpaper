@@ -5,11 +5,15 @@ import android.annotation.SuppressLint
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
 import android.location.LocationManager
+import android.os.Looper
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,6 +21,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowToast
 
 /** Exercises the launcher lifecycle, the preview button, and manual location persistence. */
 @RunWith(RobolectricTestRunner::class)
@@ -86,7 +91,6 @@ class SettingsActivityTest {
             shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
             val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
             shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, false)
-            shadowOf(locationManager).setProviderEnabled(LocationManager.GPS_PROVIDER, false)
             activity.findViewById<Button>(R.id.refresh_location).performClick()
 
             assertEquals(expected, activity.findViewById<TextView>(R.id.location_current).text.toString())
@@ -95,5 +99,99 @@ class SettingsActivityTest {
                 LocationStore(activity).load(),
             )
         }
+    }
+
+    @Test
+    fun useCurrentLocationSavesCoarse() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
+            val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+            activity.findViewById<Button>(R.id.use_current_location).performClick()
+            shadowOf(locationManager).simulateLocation(
+                LocationManager.NETWORK_PROVIDER,
+                location(latitude = 37.42, longitude = -122.08),
+            )
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(
+                "37.42, -122.08 (current)",
+                activity.findViewById<TextView>(R.id.location_current).text.toString(),
+            )
+            assertEquals(
+                ObservingLocation(
+                    latitude = 37.42,
+                    longitude = -122.08,
+                    source = ObservingLocation.Source.CURRENT_COARSE,
+                ),
+                LocationStore(activity).load(),
+            )
+        }
+    }
+
+    @Test
+    fun grantCallbackFetchesLocation() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
+            val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+            activity.onRequestPermissionsResult(
+                REQUEST_LOCATION_PERMISSION,
+                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+                intArrayOf(PackageManager.PERMISSION_GRANTED),
+            )
+            shadowOf(locationManager).simulateLocation(
+                LocationManager.NETWORK_PROVIDER,
+                location(latitude = 37.42, longitude = -122.08),
+            )
+            shadowOf(Looper.getMainLooper()).idle()
+            assertEquals(
+                ObservingLocation(
+                    latitude = 37.42,
+                    longitude = -122.08,
+                    source = ObservingLocation.Source.CURRENT_COARSE,
+                ),
+                LocationStore(activity).load(),
+            )
+        }
+    }
+
+    @Test
+    fun denyCallbackShowsToast() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            activity.onRequestPermissionsResult(
+                REQUEST_LOCATION_PERMISSION,
+                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
+                intArrayOf(PackageManager.PERMISSION_DENIED),
+            )
+            assertEquals(activity.getString(R.string.location_permission_denied), ShadowToast.getTextOfLatestToast())
+            assertNull(LocationStore(activity).load())
+        }
+    }
+
+    @Test
+    @SuppressLint("SetTextI18n")
+    fun invalidManualInputRejected() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            activity.findViewById<EditText>(R.id.latitude_input).setText("91")
+            activity.findViewById<EditText>(R.id.longitude_input).setText("20")
+            activity.findViewById<Button>(R.id.save_location).performClick()
+            assertEquals(activity.getString(R.string.location_invalid), ShadowToast.getTextOfLatestToast())
+            assertNull(LocationStore(activity).load())
+        }
+    }
+
+    private fun location(latitude: Double, longitude: Double): Location {
+        val location = Location(LocationManager.NETWORK_PROVIDER)
+        location.setLatitude(latitude)
+        location.setLongitude(longitude)
+        return location
+    }
+
+    private companion object {
+        const val REQUEST_LOCATION_PERMISSION = 1
     }
 }

@@ -1,5 +1,7 @@
 package io.github.cmp0xff.astrolabewallpaper
 
+import android.content.Context
+import android.content.SharedPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -24,5 +26,54 @@ class LocationStoreTest {
     @Test
     fun loadReturnsNullWhenEmpty() {
         assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
+    }
+
+    @Test
+    fun loadNullWhenPartiallySet() {
+        preferences().edit().putString(KEY_LATITUDE, "10.0").apply()
+        assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
+    }
+
+    @Test
+    fun loadRejectsNonNumeric() {
+        preferences()
+            .edit()
+            .putString(KEY_LATITUDE, "abc")
+            .putString(KEY_LONGITUDE, "10.0")
+            .putString(KEY_SOURCE, ObservingLocation.Source.MANUAL.name)
+            .apply()
+        assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
+    }
+
+    @Test
+    fun loadRejectsUnknownSource() {
+        preferences()
+            .edit()
+            .putString(KEY_LATITUDE, "10.0")
+            .putString(KEY_LONGITUDE, "20.0")
+            .putString(KEY_SOURCE, "NOT_A_SOURCE")
+            .apply()
+        assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
+    }
+
+    @Test
+    fun loadRejectsOutOfRange() {
+        preferences()
+            .edit()
+            .putString(KEY_LATITUDE, "91.0")
+            .putString(KEY_LONGITUDE, "20.0")
+            .putString(KEY_SOURCE, ObservingLocation.Source.MANUAL.name)
+            .apply()
+        assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
+    }
+
+    private fun preferences(): SharedPreferences =
+        RuntimeEnvironment.getApplication().getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+
+    private companion object {
+        const val PREFERENCES_NAME = "observing_location"
+        const val KEY_LATITUDE = "latitude"
+        const val KEY_LONGITUDE = "longitude"
+        const val KEY_SOURCE = "source"
     }
 }

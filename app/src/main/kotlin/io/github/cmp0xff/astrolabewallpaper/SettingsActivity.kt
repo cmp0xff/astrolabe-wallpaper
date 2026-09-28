@@ -15,20 +15,28 @@ import android.widget.Toast
 
 /** Opens Android's preview and manages the observing location. */
 class SettingsActivity : Activity() {
-    private val locationStore by lazy { LocationStore(this) }
-    private val locationProvider by lazy { LocationProvider(this) }
+    private val locationStore by lazy { LocationStore(applicationContext) }
+    private val locationProvider by lazy { LocationProvider(applicationContext) }
     private val locationCurrent by lazy { findViewById<TextView>(R.id.location_current) }
     private val latitudeInput by lazy { findViewById<EditText>(R.id.latitude_input) }
     private val longitudeInput by lazy { findViewById<EditText>(R.id.longitude_input) }
+    private var isForceFreshPending = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         findViewById<Button>(R.id.open_preview).setOnClickListener { openWallpaperPreview() }
-        findViewById<Button>(R.id.use_current_location).setOnClickListener { requestCurrentLocation() }
-        findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation() }
+        findViewById<Button>(
+            R.id.use_current_location,
+        ).setOnClickListener { requestCurrentLocation(forceFresh = false) }
+        findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation(forceFresh = true) }
         findViewById<Button>(R.id.save_location).setOnClickListener { saveManualLocation() }
         displayLocation(locationStore.load())
+    }
+
+    override fun onDestroy() {
+        locationProvider.cancel()
+        super.onDestroy()
     }
 
     private fun openWallpaperPreview() {
@@ -44,14 +52,15 @@ class SettingsActivity : Activity() {
         }
     }
 
-    private fun requestCurrentLocation() {
+    private fun requestCurrentLocation(forceFresh: Boolean) {
         val hasPermission =
             checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (!hasPermission) {
+            isForceFreshPending = forceFresh
             requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), REQUEST_LOCATION_PERMISSION)
             return
         }
-        fetchCurrentLocation()
+        fetchCurrentLocation(forceFresh)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -60,14 +69,15 @@ class SettingsActivity : Activity() {
             return
         }
         if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-            fetchCurrentLocation()
+            fetchCurrentLocation(isForceFreshPending)
         } else {
             Toast.makeText(this, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
         }
+        isForceFreshPending = false
     }
 
-    private fun fetchCurrentLocation() {
-        locationProvider.fetch { location ->
+    private fun fetchCurrentLocation(forceFresh: Boolean) {
+        locationProvider.fetch(forceFresh = forceFresh) { location ->
             if (location != null) {
                 locationStore.save(location)
                 displayLocation(location)

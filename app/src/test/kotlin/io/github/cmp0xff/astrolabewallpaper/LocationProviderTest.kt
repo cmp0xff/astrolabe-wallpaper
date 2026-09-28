@@ -51,14 +51,18 @@ class LocationProviderTest {
     fun fetchDeniedWithoutPermission() {
         shadowOf(application).denyPermissions(ACCESS_COARSE_LOCATION)
         var isCalled = false
-        LocationProvider(application).fetch { isCalled = true }
+        var result: ObservingLocation? = ObservingLocation(0.0, 0.0, ObservingLocation.Source.MANUAL)
+        LocationProvider(application).fetch { fetched ->
+            isCalled = true
+            result = fetched
+        }
         assertTrue(isCalled)
+        assertNull(result)
     }
 
     @Test
-    fun fetchNullWhenProvidersDisabled() {
+    fun fetchNullWhenNetworkDisabled() {
         shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, false)
-        shadowOf(locationManager).setProviderEnabled(LocationManager.GPS_PROVIDER, false)
         var isCalled = false
         var result: ObservingLocation? = null
         LocationProvider(application).fetch { fetched ->
@@ -86,9 +90,33 @@ class LocationProviderTest {
     @Test
     fun fetchSingleUpdateFromProvider() {
         shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
-        shadowOf(locationManager).setProviderEnabled(LocationManager.GPS_PROVIDER, false)
         var result: ObservingLocation? = null
         LocationProvider(application, timeoutMillis = SHORT_TIMEOUT).fetch { result = it }
+        shadowOf(locationManager).simulateLocation(
+            LocationManager.NETWORK_PROVIDER,
+            location(latitude = LATITUDE, longitude = LONGITUDE),
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(
+            ObservingLocation(
+                latitude = LATITUDE,
+                longitude = LONGITUDE,
+                source = ObservingLocation.Source.CURRENT_COARSE,
+            ),
+            result,
+        )
+    }
+
+    @Test
+    @Suppress("DEPRECATION")
+    fun fetchFreshIgnoresCache() {
+        shadowOf(locationManager).setLastKnownLocation(
+            LocationManager.NETWORK_PROVIDER,
+            location(latitude = 1.0, longitude = 2.0),
+        )
+        shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+        var result: ObservingLocation? = null
+        LocationProvider(application, timeoutMillis = SHORT_TIMEOUT).fetch(forceFresh = true) { result = it }
         shadowOf(locationManager).simulateLocation(
             LocationManager.NETWORK_PROVIDER,
             location(latitude = LATITUDE, longitude = LONGITUDE),

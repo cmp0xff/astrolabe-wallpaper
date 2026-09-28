@@ -101,11 +101,11 @@ PR. Removing a finding by lowering global severity or excluding production/test 
 | --- | --- | --- |
 | detekt `UnnecessaryInnerClass` | `ClockEngine : WallpaperService.Engine()` needs its enclosing service because the superclass is a Java non-static inner class. detekt does not recognize that implicit outer-instance use. | Only `ClockEngine`, annotated in source |
 | Kotlin `DEPRECATION` | The preview test reads a `ComponentName` with the legacy `getParcelableExtra` overload because the typed overload is unavailable on its API 26 test environment. | Only the local test value reading this extra |
-| Kotlin `DEPRECATION` | `LocationManager.requestSingleUpdate` is the single-update API available since API 9; its API 30 replacement `getCurrentLocation` is unavailable on the min SDK 26 target. | Only the `LocationProvider.requestSingleUpdate` helper, annotated in source |
-| Kotlin `OVERRIDE_DEPRECATION` | `LocationListener.onProviderEnabled` / `onProviderDisabled` / `onStatusChanged` are abstract on API 26 but default on API 30+, so the single-update listener must override them as no-ops for the min SDK 26 target. | Only the three `LocationProvider` listener overrides, annotated in source |
+| Kotlin `DEPRECATION` | `LocationManager.requestSingleUpdate` is the single-update API available since API 9; its API 30 replacement `getCurrentLocation` is unavailable on devices at the API 26 minimum. | Only the `LocationProvider.requestSingleUpdate` helper, annotated in source |
+| Kotlin `OVERRIDE_DEPRECATION` | `LocationListener.onProviderEnabled` / `onProviderDisabled` / `onStatusChanged` are abstract on API 26 but default on API 30+, so the single-update listener must override them as no-ops for devices at the API 26 minimum. | Only the three `LocationProvider` listener overrides, annotated in source |
 | Lint `MissingPermission` | `LocationManager.getLastKnownLocation` / `requestSingleUpdate` run only after `fetch` has confirmed `ACCESS_COARSE_LOCATION` at runtime; lint cannot see the helper-method guard. | Only the two `LocationProvider` methods, annotated in source |
-| Lint `SetTextI18n` | The settings tests type literal coordinates into the manual `EditText` fields; they are test inputs, not user-facing text. | Only the two settings test methods that call `setText`, annotated in source |
-| Kotlin `DEPRECATION` | The provider test seeds the cached-location branch with Robolectric's `ShadowLocationManager.setLastKnownLocation`, which Robolectric deprecated without a replacement. | Only the cached-location provider test, annotated in source |
+| Lint `SetTextI18n` | The settings tests type literal coordinates into the manual `EditText` fields; they are test inputs, not user-facing text. | Only the three settings test methods that call `setText`, annotated in source |
+| Kotlin `DEPRECATION` | The provider tests seed a cached location with Robolectric's `ShadowLocationManager.setLastKnownLocation`, which Robolectric deprecated without a replacement. | Only the two provider tests that seed a cached location, annotated in source |
 | Lint `QueryPermissionsNeeded` | `queryIntentServices` in the manifest test restricts the query to its own package, which is always visible. Adding external package queries would misstate app needs. | Only `wallpaperDeclaration` test method |
 | Lint `UnsupportedChromeOsHardware` | `android.software.live_wallpaper` is required because wallpaper rendering is the app's core feature; devices lacking it cannot provide that feature. | Only that manifest `uses-feature` element |
 | Lint `AndroidGradlePluginVersion` | Lint suggests Gradle 9.7.1 over 9.6.1. The explicit 9.6.1 pin follows the selected detekt compatibility family; network-discovered upgrade suggestions must not change this bootstrap's agreed toolchain. | Only `gradle/wrapper/gradle-wrapper.properties`, via `app/lint.xml` |
@@ -128,8 +128,8 @@ second while visible and cancels the pending tick when hidden or destroyed.
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`, with application ID
 `io.github.cmp0xff.astrolabewallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
-wallpaper declaration, that the only requested permission is `ACCESS_COARSE_LOCATION`, and the debug
-signature, then records SHA-256.
+wallpaper declaration, that the only requested permission is `ACCESS_COARSE_LOCATION`, the debug flag
+and signature, then records SHA-256.
 The stable release ID is `io.github.cmp0xff.astrolabewallpaper`; release signing belongs to #7.
 Debug signing keys are disposable and local/CI APKs may require uninstalling the previous debug app.
 
