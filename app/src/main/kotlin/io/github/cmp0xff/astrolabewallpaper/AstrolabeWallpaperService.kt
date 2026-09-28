@@ -187,18 +187,22 @@ internal data class ClockState(val hourAngle: Float, val minuteAngle: Float, val
 
 /** Derives the three hand angles for a wall-clock time. */
 internal fun clockState(time: LocalTime): ClockState {
-    val hourOfDial = time.hour % HOURS_PER_REVOLUTION
+    val secondOfDay = time.hour * SECONDS_PER_HOUR + time.minute * SECONDS_PER_MINUTE + time.second
+    val secondOfHalfDay = secondOfDay % SECONDS_PER_HALF_DAY
+    val secondOfHour = secondOfDay % SECONDS_PER_HOUR
     return ClockState(
-        hourAngle = hourOfDial * DEGREES_PER_HOUR + time.minute * DEGREES_PER_MINUTE_ON_HOUR_HAND,
-        minuteAngle = time.minute * DEGREES_PER_MINUTE,
-        secondAngle = time.second * DEGREES_PER_SECOND,
+        hourAngle = secondOfHalfDay * HOUR_HAND_DEGREES_PER_SECOND,
+        minuteAngle = secondOfHour * MINUTE_HAND_DEGREES_PER_SECOND,
+        secondAngle = time.second * SECOND_HAND_DEGREES_PER_SECOND,
     )
 }
 
 private data class Dial(val centerX: Float, val centerY: Float, val radius: Float)
 
 private const val HOURS_PER_REVOLUTION = 12
-private const val DEGREES_PER_HOUR = 30f
-private const val DEGREES_PER_MINUTE_ON_HOUR_HAND = 0.5f
-private const val DEGREES_PER_MINUTE = 6f
-private const val DEGREES_PER_SECOND = 6f
+private const val SECONDS_PER_MINUTE = 60
+private const val SECONDS_PER_HOUR = 60 * 60
+private const val SECONDS_PER_HALF_DAY = HOURS_PER_REVOLUTION * SECONDS_PER_HOUR
+private const val SECOND_HAND_DEGREES_PER_SECOND = 6f
+private const val MINUTE_HAND_DEGREES_PER_SECOND = 0.1f
+private const val HOUR_HAND_DEGREES_PER_SECOND = 1f / 120f
