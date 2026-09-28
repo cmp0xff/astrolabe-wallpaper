@@ -62,10 +62,11 @@ rendering unchanged).
 Rendering was later extracted into `DialRenderer` on `feat/19-rendered-clock` with no intended
 visual change. The `DialRendererTest` host pixel test exercises hand angle and position at five
 times, the hour and minute tick bands, a non-square canvas, the palette, and renderer reuse on a
-200x200 bitmap at SDK 26 and 36. That test is a host check only: it does not verify a physical device, and the debug
-APK SHA-256 recorded for the pre-review build
-(c103410e9135bf0ade955cebe0f0b2a1ab04f5a1844c4bb4c4df6f3af9dac449) predates the review fixes and no
-longer identifies the current revision. Physical-device verification for this revision is unrun.
+200x200 bitmap at SDK 26 and 36, and `AstrolabeWallpaperServiceTest` covers resuming the tick after
+a surface is destroyed and recreated. Those tests are host checks only: they do not verify a physical
+device. The current revision's local debug APK SHA-256 is
+25e0273350d9081d905ea6a2236bcd16d09a2a3d4c294fa934056862c12cb1e3 (host build; physical-device
+verification unrun).
 
 Android version: 16 (API 36)
 Firmware build: withheld (embeds the model identifier)
