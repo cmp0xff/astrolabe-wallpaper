@@ -4,7 +4,7 @@
 
 | Component | Version |
 | --- | --- |
-| Eclipse Temurin JDK | 21.0.12.1+1 (HotSpot) |
+| Eclipse Temurin JDK | 21 (HotSpot); macOS via Homebrew cask `temurin@21` (tracks latest 21.x patch); CI/Linux pins the exact 21.0.12.1+1 archive |
 | Gradle wrapper | 9.6.1 |
 | Android Gradle Plugin (AGP) | 9.3.2 |
 | Kotlin compiler and standard library | 2.4.10 |
@@ -31,14 +31,11 @@ level supported by AGP 9.3. Physical-device behavior and firmware qualification 
 ## Local setup
 
 Android Studio is optional. Install the pinned JDK, `curl`, `unzip`, `shasum`, and Python 3.
-On Apple Silicon macOS, download and verify the official Temurin archive:
+On Apple Silicon macOS, install the Temurin JDK via Homebrew:
 
 ```sh
-curl -fL 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_aarch64_mac_hotspot_21.0.12.1_1.tar.gz' -o /tmp/astrolabe-jdk.tar.gz
-printf '%s  %s\n' 3623232f33a9c3baadf304480b2535f9a3cba8a58d42ecbb438ba267315d9998 /tmp/astrolabe-jdk.tar.gz | shasum -a 256 --check
-mkdir -p "$HOME/Library/Java/JavaVirtualMachines"
-tar -xzf /tmp/astrolabe-jdk.tar.gz -C "$HOME/Library/Java/JavaVirtualMachines"
-export JAVA_HOME="$HOME/Library/Java/JavaVirtualMachines/jdk-21.0.12.1+1/Contents/Home"
+brew install --cask temurin@21
+export JAVA_HOME="$(/usr/libexec/java_home -v 21)"
 unset ANDROID_SDK_ROOT
 export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
@@ -48,7 +45,8 @@ Use the matching Linux x64 archive from the
 [Temurin release](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1)
 on Linux, verify its published SHA-256, and set `JAVA_HOME` to the extracted JDK and `ANDROID_HOME` to
 `$HOME/Android/Sdk`. CI downloads and checksum-verifies the exact Linux JDK archive; setup-java does not
-accept this release's four-part version string.
+accept this release's four-part version string. The macOS Homebrew install may be a newer 21.x patch
+than the CI-pinned archive, which stays the reproducible-build source of truth.
 Keep these exports in your own shell configuration; do not commit local SDK paths.
 
 From the checkout:
