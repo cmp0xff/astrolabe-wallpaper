@@ -40,6 +40,8 @@ strict checking policy, and individually justified exceptions.
   On Display and interactive sky exploration are outside the first release.
 - Render only while visible. Verify wake, surface recreation, process recreation,
   and time/timezone changes. Record actual firmware when testing on the physical device.
+- Log (don't silently swallow) render/surface no-op and failure paths so field issues
+  are diagnosable.
 - Keep signing keys, passwords, local SDK paths, and private device data out of
   Git. Retain and privately back up the first durable APK release key. Do not
   promise cross-store signature continuity before each store's signing path is

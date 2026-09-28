@@ -6,6 +6,7 @@ import android.graphics.Paint
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
+import android.util.Log
 import android.view.SurfaceHolder
 import java.time.LocalTime
 import kotlin.math.cos
@@ -32,6 +33,8 @@ class AstrolabeWallpaperService : WallpaperService() {
 
         override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
             super.onSurfaceChanged(holder, format, width, height)
+            // Redraw immediately for the new surface; onSurfaceChanged never schedules ticks — the
+            // per-second loop is (re)started only by onVisibilityChanged(true).
             if (isVisible) {
                 drawFrame()
             }
@@ -62,15 +65,19 @@ class AstrolabeWallpaperService : WallpaperService() {
         private fun drawFrame() {
             val holder = surfaceHolder
             val surface = holder.surface
-            if (surface != null && surface.isValid) {
-                val canvas = holder.lockCanvas()
-                if (canvas != null) {
-                    try {
-                        drawDial(canvas, clockState(LocalTime.now()))
-                    } finally {
-                        holder.unlockCanvasAndPost(canvas)
-                    }
-                }
+            if (surface == null || !surface.isValid) {
+                Log.d(TAG, "skipping frame: surface not ready")
+                return
+            }
+            val canvas = holder.lockCanvas()
+            if (canvas == null) {
+                Log.w(TAG, "skipping frame: lockCanvas returned null")
+                return
+            }
+            try {
+                drawDial(canvas, clockState(LocalTime.now()))
+            } finally {
+                holder.unlockCanvasAndPost(canvas)
             }
         }
 
@@ -161,6 +168,7 @@ class AstrolabeWallpaperService : WallpaperService() {
     }
 
     private companion object {
+        const val TAG = "AstrolabeWallpaperService"
         val BACKGROUND_COLOR: Int = Color.rgb(17, 25, 35)
         val DIAL_COLOR: Int = Color.rgb(216, 182, 106)
         const val CENTER_DIVISOR = 2f

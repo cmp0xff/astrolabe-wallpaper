@@ -55,7 +55,8 @@ be checked against the expected handler.
 ## Observed results
 
 Test build: local debug `app-debug.apk` from `feat/2-device-feasibility` (SHA-256
-00e22e441da2635431cbb979f691bf6354ed5acdd1791465b82f10afb325cb73).
+881cb234654bd4967e3c9ca4c9a84003723ec8ac94f5ce2c80f2d133d58b5eef; logging-only change,
+rendering unchanged).
 
 Android version: 16 (API 36)
 Firmware build: withheld (embeds the model identifier)
