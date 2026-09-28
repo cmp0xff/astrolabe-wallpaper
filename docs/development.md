@@ -26,7 +26,8 @@ for build scripts is independent of the application's compiler; `./gradlew --ver
 Java and Kotlin produce Java 17 bytecode while Gradle runs on JDK 21.
 
 API 26 is a conservative initial minimum, not a device compatibility claim. API 37 is the compile/target
-level supported by AGP 9.3. Physical-device behavior and firmware qualification remain in #2.
+level supported by AGP 9.3. Physical-device behavior and firmware qualification are recorded in
+[device-testing.md](device-testing.md).
 
 ## Local setup
 

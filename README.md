@@ -128,9 +128,11 @@ this wallpaper. See #16.
 
 Read [AGENTS.md](AGENTS.md) for issue-linked worktrees, Conventional Commits,
 verification, and AI attribution. Use the issue and pull request templates.
-Record physical-device evidence separately from emulator or automated results,
-including the Android version and firmware build; omit personal identifiers
-and precise personal locations from public reports.
+Record physical-device evidence separately from emulator or automated results.
+Record the Android version and the test APK/source revision. Withhold the device
+model, OEM, serial number, and firmware build string (it embeds the model
+identifier), and omit personal identifiers and precise personal locations from
+public reports.
 
 ## License
 

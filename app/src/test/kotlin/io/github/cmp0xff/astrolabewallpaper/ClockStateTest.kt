@@ -31,6 +31,14 @@ class ClockStateTest {
     }
 
     @Test
+    fun threeFifteenSweepsHourHand() {
+        assertAngles(
+            actual = clockState(LocalTime.of(3, 15, 0)),
+            expected = ClockState(hourAngle = 97.5f, minuteAngle = 90f, secondAngle = 0f),
+        )
+    }
+
+    @Test
     fun secondHandAtThirtySeconds() {
         assertAngles(
             actual = clockState(LocalTime.of(0, 0, 30)),
@@ -41,7 +49,7 @@ class ClockStateTest {
     @Test
     fun elevenFiftyNineBeforeMidnight() {
         assertAngles(
-            actual = clockState(LocalTime.of(11, 59, 59)),
+            actual = clockState(LocalTime.of(23, 59, 59)),
             expected = ClockState(hourAngle = 359.9917f, minuteAngle = 359.9f, secondAngle = 354f),
         )
     }

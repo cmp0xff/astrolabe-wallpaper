@@ -11,7 +11,7 @@ import java.time.LocalTime
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** An animated astrolabe-style clock; device qualification belongs to issue #2. */
+/** An animated astrolabe-style clock. */
 class AstrolabeWallpaperService : WallpaperService() {
     override fun onCreateEngine(): Engine = ClockEngine()
 
@@ -42,7 +42,7 @@ class AstrolabeWallpaperService : WallpaperService() {
             super.onDestroy()
         }
 
-        // Draw once and re-schedule to the next whole second; the handler is dedicated to ticks.
+        // Post a tick that draws once and re-schedules for the next whole second; the handler is dedicated to ticks.
         private fun scheduleNextTick() {
             handler.removeCallbacksAndMessages(null)
             handler.postDelayed(
