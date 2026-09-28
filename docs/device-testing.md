@@ -54,15 +54,17 @@ be checked against the expected handler.
 
 ## Observed results
 
-<!-- Filled in during the physical-device session. Record Android version and firmware build, but
-     keep model, OEM, and serial number out. -->
+Test build: `app-debug.apk` from `feat/2-device-feasibility` @
+df0bdd5ab4370a1560262fa3cf54962d2b0fa971 (SHA-256
+00e22e441da2635431cbb979f691bf6354ed5acdd1791465b82f10afb325cb73).
 
-Android version: <!-- e.g. 15 -->
-Firmware build: <!-- non-identifying build string; redact any model/OEM fragment -->
+Android version: 16 (API 36)
+Firmware build: withheld (embeds the model identifier)
 
 | Date | Surface | Transition | Observed |
 | --- | --- | --- | --- |
-| <!-- YYYY-MM-DD --> | home | preview open/close | <!-- advancing clock, recovery --> |
-| <!-- YYYY-MM-DD --> | lit lock | lock/unlock, screen off/on, reboot | <!-- advancing clock, recovery --> |
+| 2026-09-28 | preview | open / close | Clock advanced; applied to home and lock screens via **Open wallpaper preview** → **Set wallpaper** |
+| 2026-09-28 | home | apply, lock/unlock, screen off/on | Clock advanced; survived three lock/unlock cycles and screen off/on |
+| 2026-09-28 | lit lock | lock/unlock, screen off/on, reboot | Clock advanced on the lit lock screen; recovered after reboot (wallpaper persisted, service restarted) |
 
-Unresolved limitations: <!-- none, or describe. Always On Display is out of scope per #2. -->
+Unresolved limitations: none. Always On Display is out of scope per #2.
