@@ -1,10 +1,10 @@
 # Physical-device testing
 
 Procedures and acceptance results for verifying the live wallpaper on a physical Android device.
-This page is deliberately device-agnostic: the device is referred to only as "the physical device",
-and its model, OEM, and serial number are omitted from public surfaces per the project's
-device-privacy policy. The exact model and firmware build are captured privately for acceptance
-evidence only.
+This page is deliberately device-agnostic about identity: the device is referred to only as
+"the physical device", and its model, OEM, and serial number are omitted from public surfaces per
+the project's device-privacy policy. Android version and firmware build are non-identifying
+software metadata and are recorded below, as #2 and README.md require.
 
 ## Connecting
 
@@ -54,7 +54,11 @@ be checked against the expected handler.
 
 ## Observed results
 
-<!-- Filled in during the physical-device session. Keep model, OEM, and serial number out. -->
+<!-- Filled in during the physical-device session. Record Android version and firmware build, but
+     keep model, OEM, and serial number out. -->
+
+Android version: <!-- e.g. 15 -->
+Firmware build: <!-- non-identifying build string; redact any model/OEM fragment -->
 
 | Date | Surface | Transition | Observed |
 | --- | --- | --- | --- |
