@@ -30,7 +30,7 @@ level supported by AGP 9.3. Physical-device behavior and firmware qualification 
 
 ## Local setup
 
-Android Studio is optional. Install the pinned JDK, `curl`, `unzip`, and Python 3.
+Android Studio is optional. Install the pinned JDK, `curl`, `unzip`, `shasum`, and Python 3.
 On Apple Silicon macOS, download and verify the official Temurin archive:
 
 ```sh
