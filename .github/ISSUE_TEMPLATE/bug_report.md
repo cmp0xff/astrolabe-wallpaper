@@ -18,7 +18,7 @@ Describe what should happen and what happens instead.
 
 - App version and install source:
 - Device model:
-- Android / One UI version and firmware build:
+- Android version and firmware build:
 - Surface: preview / home / lit lock screen:
 - Location mode and timezone (use a non-personal test location if relevant):
 
