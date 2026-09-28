@@ -3,8 +3,8 @@
 Procedures and acceptance results for verifying the live wallpaper on a physical Android device.
 This page is deliberately device-agnostic about identity: the device is referred to only as
 "the physical device", and its model, OEM, and serial number are omitted from public surfaces per
-the project's device-privacy policy. Android version and firmware build are non-identifying
-software metadata and are recorded below, as #2 and README.md require.
+the project's device-privacy policy. Android version is non-identifying and is recorded below; the
+firmware build string embeds the model identifier, so it is withheld.
 
 ## Connecting
 
@@ -54,8 +54,7 @@ be checked against the expected handler.
 
 ## Observed results
 
-Test build: `app-debug.apk` from `feat/2-device-feasibility` @
-df0bdd5ab4370a1560262fa3cf54962d2b0fa971 (SHA-256
+Test build: local debug `app-debug.apk` from `feat/2-device-feasibility` (SHA-256
 00e22e441da2635431cbb979f691bf6354ed5acdd1791465b82f10afb325cb73).
 
 Android version: 16 (API 36)
@@ -63,8 +62,13 @@ Firmware build: withheld (embeds the model identifier)
 
 | Date | Surface | Transition | Observed |
 | --- | --- | --- | --- |
-| 2026-09-28 | preview | open / close | Clock advanced; applied to home and lock screens via **Open wallpaper preview** → **Set wallpaper** |
-| 2026-09-28 | home | apply, lock/unlock, screen off/on | Clock advanced; survived three lock/unlock cycles and screen off/on |
-| 2026-09-28 | lit lock | lock/unlock, screen off/on, reboot | Clock advanced on the lit lock screen; recovered after reboot (wallpaper persisted, service restarted) |
+| 2026-09-28 | preview | open | Clock advanced |
+| 2026-09-28 | preview | close (apply) | Applied to home and lock screens via **Open wallpaper preview** → **Set wallpaper** |
+| 2026-09-28 | home | apply | Clock advanced |
+| 2026-09-28 | home | repeated lock/unlock | Clock advanced after each of three cycles; process survived |
+| 2026-09-28 | home | screen off/on | Clock advanced |
+| 2026-09-28 | lit lock | lock/unlock | Clock advanced |
+| 2026-09-28 | lit lock | screen off/on | Clock advanced |
+| 2026-09-28 | home + lit lock | reboot | Clock recovered; wallpaper persisted and service restarted |
 
 Unresolved limitations: none. Always On Display is out of scope per #2.
