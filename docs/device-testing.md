@@ -58,6 +58,11 @@ Test build: local debug `app-debug.apk` from `feat/2-device-feasibility` (SHA-25
 881cb234654bd4967e3c9ca4c9a84003723ec8ac94f5ce2c80f2d133d58b5eef; logging-only change,
 rendering unchanged).
 
+Rendering was later extracted into `DialRenderer` with no output change, and is now verified by the
+`DialRendererTest` pixel test; the extracted debug APK SHA-256 is
+0e7f93eaf07835782b6d885f120264866af07eeade65a8d9993e779a32b50d4d (rendering unchanged;
+pixel-tested).
+
 Android version: 16 (API 36)
 Firmware build: withheld (embeds the model identifier)
 
