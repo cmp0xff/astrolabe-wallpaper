@@ -14,6 +14,7 @@ class AstrolabeWallpaperService : WallpaperService() {
     // Engine is a non-static Java inner class and requires the enclosing service instance.
     @Suppress("UnnecessaryInnerClass")
     private inner class ClockEngine : Engine() {
+        private val dialRenderer = DialRenderer()
         private val handler = Handler(Looper.getMainLooper())
 
         override fun onVisibilityChanged(visible: Boolean) {
@@ -34,6 +35,11 @@ class AstrolabeWallpaperService : WallpaperService() {
             }
         }
 
+        override fun onSurfaceDestroyed(holder: SurfaceHolder) {
+            handler.removeCallbacksAndMessages(null)
+            super.onSurfaceDestroyed(holder)
+        }
+
         override fun onDestroy() {
             handler.removeCallbacksAndMessages(null)
             super.onDestroy()
@@ -44,8 +50,11 @@ class AstrolabeWallpaperService : WallpaperService() {
             handler.removeCallbacksAndMessages(null)
             handler.postDelayed(
                 Runnable {
-                    drawFrame()
-                    scheduleNextTick()
+                    try {
+                        drawFrame()
+                    } finally {
+                        scheduleNextTick()
+                    }
                 },
                 millisUntilNextWholeSecond(),
             )
@@ -63,15 +72,27 @@ class AstrolabeWallpaperService : WallpaperService() {
                 Log.d(TAG, "skipping frame: surface not ready")
                 return
             }
-            val canvas = holder.lockCanvas()
+            val canvas =
+                try {
+                    holder.lockCanvas()
+                } catch (e: IllegalArgumentException) {
+                    Log.w(TAG, "skipping frame: lockCanvas failed", e)
+                    null
+                }
             if (canvas == null) {
                 Log.w(TAG, "skipping frame: lockCanvas returned null")
                 return
             }
             try {
-                renderDial(canvas, clockState(LocalTime.now()))
+                dialRenderer.renderDial(canvas, clockState(LocalTime.now()))
             } finally {
-                holder.unlockCanvasAndPost(canvas)
+                try {
+                    holder.unlockCanvasAndPost(canvas)
+                } catch (e: IllegalArgumentException) {
+                    Log.w(TAG, "unlockCanvasAndPost failed: surface already released", e)
+                } catch (e: IllegalStateException) {
+                    Log.w(TAG, "unlockCanvasAndPost failed: invalid surface state", e)
+                }
             }
         }
     }
@@ -81,26 +102,3 @@ class AstrolabeWallpaperService : WallpaperService() {
         const val MILLIS_PER_SECOND = 1000L
     }
 }
-
-/** Clock-hand angles in degrees, measured clockwise from 12 o'clock. */
-internal data class ClockState(val hourAngle: Float, val minuteAngle: Float, val secondAngle: Float)
-
-/** Derives the three hand angles for a wall-clock time. */
-internal fun clockState(time: LocalTime): ClockState {
-    val secondOfDay = time.hour * SECONDS_PER_HOUR + time.minute * SECONDS_PER_MINUTE + time.second
-    val secondOfHalfDay = secondOfDay % SECONDS_PER_HALF_DAY
-    val secondOfHour = secondOfDay % SECONDS_PER_HOUR
-    return ClockState(
-        hourAngle = secondOfHalfDay * HOUR_HAND_DEGREES_PER_SECOND,
-        minuteAngle = secondOfHour * MINUTE_HAND_DEGREES_PER_SECOND,
-        secondAngle = time.second * SECOND_HAND_DEGREES_PER_SECOND,
-    )
-}
-
-private const val HOURS_PER_REVOLUTION = 12
-private const val SECONDS_PER_MINUTE = 60
-private const val SECONDS_PER_HOUR = 60 * 60
-private const val SECONDS_PER_HALF_DAY = HOURS_PER_REVOLUTION * SECONDS_PER_HOUR
-private const val SECOND_HAND_DEGREES_PER_SECOND = 6f
-private const val MINUTE_HAND_DEGREES_PER_SECOND = 0.1f
-private const val HOUR_HAND_DEGREES_PER_SECOND = 1f / 120f

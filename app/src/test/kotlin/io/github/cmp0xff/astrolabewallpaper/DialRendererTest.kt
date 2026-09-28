@@ -11,20 +11,27 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.time.LocalTime
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
-/** Renders the dial to a bitmap and checks the drawn hands land on the expected numerals. */
+/** Renders the dial to a bitmap and checks the drawn hands land at the expected radial positions. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DialRendererTest {
+    private val renderer = DialRenderer()
+
     @Test
     fun twelveOClockAllHandsAtNorth() {
-        val time = LocalTime.of(12, 0, 0)
-        val bitmap = render(time)
+        val bitmap = render(LocalTime.of(12, 0, 0))
         assertBackground(bitmap)
-        assertHandsAt(bitmap, time)
-        // No hand points at the 3, 6, or 9 numerals at noon.
+        assertHandsAt(
+            bitmap = bitmap,
+            expectedHourAngle = 0f,
+            expectedMinuteAngle = 0f,
+            expectedSecondAngle = 0f,
+        )
+        // No hand points at the 3, 6, or 9 o'clock positions (90°, 180°, 270°) at noon.
         assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_SAMPLE_DISTANCE)
         assertBackgroundPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_SAMPLE_DISTANCE)
         assertBackgroundPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_SAMPLE_DISTANCE)
@@ -32,37 +39,79 @@ class DialRendererTest {
 
     @Test
     fun threeOClockHourHandAtEast() {
-        val time = LocalTime.of(3, 0, 0)
-        val bitmap = render(time)
+        val bitmap = render(LocalTime.of(3, 0, 0))
         assertBackground(bitmap)
-        assertHandsAt(bitmap, time)
-        // The hour hand is at 3; nothing points at 6 or 9.
+        assertHandsAt(
+            bitmap = bitmap,
+            expectedHourAngle = 90f,
+            expectedMinuteAngle = 0f,
+            expectedSecondAngle = 0f,
+        )
+        // The hour hand points at 3 (East); nothing points at 6 or 9.
         assertBackgroundPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_SAMPLE_DISTANCE)
         assertBackgroundPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_SAMPLE_DISTANCE)
+        // Overdraw check: hour hand terminates before 35 px (length is 30 px).
+        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_OVERDRAW_DISTANCE)
     }
 
     @Test
     fun sixOClockHourHandAtSouth() {
-        val time = LocalTime.of(6, 0, 0)
-        val bitmap = render(time)
+        val bitmap = render(LocalTime.of(6, 0, 0))
         assertBackground(bitmap)
-        assertHandsAt(bitmap, time)
-        // The hour hand is at 6; nothing points at 3 or 9.
+        assertHandsAt(
+            bitmap = bitmap,
+            expectedHourAngle = 180f,
+            expectedMinuteAngle = 0f,
+            expectedSecondAngle = 0f,
+        )
+        // The hour hand points at 6 (South); nothing points at 3 or 9.
         assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_SAMPLE_DISTANCE)
         assertBackgroundPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_SAMPLE_DISTANCE)
     }
 
+    @Test
+    fun nineOClockHourHandAtWest() {
+        val bitmap = render(LocalTime.of(9, 0, 0))
+        assertBackground(bitmap)
+        assertHandsAt(
+            bitmap = bitmap,
+            expectedHourAngle = 270f,
+            expectedMinuteAngle = 0f,
+            expectedSecondAngle = 0f,
+        )
+        // The hour hand points at 9 (West / negative X); nothing points at 3 or 6.
+        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_SAMPLE_DISTANCE)
+        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_SAMPLE_DISTANCE)
+    }
+
+    @Test
+    fun threeFifteenThirtyDispersed() {
+        val bitmap = render(LocalTime.of(3, 15, 30))
+        assertBackground(bitmap)
+        // Hour: 3h + 15m 30s = 97.75°, Minute: 15m 30s = 93°, Second: 30s = 180°.
+        assertHandsAt(
+            bitmap = bitmap,
+            expectedHourAngle = 97.75f,
+            expectedMinuteAngle = 93f,
+            expectedSecondAngle = 180f,
+        )
+    }
+
     private fun render(time: LocalTime): Bitmap {
         val bitmap = Bitmap.createBitmap(BITMAP_SIZE, BITMAP_SIZE, Bitmap.Config.ARGB_8888)
-        renderDial(Canvas(bitmap), clockState(time))
+        renderer.renderDial(Canvas(bitmap), clockState(time))
         return bitmap
     }
 
-    private fun assertHandsAt(bitmap: Bitmap, time: LocalTime) {
-        val state = clockState(time)
-        assertDialPixel(bitmap = bitmap, angleDegrees = state.hourAngle, distance = HOUR_SAMPLE_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = state.minuteAngle, distance = MINUTE_SAMPLE_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = state.secondAngle, distance = SECOND_SAMPLE_DISTANCE)
+    private fun assertHandsAt(
+        bitmap: Bitmap,
+        expectedHourAngle: Float,
+        expectedMinuteAngle: Float,
+        expectedSecondAngle: Float,
+    ) {
+        assertDialPixel(bitmap = bitmap, angleDegrees = expectedHourAngle, distance = HOUR_SAMPLE_DISTANCE)
+        assertDialPixel(bitmap = bitmap, angleDegrees = expectedMinuteAngle, distance = MINUTE_SAMPLE_DISTANCE)
+        assertDialPixel(bitmap = bitmap, angleDegrees = expectedSecondAngle, distance = SECOND_SAMPLE_DISTANCE)
     }
 
     private fun assertDialPixel(bitmap: Bitmap, angleDegrees: Float, distance: Float) {
@@ -99,17 +148,25 @@ class DialRendererTest {
         val radians = Math.toRadians(angleDegrees.toDouble())
         val x = center + distance * sin(radians).toFloat()
         val y = center - distance * cos(radians).toFloat()
-        return Pair(first = Math.round(x), second = Math.round(y))
+        return Pair(first = x.roundToInt(), second = y.roundToInt())
     }
 
     private companion object {
         const val BITMAP_SIZE = 200
+        const val CENTER_DIVISOR = 2f
 
-        // Sample each hand inside its length but clear of the tick annulus (tick marks start at
-        // radius - HOUR_TICK_LENGTH = 50 px for the 200 px bitmap), so only the target hand is hit.
+        // Dial radius for a 200 px bitmap is 60 px (BITMAP_SIZE * RADIUS_FRACTION).
+        // Hand lengths: hour = 30 px (0.5 * 60), minute = 45 px (0.75 * 60), second = 51 px (0.85 * 60).
+        // Hour ticks span radius [50, 60] px, with a 3 px round cap extending inward to 48.5 px.
+        //
+        // Sample distances are chosen to:
+        // 1) Lie within the target hand's length (15 < 30, 40 < 45, 46.5 < 51).
+        // 2) Isolate longer hands from shorter ones when divergent (40 > 30, 46.5 > 45).
+        // 3) Sample the second hand clear of the inward round cap of the 12 o'clock tick mark (< 48.5 px).
         const val HOUR_SAMPLE_DISTANCE = 15f
         const val MINUTE_SAMPLE_DISTANCE = 40f
-        const val SECOND_SAMPLE_DISTANCE = 48f
+        const val SECOND_SAMPLE_DISTANCE = 46.5f
+        const val HOUR_OVERDRAW_DISTANCE = 35f
         const val SEARCH_RADIUS = 1
         const val CORNER = 1
     }
