@@ -127,3 +127,23 @@ extraction.
 Unresolved limitations: neither device-tested build had an observed failure. Reboot and
 surface-recreation behavior is documented above but was not re-run for `feat/19-rendered-clock`; only
 the `2026-09-28` rows cover those transitions. Always On Display is out of scope per #2.
+
+## Location slice (#3)
+
+Test build: local debug `app-debug.apk` from `feat/3-current-location` at cf30cf5 (APK SHA-256
+7299ef24f4758ea53409650e8b1551319e3801f5654c71b1fdd1540a4e236647).
+
+Android version: 16 (API 36)
+Firmware build: withheld (embeds the model identifier)
+
+| Date | Check | Observed |
+| --- | --- | --- |
+| 2026-09-28 | manual coordinates + relaunch | Saved `45.5, -120.25` as MANUAL; persisted through force-stop and relaunch |
+| 2026-09-28 | use current location (grant) | Approximate-location prompt; stored a real network fix as CURRENT_COARSE; no failure logs |
+| 2026-09-28 | refresh | Re-fetched cleanly; current value retained |
+| 2026-09-28 | deny permission | Permission-denied toast; prior selection preserved |
+| 2026-09-28 | location off → refresh | "Could not get the current location" toast; logged "network location provider disabled"; prior selection preserved |
+| 2026-09-28 | corrupt stored prefs | Discarded invalid values; no crash; fell back to "No observing location set." |
+
+Unresolved limitations: the current-location display shows raw double precision (cosmetic, noted for a
+follow-up). The offline city chooser half of #3 is a separate follow-up issue.
