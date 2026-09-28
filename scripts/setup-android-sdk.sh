@@ -3,14 +3,15 @@
 set -euo pipefail
 : "${ANDROID_HOME:?Set ANDROID_HOME to your user-local Android SDK directory}"
 # `sdk install` package names resolve to "latest", so assert the exact revisions
-# recorded in docs/development.md and fail loudly instead of silently drifting.
+# pinned in this script and recorded in docs/development.md, and fail loudly
+# instead of silently drifting.
 assert_sdk_revision() {
   local props="$1" expected="$2" actual
   [[ -f "$props" ]] || { echo "Missing SDK component: $props" >&2; exit 1; }
   actual=$(sed -n 's/^Pkg\.Revision=//p' "$props" | tail -n 1)
   if [[ "$actual" != "$expected" ]]; then
     echo "Pinned SDK revision mismatch: $props has Pkg.Revision=${actual:-<missing>}, expected $expected." >&2
-    echo "Update the recorded revision in docs/development.md, then re-run." >&2
+    echo "Update the expected revision in this script and the recorded revision in docs/development.md together, then re-run." >&2
     exit 1
   fi
 }
