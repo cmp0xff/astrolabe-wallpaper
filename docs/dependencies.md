@@ -16,7 +16,7 @@ is bundled in this bootstrap. Astronomy Engine integration and its notices belon
 | JUnit 4.13.2 | [JUnit 4](https://github.com/junit-team/junit4/tree/r4.13.2) | EPL-1.0; tests only |
 | Robolectric 4.17 | [Robolectric](https://github.com/robolectric/robolectric/tree/robolectric-4.17) | MIT; tests only |
 | Hamcrest (JUnit transitive dependency) | [Hamcrest](https://github.com/hamcrest/JavaHamcrest) | BSD-3-Clause; tests only |
-| Eclipse Temurin 21.0.12.1+1 | [Adoptium](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1) | GPL-2.0 with Classpath Exception; build/test JDK only |
+| Eclipse Temurin 21.0.12.1+1 | [Adoptium](https://github.com/adoptium/temurin21-binaries/releases/tag/jdk-21.0.12.1%2B1); macOS via the [`temurin@21` Homebrew cask](https://formulae.brew.sh/cask/temurin%4021) | GPL-2.0 with Classpath Exception; build/test JDK only |
 
 Resolved dependency graphs can be inspected with `./gradlew :app:dependencies` and
 `./gradlew :app:dependencyInsight --configuration debugRuntimeClasspath --dependency kotlin-stdlib`.
