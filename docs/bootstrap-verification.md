@@ -34,7 +34,7 @@ rerunning the complete gate. No probe or baseline is part of the application.
 | Missing spaces around `=` in a Kotlin source file | Root `detekt` | `SpacingAroundOperators` |
 | Missing spaces around `=` in a Gradle script | Root `detekt` | `SpacingAroundOperators` |
 | Hardcoded button text in an Android layout | `:app:lintDebug` | `HardcodedText`, warning promoted to error |
-| Remove `inner` from `StaticEngine` | `:app:compileDebugKotlin` | `INACCESSIBLE_OUTER_CLASS_RECEIVER`, substantiating the detekt exception |
+| Remove `inner` from `ClockEngine` | `:app:compileDebugKotlin` | `INACCESSIBLE_OUTER_CLASS_RECEIVER`, substantiating the detekt exception |
 
 During initial configuration, deprecated AGP Lint report properties also failed Gradle
 Kotlin DSL compilation with warnings-as-errors. The deprecated configuration was removed;
