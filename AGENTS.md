@@ -84,7 +84,11 @@ Follow [.github/pull_request_template.md](.github/pull_request_template.md):
   each commit with a brief what/why, links to discussion comments containing
   review decisions, and a short caveats note. It indexes evidence; full rationale
   belongs in commit bodies and discussion threads.
-- Update the index after each push and review round. Link evidence without
+- Update the index on every push and review round, in the same pass as the
+  commit or reply: add one row for every commit pushed (the table must not stop
+  at the opening commits), and replace the "Review decisions" line with links to
+  every resolved discussion thread. A table stuck at the opening commits or a
+  stale "none yet" line is itself a review finding. Link evidence without
   copying extensive rationale. This project explicitly requires this per-commit
   index, overriding the global default against one.
 - Finish with the same visible `Co-Authored-By` identity used for the source work.
