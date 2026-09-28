@@ -2,20 +2,25 @@ package io.github.cmp0xff.astrolabewallpaper
 
 import java.time.LocalTime
 
-/** Clock-hand angles in degrees, measured clockwise from 12 o'clock. */
+/**
+ * Clock-hand angles in degrees, measured clockwise from 12 o'clock (screen up).
+ *
+ * Every angle must be finite and within `0..360` inclusive; `360` and `0` denote the same
+ * orientation, though value equality still treats them as distinct. [clockState] is the intended
+ * producer and guarantees that the three angles describe one wall-clock reading; that cross-field
+ * consistency is a [clockState] postcondition, not something this constructor can check.
+ */
 internal data class ClockState(val hourAngle: Float, val minuteAngle: Float, val secondAngle: Float) {
     init {
-        require(hourAngle in 0f..DEGREES_PER_REVOLUTION && hourAngle.isFinite()) { "Invalid hourAngle: $hourAngle" }
-        require(
-            minuteAngle in 0f..DEGREES_PER_REVOLUTION && minuteAngle.isFinite(),
-        ) { "Invalid minuteAngle: $minuteAngle" }
-        require(
-            secondAngle in 0f..DEGREES_PER_REVOLUTION && secondAngle.isFinite(),
-        ) { "Invalid secondAngle: $secondAngle" }
+        // ClosedFloatingPointRange containment already returns false for NaN and both infinities, so
+        // the range check alone enforces finiteness.
+        require(hourAngle in 0f..DEGREES_PER_REVOLUTION) { "Invalid hourAngle: $hourAngle" }
+        require(minuteAngle in 0f..DEGREES_PER_REVOLUTION) { "Invalid minuteAngle: $minuteAngle" }
+        require(secondAngle in 0f..DEGREES_PER_REVOLUTION) { "Invalid secondAngle: $secondAngle" }
     }
 }
 
-/** Derives the three hand angles for a wall-clock time. */
+/** Derives the three hand angles for a wall-clock time; sub-second nanoseconds are dropped. */
 internal fun clockState(time: LocalTime): ClockState {
     val secondOfDay = time.hour * SECONDS_PER_HOUR + time.minute * SECONDS_PER_MINUTE + time.second
     val secondOfHalfDay = secondOfDay % SECONDS_PER_HALF_DAY

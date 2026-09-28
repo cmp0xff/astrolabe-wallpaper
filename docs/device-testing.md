@@ -50,6 +50,7 @@ be checked against the expected handler.
 | Lock / unlock (lit lock screen) | `onVisibilityChanged(false)` / `(true)` across the surface switch |
 | Screen off | `onVisibilityChanged(false)` cancels the pending tick |
 | Screen on | `onVisibilityChanged(true)` redraws and reschedules from wall time |
+| Surface recreation (no visibility change) | `onSurfaceDestroyed` cancels the pending tick; `onSurfaceChanged` redraws and reschedules while visible |
 | Reboot | Process and engine recreated; clock resumes from the device wall time |
 
 ## Observed results
@@ -58,13 +59,19 @@ Test build: local debug `app-debug.apk` from `feat/2-device-feasibility` (SHA-25
 881cb234654bd4967e3c9ca4c9a84003723ec8ac94f5ce2c80f2d133d58b5eef; logging-only change,
 rendering unchanged).
 
-Rendering was later extracted into `DialRenderer` with no visual output change, and is verified by
-the `DialRendererTest` host pixel test; the updated debug APK SHA-256 is
-c103410e9135bf0ade955cebe0f0b2a1ab04f5a1844c4bb4c4df6f3af9dac449 (rendering unchanged; host
-pixel-tested; physical-device verification unrun for this build).
+Rendering was later extracted into `DialRenderer` on `feat/19-rendered-clock` with no intended
+visual change. The `DialRendererTest` host pixel test exercises hand angle and position at five
+times, the hour and minute tick bands, a non-square canvas, the palette, and renderer reuse on a
+200x200 bitmap at SDK 26 and 36. That test is a host check only: it does not verify a physical device, and the debug
+APK SHA-256 recorded for the pre-review build
+(c103410e9135bf0ade955cebe0f0b2a1ab04f5a1844c4bb4c4df6f3af9dac449) predates the review fixes and no
+longer identifies the current revision. Physical-device verification for this revision is unrun.
 
 Android version: 16 (API 36)
 Firmware build: withheld (embeds the model identifier)
+
+The observations below are from the `feat/2-device-feasibility` build; the later `DialRenderer`
+extraction has not been device-tested.
 
 | Date | Surface | Transition | Observed |
 | --- | --- | --- | --- |
@@ -77,4 +84,6 @@ Firmware build: withheld (embeds the model identifier)
 | 2026-09-28 | lit lock | screen off/on | Clock advanced |
 | 2026-09-28 | home + lit lock | reboot | Clock recovered; wallpaper persisted and service restarted |
 
-Unresolved limitations: none. Always On Display is out of scope per #2.
+Unresolved limitations: device verification of the `feat/19-rendered-clock` revision is unrun; the
+last device-tested build (`feat/2-device-feasibility`) had no observed failures. Always On Display is
+out of scope per #2.

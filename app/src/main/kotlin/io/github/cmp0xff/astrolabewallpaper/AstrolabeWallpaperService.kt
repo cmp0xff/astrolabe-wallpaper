@@ -1,5 +1,6 @@
 package io.github.cmp0xff.astrolabewallpaper
 
+import android.graphics.Canvas
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
@@ -17,44 +18,59 @@ class AstrolabeWallpaperService : WallpaperService() {
         private val dialRenderer = DialRenderer()
         private val handler = Handler(Looper.getMainLooper())
 
+        // Mirrors the visibility the framework reports through onVisibilityChanged; kept here so
+        // onSurfaceChanged can decide whether to resume ticking without a framework-only getter.
+        private var isEngineVisible = false
+
         override fun onVisibilityChanged(visible: Boolean) {
+            isEngineVisible = visible
             if (visible) {
-                drawFrame()
-                scheduleNextTick()
+                startTicking()
             } else {
-                handler.removeCallbacksAndMessages(null)
+                stopTicking()
             }
         }
 
         override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
             super.onSurfaceChanged(holder, format, width, height)
-            // Redraw immediately for the new surface; onSurfaceChanged never schedules ticks — the
-            // per-second loop is (re)started only by onVisibilityChanged(true).
-            if (isVisible) {
-                drawFrame()
+            // Redraw for the new surface and restart the tick. The framework can destroy and
+            // recreate the surface without a visibility change, and onSurfaceDestroyed cancels the
+            // loop, so this is the only place that can resume it in that case.
+            if (isEngineVisible) {
+                startTicking()
             }
         }
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
-            handler.removeCallbacksAndMessages(null)
+            stopTicking()
             super.onSurfaceDestroyed(holder)
         }
 
         override fun onDestroy() {
-            handler.removeCallbacksAndMessages(null)
+            stopTicking()
             super.onDestroy()
         }
 
-        // Post a tick that draws once and re-schedules for the next whole second; the handler is dedicated to ticks.
+        // Draw one frame and post the next tick. Safe to call repeatedly: scheduleNextTick clears any
+        // pending callback first, so the loop is never double-scheduled.
+        private fun startTicking() {
+            drawFrame()
+            scheduleNextTick()
+        }
+
+        // The handler is dedicated to ticks, so cancelling all messages stops the loop.
+        private fun stopTicking() {
+            handler.removeCallbacksAndMessages(null)
+        }
+
+        // Failure containment lives in drawFrame, which logs the reason and returns; it does not
+        // rethrow, so there is nothing here for a try/finally to keep alive.
         private fun scheduleNextTick() {
             handler.removeCallbacksAndMessages(null)
             handler.postDelayed(
                 Runnable {
-                    try {
-                        drawFrame()
-                    } finally {
-                        scheduleNextTick()
-                    }
+                    drawFrame()
+                    scheduleNextTick()
                 },
                 millisUntilNextWholeSecond(),
             )
@@ -69,30 +85,44 @@ class AstrolabeWallpaperService : WallpaperService() {
             val holder = surfaceHolder
             val surface = holder.surface
             if (surface == null || !surface.isValid) {
+                // Expected while the engine is alive but the surface is gone; debug level avoids
+                // spamming logcat once per tick for a long-lived invalid surface.
                 Log.d(TAG, "skipping frame: surface not ready")
                 return
             }
-            val canvas =
-                try {
-                    holder.lockCanvas()
-                } catch (e: IllegalArgumentException) {
-                    Log.w(TAG, "skipping frame: lockCanvas failed", e)
-                    null
-                }
-            if (canvas == null) {
-                Log.w(TAG, "skipping frame: lockCanvas returned null")
-                return
-            }
+            val canvas = lockCanvasOrNull(holder) ?: return
             try {
-                dialRenderer.renderDial(canvas, clockState(LocalTime.now()))
+                containRenderFailure { dialRenderer.renderDial(canvas, clockState(LocalTime.now())) }
             } finally {
-                try {
-                    holder.unlockCanvasAndPost(canvas)
-                } catch (e: IllegalArgumentException) {
-                    Log.w(TAG, "unlockCanvasAndPost failed: surface already released", e)
-                } catch (e: IllegalStateException) {
-                    Log.w(TAG, "unlockCanvasAndPost failed: invalid surface state", e)
+                unlockCanvasAndPost(holder, canvas)
+            }
+        }
+
+        // Locks the canvas, logging the reason exactly once when no canvas is available: either the
+        // exception that stopped the lock, or a genuine null return.
+        private fun lockCanvasOrNull(holder: SurfaceHolder): Canvas? {
+            try {
+                val canvas = holder.lockCanvas()
+                if (canvas == null) {
+                    Log.w(TAG, "skipping frame: lockCanvas returned null")
                 }
+                return canvas
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "skipping frame: lockCanvas failed (surface released)", e)
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "skipping frame: lockCanvas failed (invalid surface state)", e)
+            }
+            return null
+        }
+
+        // Posts the canvas back, logging either failure mode rather than propagating it.
+        private fun unlockCanvasAndPost(holder: SurfaceHolder, canvas: Canvas) {
+            try {
+                holder.unlockCanvasAndPost(canvas)
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "unlockCanvasAndPost failed: surface already released", e)
+            } catch (e: IllegalStateException) {
+                Log.e(TAG, "unlockCanvasAndPost failed: invalid surface state", e)
             }
         }
     }
