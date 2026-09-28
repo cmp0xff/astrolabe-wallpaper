@@ -5,6 +5,7 @@ import android.app.WallpaperInfo
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Looper
 import android.service.wallpaper.WallpaperService
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -15,7 +16,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import java.time.Duration
 
 /** Verifies Android discovery, binding protection, metadata, and service teardown. */
 @RunWith(RobolectricTestRunner::class)
@@ -59,5 +62,29 @@ class AstrolabeWallpaperServiceTest {
         first.onDestroy()
         second.onVisibilityChanged(false)
         second.onDestroy()
+    }
+
+    @Test
+    fun visibleSchedulesHiddenCancels() {
+        val engine = controller.get().onCreateEngine()
+        val looper = shadowOf(Looper.getMainLooper())
+
+        engine.onVisibilityChanged(true)
+        assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
+
+        engine.onVisibilityChanged(false)
+        assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
+    }
+
+    @Test
+    fun destroyCancelsScheduledRedraw() {
+        val engine = controller.get().onCreateEngine()
+        val looper = shadowOf(Looper.getMainLooper())
+
+        engine.onVisibilityChanged(true)
+        assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
+
+        engine.onDestroy()
+        assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
     }
 }
