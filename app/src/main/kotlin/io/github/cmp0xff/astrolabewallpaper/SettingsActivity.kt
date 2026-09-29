@@ -13,6 +13,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.text.ParsePosition
 
@@ -29,6 +30,9 @@ class SettingsActivity : Activity() {
         super.onCreate(savedInstanceState)
         isForceFreshPending = savedInstanceState?.getBoolean(STATE_FORCE_FRESH_PENDING) == true
         setContentView(R.layout.activity_settings)
+        // The layout's inputType filter drops the locale decimal separator; see CoordinateKeyListener.
+        latitudeInput.keyListener = CoordinateKeyListener(latitudeInput.textLocale)
+        longitudeInput.keyListener = CoordinateKeyListener(longitudeInput.textLocale)
         findViewById<Button>(R.id.open_preview).setOnClickListener { openWallpaperPreview() }
         findViewById<Button>(
             R.id.use_current_location,
@@ -115,15 +119,20 @@ class SettingsActivity : Activity() {
 
     private fun parseCoordinate(input: EditText): Double? {
         val text = input.text.toString().trim()
-        val format = NumberFormat.getNumberInstance(input.textLocale)
+        val locale = input.textLocale
+        val decimal = DecimalFormatSymbols.getInstance(locale).decimalSeparator
+        // Coordinates are written with '.' in every locale; accept it as an alias for the locale
+        // separator so a German comma-decimal keyboard and a coordinate-style dot both parse.
+        val normalized = text.replace(oldChar = '.', newChar = decimal)
+        val format = NumberFormat.getNumberInstance(locale)
         format.isGroupingUsed = false
         // DecimalFormat omits the positive sign by default, but the signed input field accepts it.
-        if (format is DecimalFormat && text.startsWith("+")) {
+        if (format is DecimalFormat && normalized.startsWith("+")) {
             format.positivePrefix = "+"
         }
         val position = ParsePosition(0)
-        val number = format.parse(text, position)
-        return if (position.index == text.length) number?.toDouble() else null
+        val number = format.parse(normalized, position)
+        return if (position.index == normalized.length) number?.toDouble() else null
     }
 
     private fun displayLocation(location: ObservingLocation?) {

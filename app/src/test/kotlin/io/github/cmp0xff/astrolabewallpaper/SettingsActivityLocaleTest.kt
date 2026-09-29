@@ -75,9 +75,38 @@ class SettingsActivityLocaleTest {
     }
 
     @Test
-    fun groupingSeparatorIsRejected() {
-        // Grouping-enabled parsing would produce 85, which passes latitude validation.
-        assertRejectedLatitude("8.5")
+    fun dotCoordinatesArePersisted() {
+        // '.' is the canonical coordinate separator and an alias for the German comma.
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            enterCoordinates(activity, latitude = "8.5", longitude = "-120.25")
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            assertEquals(
+                ObservingLocation(latitude = 8.5, longitude = -120.25, source = ObservingLocation.Source.MANUAL),
+                LocationStore(activity).load(),
+            )
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "ar-rEG")
+    fun arabicDotCoordinatesPersist() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            enterCoordinates(
+                activity = activity,
+                latitude = "45.5",
+                longitude = "120.5",
+                expectedLocale = Locale.forLanguageTag("ar-EG"),
+            )
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            assertEquals(
+                ObservingLocation(latitude = 45.5, longitude = 120.5, source = ObservingLocation.Source.MANUAL),
+                LocationStore(activity).load(),
+            )
+        }
     }
 
     @Test
