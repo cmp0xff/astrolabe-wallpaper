@@ -60,13 +60,28 @@ Test build: local debug `app-debug.apk` from `feat/2-device-feasibility` (SHA-25
 rendering unchanged).
 
 Rendering was later extracted into `DialRenderer` on `feat/19-rendered-clock` with no intended
-visual change. The `DialRendererTest` host pixel test exercises hand angle and position at five
-times, the hour and minute tick bands, a non-square canvas, the palette, and renderer reuse on a
-200x200 bitmap at SDK 26 and 36, and `AstrolabeWallpaperServiceTest` covers resuming the tick after
-a surface is destroyed and recreated. Those tests are host checks only: they do not verify a physical
-device. The current revision's local debug APK SHA-256 is
-25e0273350d9081d905ea6a2236bcd16d09a2a3d4c294fa934056862c12cb1e3 (host build; physical-device
-verification unrun).
+visual change. The reviewed renderer preserves the original `#D8B66A` dial colour. Host verification
+on 2026-09-29 uses `DialRendererTest` on SDK 26 and 36: four cardinal-time checks anchor orientation,
+and all three hands are independently checked at 12:20:43, 04:42:03, and 08:03:23. Literal expected
+angles, isolated 3x3 presence windows, and single-pixel overdraw probes account for pixel rounding
+and antialiasing; the test documents the distances from other hands and ticks. It also checks the
+tick bands, non-square canvas, palette, and renderer reuse on a 200x200 bitmap.
+
+Regression checks first confirmed that the original-colour assertion rejects `#D8B26A`. Temporarily
+setting each hand's length to zero, rotating it by 90 degrees, or doubling its length (one change at
+a time) failed all three dispersed-time checks on both SDKs for every hand. All nine mutations were
+restored before final verification.
+
+`AstrolabeWallpaperServiceTest` covers resuming ticks after surface recreation. `WallpaperFrameTest`
+injects null/throwing acquisition, drawing failures, and posting failures through the engine's real
+frame operation. It verifies exception logging, one posting attempt for each acquired canvas, and a
+subsequent successful scheduled frame. Unrelated drawing exceptions still propagate after posting.
+These are host checks only; they do not verify a physical wallpaper surface.
+
+`./gradlew qualityGate :app:assembleDebug` passed with 78 tests per build variant (SDK 26/36 combined),
+including strict detekt and Android Lint. `scripts/verify-apk.sh` verified the local debug APK, SHA-256
+1c9d025ca9e37731fc744fdffd2d98148adb434802371bb4d153e1ea0c4a314e. Physical-device verification of
+this revision remains unrun.
 
 Android version: 16 (API 36)
 Firmware build: withheld (embeds the model identifier)

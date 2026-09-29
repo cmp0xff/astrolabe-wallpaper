@@ -20,11 +20,11 @@ import kotlin.math.sin
 /**
  * Renders the dial to a bitmap and checks that the hands land where they should.
  *
- * Probe radii are chosen so each assertion can only be satisfied by the feature under test: at
- * [dispersedTime] the three hands are more than 100 degrees apart, presence probes sit inside the
- * target hand but beyond the next shorter hand, and overdraw probes sit past the target tip but
- * before the first tick that crosses the probe ray (radius 50 for the 12 hour ticks, 55 for the
- * other 48).
+ * Cardinal times anchor the screen orientation; dispersed times isolate each hand. At each
+ * dispersed time the three hands are more than 100 degrees apart. Presence probes sit inside
+ * the target hand, and overdraw probes sit past its tip. The second-hand probes use minute-tick
+ * rays, safely separated from the longer hour ticks. Pixel rounding and antialiasing tolerances
+ * are documented alongside the probe distances below.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
@@ -32,7 +32,7 @@ import kotlin.math.sin
 class DialRendererTest {
     private val renderer = DialRenderer()
 
-    // 12:20:43 -> hour 1243/120 = 10.358 deg, minute 1243/10 = 124.3 deg, second 43 * 6 = 258 deg.
+    // Also used by palette, tick-spacing, and renderer-reuse checks.
     private val dispersedTime = LocalTime.of(12, 20, 43)
 
     @Test
@@ -82,24 +82,32 @@ class DialRendererTest {
     }
 
     @Test
-    fun dispersedHandsAreIsolated() {
-        val bitmap = render(dispersedTime)
-        // Hour hand: present uniquely at 20 px, absent past its 32.5 px cap-extended tip.
-        assertDialPixel(bitmap = bitmap, angleDegrees = DISPERSED_HOUR_ANGLE, distance = HOUR_ONLY_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = DISPERSED_HOUR_ANGLE, distance = HOUR_OVERDRAW_DISTANCE)
-        // Minute hand: uniquely present at 40 px (past the hour hand), absent past its 46.5 px tip.
-        assertDialPixel(bitmap = bitmap, angleDegrees = DISPERSED_MINUTE_ANGLE, distance = MINUTE_ONLY_DISTANCE)
-        assertBackgroundPixel(
-            bitmap = bitmap,
-            angleDegrees = DISPERSED_MINUTE_ANGLE,
-            distance = MINUTE_OVERDRAW_DISTANCE,
+    fun handsAt122043AreIsolated() {
+        assertDispersedHands(
+            time = dispersedTime,
+            hourAngle = 10.3583f,
+            minuteAngle = 124.3f,
+            secondAngle = 258f,
         )
-        // Second hand: only hand that reaches 49 px, absent before its ray's first tick at 55 px.
-        assertDialPixel(bitmap = bitmap, angleDegrees = DISPERSED_SECOND_ANGLE, distance = SECOND_ONLY_DISTANCE)
-        assertBackgroundPixel(
-            bitmap = bitmap,
-            angleDegrees = DISPERSED_SECOND_ANGLE,
-            distance = SECOND_OVERDRAW_DISTANCE,
+    }
+
+    @Test
+    fun handsAt044203AreIsolated() {
+        assertDispersedHands(
+            time = LocalTime.of(4, 42, 3),
+            hourAngle = 141.025f,
+            minuteAngle = 252.3f,
+            secondAngle = 18f,
+        )
+    }
+
+    @Test
+    fun handsAt080323AreIsolated() {
+        assertDispersedHands(
+            time = LocalTime.of(8, 3, 23),
+            hourAngle = 241.6917f,
+            minuteAngle = 20.3f,
+            secondAngle = 138f,
         )
     }
 
@@ -124,7 +132,7 @@ class DialRendererTest {
             "no exact dial colour near the hour hand at 12:20:43",
             containsExactColour(
                 bitmap = bitmap,
-                angleDegrees = DISPERSED_HOUR_ANGLE,
+                angleDegrees = 10.3583f,
                 distance = HOUR_ONLY_DISTANCE,
                 colour = EXPECTED_DIAL_COLOR,
             ),
@@ -178,7 +186,7 @@ class DialRendererTest {
 
     @Test
     fun degenerateAndSmallDials() {
-        // A 0x0 canvas is skipped without touching the bitmap.
+        // An empty canvas is skipped.
         renderer.renderDial(Canvas(), clockState(LocalTime.of(12, 0, 0)))
 
         val belowMinimum = Bitmap.createBitmap(BELOW_MIN_DIAL_SIZE, BELOW_MIN_DIAL_SIZE, Bitmap.Config.ARGB_8888)
@@ -216,6 +224,18 @@ class DialRendererTest {
         assertThrows(UnsupportedOperationException::class.java) {
             containRenderFailure { throw UnsupportedOperationException("not contained") }
         }
+    }
+
+    private fun assertDispersedHands(time: LocalTime, hourAngle: Float, minuteAngle: Float, secondAngle: Float) {
+        val bitmap = render(time)
+        // Every hand has its own presence and overdraw check; a missing or wrongly placed hand
+        // cannot borrow pixels from another hand as it can when all three overlap at noon.
+        assertDialPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_ONLY_DISTANCE)
+        assertBackgroundPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_OVERDRAW_DISTANCE)
+        assertDialPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_ONLY_DISTANCE)
+        assertBackgroundPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_OVERDRAW_DISTANCE)
+        assertDialPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_ONLY_DISTANCE)
+        assertBackgroundPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_OVERDRAW_DISTANCE)
     }
 
     private fun render(time: LocalTime): Bitmap = renderWith(renderer = renderer, time = time)
@@ -256,7 +276,7 @@ class DialRendererTest {
         assertEquals(
             "expected background at ($x, $y) for angle $angleDegrees at distance $distance",
             DialRenderer.BACKGROUND_COLOR,
-            pixelOrBackground(bitmap = bitmap, x = x, y = y),
+            bitmap.getPixel(x, y),
         )
     }
 
@@ -276,7 +296,7 @@ class DialRendererTest {
             assertEquals(
                 "expected background at ($x, $y)",
                 DialRenderer.BACKGROUND_COLOR,
-                pixelOrBackground(bitmap = bitmap, x = x, y = y),
+                bitmap.getPixel(x, y),
             )
         }
     }
@@ -286,7 +306,7 @@ class DialRendererTest {
             for (dy in -SEARCH_RADIUS..SEARCH_RADIUS) {
                 // A dial stroke is the only non-background colour; anti-aliasing blends its edges
                 // toward BACKGROUND_COLOR, so a thin (1 px) hand may have no exact DIAL_COLOR pixel.
-                if (pixelOrBackground(bitmap = bitmap, x = x + dx, y = y + dy) != DialRenderer.BACKGROUND_COLOR) {
+                if (bitmap.getPixel(x + dx, y + dy) != DialRenderer.BACKGROUND_COLOR) {
                     return true
                 }
             }
@@ -298,7 +318,7 @@ class DialRendererTest {
         val (x, y) = samplePoint(angleDegrees = angleDegrees, distance = distance)
         for (dx in -PALETTE_WINDOW..PALETTE_WINDOW) {
             for (dy in -PALETTE_WINDOW..PALETTE_WINDOW) {
-                if (pixelOrBackground(bitmap = bitmap, x = x + dx, y = y + dy) == colour) {
+                if (bitmap.getPixel(x + dx, y + dy) == colour) {
                     return true
                 }
             }
@@ -306,15 +326,8 @@ class DialRendererTest {
         return false
     }
 
-    // Bitmap.getPixel throws for out-of-bounds coordinates; clamping keeps a future probe change a
-    // test failure rather than a crash.
-    private fun pixelOrBackground(bitmap: Bitmap, x: Int, y: Int): Int {
-        val clampedX = x.coerceIn(minimumValue = 0, maximumValue = bitmap.width - 1)
-        val clampedY = y.coerceIn(minimumValue = 0, maximumValue = bitmap.height - 1)
-        return bitmap.getPixel(clampedX, clampedY)
-    }
-
-    // Mirrors drawRadiusLine: a hand at angleDegrees passes through this pixel at the given distance.
+    // Project the literal expected angles into screen coordinates: clockwise from up. The cardinal
+    // tests anchor this convention. Out-of-bounds probes fail rather than sampling a clamped edge.
     private fun samplePoint(
         angleDegrees: Float,
         distance: Float,
@@ -335,17 +348,18 @@ class DialRendererTest {
         // A 200 px bitmap gives a 60 px dial radius. Hand lengths: hour 30 px (cap-extended 32.5),
         // minute 45 px (46.5), second 51 px (51.5). Hour ticks span radii [50, 60] with a 3 px round
         // cap reaching inward to 48.5; minute ticks span [55, 60] with a 1 px cap reaching to 54.5.
-        // Hand probes stay below 48.5 px, and the 49/53 px probes sit on rays that only carry a
-        // minute tick (innermost point 54.5 px).
+        // Presence probes accept any antialiased stroke pixel in a 3x3 window: rounding can move
+        // the expected location by 0.5 px per axis, and a 1 px stroke may have no exact dial colour.
+        // Hour/minute windows remain inside radius 43, well before any tick. Second-hand windows
+        // reach at most radius 52, before the minute tick's 54.5 px inner cap. Their 18/138/258 degree
+        // rays are at least 12 degrees from an hour tick, leaving a gap even after the probe window
+        // and tick width are included. Other hands are over 100 degrees away at every dispersed time.
+        // Overdraw probes use one exact background pixel beyond the cap and its antialiased edge.
         const val HOUR_SAMPLE_DISTANCE = 15f
         const val MINUTE_SAMPLE_DISTANCE = 40f
         const val SECOND_SAMPLE_DISTANCE = 47f
         const val HOUR_OVERDRAW_DISTANCE = 35f
 
-        // 12:20:43 separates the hands by more than 100 degrees so each probe is unambiguous.
-        const val DISPERSED_HOUR_ANGLE = 10.358f
-        const val DISPERSED_MINUTE_ANGLE = 124.3f
-        const val DISPERSED_SECOND_ANGLE = 258f
         const val HOUR_ONLY_DISTANCE = 20f
         const val MINUTE_ONLY_DISTANCE = 40f
         const val MINUTE_OVERDRAW_DISTANCE = 49f
@@ -368,7 +382,7 @@ class DialRendererTest {
         const val SEARCH_RADIUS = 1
         const val PALETTE_WINDOW = 2
         const val EXPECTED_BACKGROUND_COLOR = 0xFF111923.toInt()
-        const val EXPECTED_DIAL_COLOR = 0xFFD8B26A.toInt()
+        const val EXPECTED_DIAL_COLOR = 0xFFD8B66A.toInt()
         const val DIAL_RENDERER_TAG = "DialRenderer"
     }
 }

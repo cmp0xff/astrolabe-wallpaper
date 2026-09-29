@@ -118,7 +118,7 @@ internal class DialRenderer {
         internal const val BACKGROUND_COLOR: Int = 0xFF111923.toInt()
 
         /** Dial stroke colour; exposed so the pixel test can pin the palette. */
-        internal const val DIAL_COLOR: Int = 0xFFD8B26A.toInt()
+        internal const val DIAL_COLOR: Int = 0xFFD8B66A.toInt()
 
         private const val CENTER_DIVISOR = 2f
         private const val RADIUS_FRACTION = 0.3f
@@ -144,9 +144,8 @@ internal class DialRenderer {
 }
 
 /**
- * Runs one dial draw, containing the exceptions the draw path can raise so a single bad frame cannot
- * kill the per-second tick. The exception is logged with its stack trace, so the failure stays
- * diagnosable instead of being lost.
+ * Runs one dial draw, containing argument and state exceptions so these failures preserve the
+ * per-second tick. Each contained exception is logged with its stack trace; other exceptions propagate.
  */
 internal fun containRenderFailure(draw: () -> Unit) {
     try {
