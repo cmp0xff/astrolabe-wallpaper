@@ -74,10 +74,12 @@ internal data class PlanetState(val planet: Planet, val position: Horizontal, va
  * One catalog star at one instant.
  *
  * [name] is the IAU proper name and [constellation] the IAU three-letter abbreviation of the
- * constellation holding the star. [magnitude] is the catalog V magnitude, which is constant:
- * these are fixed stars, and their variability and their distance are both below the accuracy
- * this app needs. Positions are reduced from the catalog epoch and include the star's proper
- * motion; see [StarCatalog].
+ * constellation holding the star. [magnitude] is the catalog V magnitude, carried unchanged:
+ * these are fixed stars, so neither their variability nor their distance is modelled. Both are
+ * deliberate omissions rather than claims that the effects are negligible — Betelgeuse and
+ * Antares vary by more than the magnitude tolerance below — and a dial that colours by
+ * brightness is drawn from the catalogue value, not from a live estimate. Positions are reduced
+ * from the catalog epoch and include the star's proper motion; see [StarCatalog].
  */
 internal data class StarState(
     val name: String,
@@ -136,13 +138,24 @@ internal data class Sky(
 /**
  * The instant of [kind], or `null` when [kind] does not occur in the search window.
  *
+ * Returning `null` means the sky says the event does not happen; it never means the lookup
+ * failed. A [Sky] that does not carry exactly one row per [EventKind] is therefore **not**
+ * answered with `null`: it throws `NoSuchElementException` when the kind is absent and
+ * `IllegalArgumentException` when it is present twice. [Sky] documents that invariant but does
+ * not enforce it, and [AstronomyCalculator.sky] is the only producer that guarantees it. A
+ * caller holding a `Sky` from anywhere else has to establish it, or let the lookup throw.
+ *
  * An extension rather than a member so that [Sky] stays a plain record of what a calculation
  * returned.
  */
 internal fun Sky.eventTime(kind: EventKind): Instant? = events.single { it.kind == kind }.time
 
-private const val FULL_TURN_DEGREES = 360.0
-private const val RIGHT_ANGLE_DEGREES = 90.0
+/** One full turn, shared by every angle range check in this layer. */
+internal const val FULL_TURN_DEGREES = 360.0
+
+/** A right angle, shared by every angle range check in this layer. */
+internal const val RIGHT_ANGLE_DEGREES = 90.0
+
 private const val CIVIL_TWILIGHT_DEG = -6.0
 private const val NAUTICAL_TWILIGHT_DEG = -12.0
 private const val ASTRONOMICAL_TWILIGHT_DEG = -18.0

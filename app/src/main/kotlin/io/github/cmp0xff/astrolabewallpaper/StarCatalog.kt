@@ -5,21 +5,24 @@ import kotlin.math.cos
 /**
  * One entry of the bundled bright-star catalogue.
  *
- * Coordinates and motions are the Hipparcos main catalogue (ESA 1997) values, expressed in the
- * ICRS, which is aligned with the J2000 mean equator and equinox to well below the accuracy of
- * this app:
+ * Coordinates and motions are the Hipparcos main catalogue (ESA 1997, CDS I/239/hip_main), read
+ * through VizieR. They are expressed in the ICRS, which is aligned with the J2000 mean equator
+ * and equinox to well below the accuracy of this app:
  *
  * - [rightAscensionDeg] and [declinationDeg] are the catalogue place at epoch J2000, with the
  *   catalogue's own proper motion already carried from its 1991.25 observing epoch.
  * - [properMotionRaMasPerYear] is `mu_alpha * cos(delta)`, matching the catalogue's `pmRA`
  *   column; the `cos(delta)` factor is applied when the motion is converted to a change in
  *   right ascension. [properMotionDecMasPerYear] is `mu_delta`.
- * - [magnitude] is the Johnson V magnitude, which this app treats as constant: none of these
- *   stars varies enough to matter at this accuracy.
+ * - [magnitude] is the Johnson V magnitude, the catalogue's `Vmag`, carried unchanged.
+ *   Variability is a deliberate omission, not a claim that these stars are steady: Betelgeuse
+ *   and Antares both swing by more than the app's 0.25 magnitude tolerance. The constructor
+ *   requires it to be strictly below the catalogue cut, so a fainter row fails the first time
+ *   the catalogue is touched rather than quietly joining the dial.
  *
- * Two stars are deliberately absent. The Sun is not a star of this catalogue, and Alpha
- * Centauri B is dropped because it trails A by about four arcseconds — one naked-eye point to
- * an observer, and two labels drawn on top of each other to a dial.
+ * The Sun is absent because it is not an entry of this catalogue at all. Alpha Centauri B (HIP
+ * 71681) is dropped: it trails Rigil Kentaurus by about four arcseconds, which is one naked-eye
+ * point to an observer and two labels drawn on top of each other to a dial.
  */
 internal data class CatalogStar(
     /** IAU proper name, for example `Sirius`. */
@@ -39,33 +42,43 @@ internal data class CatalogStar(
         require(declinationDeg in -RIGHT_ANGLE_DEGREES..RIGHT_ANGLE_DEGREES) {
             "declinationDeg $declinationDeg not in -90..+90"
         }
-        require(magnitude < MAX_CATALOG_MAGNITUDE) { "magnitude $magnitude is not a bright star" }
+        require(magnitude < MAX_CATALOG_MAGNITUDE) {
+            "magnitude $magnitude does not beat the V < $MAX_CATALOG_MAGNITUDE catalogue cut"
+        }
     }
 }
 
 /**
  * J2000 right ascension in degrees after [years] of linear proper motion.
  *
+ * [years] is Julian years since J2000.0, negative for instants before it; see
+ * [AstronomyEngineCalculator] for how the instant is turned into that count.
+ *
  * The motion is linear in `mu_alpha`, so the catalogue's `mu_alpha * cos(delta)` is divided by
  * `cos(delta)` here. Applying the catalogue value directly to right ascension would understate
- * the drift of every star away from the equator — by a factor of two for Alpha Centauri, which
+ * the drift of every star away from the equator — by a factor of two for Rigil Kentaurus, which
  * sits at a declination of -60 degrees.
  */
 internal fun CatalogStar.rightAscensionDegAfter(years: Double): Double =
     rightAscensionDeg + properMotionRaMasPerYear * years / (MAS_PER_DEGREE * cos(Math.toRadians(declinationDeg)))
 
-/** J2000 declination in degrees after [years] of linear proper motion. */
+/**
+ * J2000 declination in degrees after [years] of linear proper motion, with [years] in Julian
+ * years since J2000.0.
+ */
 internal fun CatalogStar.declinationDegAfter(years: Double): Double =
     declinationDeg + properMotionDecMasPerYear * years / MAS_PER_DEGREE
 
 /**
- * The app's bundled bright stars: every Hipparcos main-catalogue entry brighter than V = 1.65,
- * except Alpha Centauri B (see [CatalogStar]).
+ * The app's bundled bright stars: every Hipparcos main-catalogue entry with `Vmag < 1.65`,
+ * except Alpha Centauri B (see [CatalogStar]) — 26 stars from a query result of 27 rows.
  *
- * The cut is a rendering choice, not a completeness claim: 26 stars is enough to orient a dial
+ * The cut at 1.65 is a rendering choice, not a requirement: 26 stars is enough to orient a dial
  * drawn for a screen a few centimetres across, and the list stays small enough to review by
- * eye. Selecting the set and transcribing the values is reproducible from the catalogue query
- * recorded in `docs/dependencies.md`.
+ * eye. That leaves one star sitting exactly on the boundary, Elnath (HIP 25428, `Vmag` 1.65),
+ * which both the query and this file exclude with a strict comparison. Completeness here is a
+ * claim about the recorded query rather than about the sky: `docs/dependencies.md` records it,
+ * and re-running it returns these 26 rows plus HIP 71681.
  */
 internal object StarCatalog {
     val stars: List<CatalogStar> =
@@ -308,6 +321,4 @@ internal object StarCatalog {
 }
 
 private const val MAS_PER_DEGREE = 3_600_000.0
-private const val FULL_TURN_DEGREES = 360.0
-private const val RIGHT_ANGLE_DEGREES = 90.0
 private const val MAX_CATALOG_MAGNITUDE = 1.65

@@ -24,6 +24,28 @@ import java.time.Instant
  * window — polar day, polar night, or a twilight band the Sun never reaches. An event that
  * falls past the end of the window belongs to the next UTC day and is reported by a call with
  * an instant in that day.
+ *
+ * ## Failure contract
+ *
+ * [sky] does not catch anything, does not log, and has no error result: a null is always a
+ * statement about the sky, never a failed calculation. It may throw, and a caller in a render
+ * loop has to decide what to do about that — degrade to a partial frame, or let the frame fail.
+ *
+ * - `ArithmeticException` from `Instant.toEpochMilli` for an instant outside the roughly ±292
+ *   million years a `long` of epoch milliseconds spans. The documented range is 2026; this is
+ *   the boundary of what the signature accepts at all.
+ * - `IllegalArgumentException` from [Horizontal]'s range checks, which reject a non-finite
+ *   azimuth or altitude, and from the engine's `constellation` when a position falls outside
+ *   the catalogue's frame.
+ * - `ExceptionInInitializerError` from [StarCatalog] on first use if any bundled row violates
+ *   its own invariants, followed by `NoClassDefFoundError` on later attempts in the same
+ *   process. A malformed row is a build-time data error, but it surfaces here, on the first
+ *   frame that needs a star.
+ * - `InternalError` from the engine when a search or a boundary lookup cannot converge.
+ *
+ * Logging belongs to the caller, not here: this layer is deliberately free of Android types so
+ * it can be tested on the JVM, and it owns no logger. #5 owns the render loop and therefore
+ * owns recording these failures where a field report can find them.
  */
 internal interface AstronomyCalculator {
     /** The sky at [time] over [location], with the UTC day's solar events. */
