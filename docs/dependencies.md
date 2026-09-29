@@ -2,12 +2,12 @@
 
 All application source and the placeholder Canvas/vector dial are original project work under
 [Apache-2.0](../LICENSE). No city catalog, location library, or external artwork is bundled. The
-astronomy engine arrived with #4 and is recorded below; the bundled star catalogue is recorded
-in the same section.
+astronomy engine and the star catalogue arrived with #4 and are recorded below.
 
 | Input | Source | License / use |
 | --- | --- | --- |
 | Astronomy Engine (Kotlin/JVM) commit `61dc070` | [cosinekitty/astronomy](https://github.com/cosinekitty/astronomy/tree/61dc07020aaa6885d2c7f688a4d82beaf6edb9ef), tag `v2.1.19`, built on demand by [JitPack](https://jitpack.io/#cosinekitty/astronomy) | MIT; runtime, pinned to a full commit SHA |
+| Hipparcos bright-star catalogue (V < 1.65, 26 stars) | [ESA 1997, CDS I/239/hip_main](https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239) via VizieR | Public astronomical data; transcribed into `StarCatalog.kt` |
 | Kotlin standard library 2.4.10 | [JetBrains Kotlin](https://github.com/JetBrains/kotlin/tree/v2.4.10) | Apache-2.0; runtime |
 | JetBrains annotations 13.0 (transitive) | [java-annotations](https://github.com/JetBrains/java-annotations) | Apache-2.0; Kotlin's annotation dependency |
 | Android framework API | [Android Open Source Project](https://source.android.com/) | Device-provided framework; SDK governed by Android SDK terms |
@@ -56,3 +56,30 @@ project's declared `kotlin-stdlib:2.4.10`.
 Vendoring remains the fallback if JitPack or upstream disappears: MIT permits it, and the Kotlin
 source is a single 10,674-line file. Prefer that over switching engines.
 
+## Which Hipparcos stars are bundled, and how to reproduce the list
+
+The bundled catalogue is every Hipparcos main-catalogue entry brighter than V = 1.65, minus Alpha
+Centauri B (four arcseconds from A, so one naked-eye point and two labels on one spot of the dial).
+The magnitudes and catalogue columns in `StarCatalog.kt` come from this query, run 2026-09-29:
+
+```sh
+curl -s -G "https://vizier.cds.unistra.fr/viz-bin/asu-tsv" \
+  --data-urlencode "-source=I/239/hip_main" \
+  --data-urlencode "-out=HIP,RAICRS,DEICRS,_RA.icrs,_DE.icrs,pmRA,pmDE,Vmag" \
+  --data-urlencode "Vmag=<1.65" --data-urlencode "-sort=Vmag"
+```
+
+- `_RA.icrs` and `_DE.icrs` are the J2000 place with proper motion applied; these become
+  `rightAscensionDeg` and `declinationDeg`.
+- `RAICRS` and `DEICRS` are the same stars at the catalogue's own epoch, J1991.25. They are not
+  bundled — they are the test fixture that pins the proper-motion arithmetic; see
+  [astronomy.md](astronomy.md).
+- `pmRA` is `mu_alpha * cos(delta)` and `pmDE` is `mu_delta`, in milliarcseconds per year.
+- Proper names are the IAU-approved names, cross-checked against
+  [SIMBAD](https://simbad.cds.unistra.fr) identifiers.
+
+Nothing about the catalogue is secret or licensed: it is published astronomical data, reproduced
+here as 26 rows of numbers rather than as a bundled file with its own notice. The
+[CDS VizieR terms](https://cds.unistra.fr/vizier-org/licences_vizier.html) are satisfied by
+attribution, which this section and the `StarCatalog.kt` header provide. Re-check them before
+distribution in #7 and #8.
