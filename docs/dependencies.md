@@ -1,11 +1,13 @@
 # Dependency and artwork provenance
 
 All application source and the placeholder Canvas/vector dial are original project work under
-[Apache-2.0](../LICENSE). No astronomy engine, star/city catalog, location library, or external artwork
-is bundled in this bootstrap. Astronomy Engine integration and its notices belong to #4.
+[Apache-2.0](../LICENSE). No city catalog, location library, or external artwork is bundled. The
+astronomy engine arrived with #4 and is recorded below; the bundled star catalogue is recorded
+in the same section.
 
 | Input | Source | License / use |
 | --- | --- | --- |
+| Astronomy Engine (Kotlin/JVM) commit `61dc070` | [cosinekitty/astronomy](https://github.com/cosinekitty/astronomy/tree/61dc07020aaa6885d2c7f688a4d82beaf6edb9ef), tag `v2.1.19`, built on demand by [JitPack](https://jitpack.io/#cosinekitty/astronomy) | MIT; runtime, pinned to a full commit SHA |
 | Kotlin standard library 2.4.10 | [JetBrains Kotlin](https://github.com/JetBrains/kotlin/tree/v2.4.10) | Apache-2.0; runtime |
 | JetBrains annotations 13.0 (transitive) | [java-annotations](https://github.com/JetBrains/java-annotations) | Apache-2.0; Kotlin's annotation dependency |
 | Android framework API | [Android Open Source Project](https://source.android.com/) | Device-provided framework; SDK governed by Android SDK terms |
@@ -42,5 +44,15 @@ version or source revision. Because Astronomy Engine is MIT, its Kotlin source c
 at a pinned revision if JitPack or upstream becomes unavailable — preferred over switching
 engines, since the JVM/Kotlin astronomical-calculation field is otherwise thin.
 
-Recheck this assessment at #4 before integration; if upstream is archived by then, vendor the
-source at its last MIT-licensed revision instead of switching engines.
+Rechecked 2026-09-29 for #4, immediately before integration: still not archived, still MIT, still at
+`v2.1.19` (2023-12-14) with its last commit on `master` on 2025-01-27 and 48 open issues. The
+dormancy is unchanged, so the mitigation stands as written. Upstream is **not** vendored: the
+Kotlin/JVM artifact resolves from JitPack, pinned to commit `61dc07020aaa6885d2c7f688a4d82beaf6edb9ef`,
+which is what tag `v2.1.19` points at. JitPack builds a revision once and caches the result per SHA,
+so the coordinate — not a version range — is the pin. The JitPack build for that SHA is already
+`ok`. Its only transitive dependency is `kotlin-stdlib-jdk8:1.6.10`, which resolves to this
+project's declared `kotlin-stdlib:2.4.10`.
+
+Vendoring remains the fallback if JitPack or upstream disappears: MIT permits it, and the Kotlin
+source is a single 10,674-line file. Prefer that over switching engines.
+
