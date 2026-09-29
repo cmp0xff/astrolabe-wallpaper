@@ -77,7 +77,7 @@ years and requires the result to match the catalogue's own published J1991.25 pl
 The catalogue is the result of the Hipparcos query recorded in
 [dependencies.md](dependencies.md): every main-catalogue entry with `Vmag < 1.65`, which is 27
 rows, less Alpha Centauri B (HIP 71681) — 26 stars. Alpha Centauri B trails Rigil Kentaurus by
-four arcseconds and would draw two labels on one point of the dial. Re-running that query is what
+about fifteen arcseconds and would draw two labels on one point of the dial. Re-running that query is what
 establishes the set; the suite pins the 26 recorded rows and cannot re-derive them offline, so the
 query is recorded rather than only its result. The cut itself is a rendering choice rather than a
 requirement, and it excludes Elnath (HIP 25428), which sits exactly on it.
@@ -89,8 +89,8 @@ Two deliberate simplifications apply to stars only:
 - **No annual parallax.** The Earth's orbit displaces the nearest star by under an arcsecond.
 
 Both are far inside the star tolerance below, and the first is visible in the measured spread: the
-star fixtures disagree with their SOFA reference by up to 0.020 degrees — mostly this aberration —
-against at most 0.004 degrees for the Sun, Moon, and planets, whose path corrects for it.
+star fixtures disagree with their SOFA reference by up to 0.020 degrees, this aberration among the
+causes, against at most 0.005 degrees for the Sun, Moon, and planets, whose path corrects for it.
 
 ## Refraction
 
@@ -145,13 +145,16 @@ midnight UTC.
 ## Failure behaviour
 
 `sky()` catches nothing and logs nothing, and a `null` event time is always a statement about the
-sky rather than a failed calculation. What it *can* throw is listed on `AstronomyCalculator`:
-`ArithmeticException` for an instant outside the range of epoch milliseconds, `IllegalArgumentException`
-from a position that fails a range check, `ExceptionInInitializerError` if a bundled catalogue row
-is malformed, and the engine's `InternalError` when a search cannot converge. Nothing here swallows
-any of them, which is the letter of the project rule; logging them is the caller's job, because
-this layer is deliberately free of Android types and owns no logger. #5 owns the render loop and
-therefore owns what a failure does to a frame.
+sky rather than a failed calculation. What it *can* throw is listed in full on
+`AstronomyCalculator`; in outline, `ArithmeticException` for an instant outside the range of epoch
+milliseconds, `IllegalArgumentException` from a position that fails a range check or from a
+declination outside ±90 degrees, `ExceptionInInitializerError` if a bundled catalogue row is
+malformed — and, on every later attempt in the same process, `NoClassDefFoundError` instead, which
+is the one a field report is most likely to see — and the engine's `InternalError` when one of its
+iterations or searches cannot converge. Nothing here swallows any of them, which is the letter of
+the project rule; logging them is the caller's job, because this layer is deliberately free of
+Android types and owns no logger. #5 owns the render loop and therefore owns what a failure does
+to a frame.
 
 When a kind is absent from a `Sky` rather than its time being `null`, `eventTime` throws rather
 than answering `null` — see the KDoc on `SkyState.kt` for why the two are kept distinct.
@@ -168,20 +171,22 @@ disagree by, so a regression fails while a rounding difference does not.
 "Measured spread" is the largest disagreement the committed fixtures actually show, which issue #4
 asks to be recorded against each tolerance. It is not left to prose: the `positionSpreadsAreEnforced`,
 `eventSpreadIsEnforced`, and `phaseSpreadIsEnforced` tests in `AstronomyEngineCalculatorTest`, and
-`starSpreadsAreEnforced` in `AstronomyEngineStarTest`, re-measure every row below and fail if a
-spread exceeds the bound set for it. Those tests and this table are the only places the spreads are
-written down, so a bound can only move together with the number it documents.
+`starSpreadsAreEnforced` in `AstronomyEngineStarTest`, re-measure every row below against the same
+fixtures. Each bound sits one and a half to two and a half times the number beside it, so every row
+is falsifiable upward — a spread that grows fails — while the recorded figure has that much room to
+move before the bound does. A bound that shrinks *below* its row means this table is stale and has
+to move with it.
 
 | Quantity | Tolerance | Measured spread | Reference |
 | --- | --- | --- | --- |
 | Sun azimuth and altitude | 0.05° | 0.0008° | JPL Horizons, apparent and refracted |
-| Planet azimuth and altitude | 0.05° | 0.004° (Neptune) | JPL Horizons |
+| Planet azimuth and altitude | 0.05° | 0.0041° (Neptune) | JPL Horizons |
 | Moon azimuth and altitude | 0.1° | 0.0014° | JPL Horizons |
 | Star azimuth and altitude | 0.1° | 0.020° (Spica) | Hipparcos catalogue reduced with IAU SOFA |
 | Planet and Moon magnitudes | 0.25 mag | 0.13 mag (Neptune) | JPL Horizons apparent magnitude |
 | Sunrise, sunset, and twilight | 60 s | 3 s | JPL Horizons crossings, cross-checked against USNO |
 | Lunar phase at a published phase instant | 0.05° of ecliptic longitude | 0.0052° | USNO lunar phases |
-| Proper motion over the 8.75-year catalogue step | 3e-6° | 1.3e-6° (0.0045 arcsec, Rigil Kentaurus) | Hipparcos J1991.25 place |
+| Proper motion over the 8.75-year catalogue step | 3e-6° | 1.25e-6° (0.0045 arcsec, Rigil Kentaurus) | Hipparcos J1991.25 place |
 | Sun constellation | exact match | — | IAU boundaries; three of the four instants are USNO season instants |
 
 The altitude comparison is skipped for reference positions below -1 degree, for the refraction
@@ -192,7 +197,7 @@ samples.
 
 The lunar-phase row is also the phase-wrap case: both new-moon fixtures land at an ecliptic
 longitude just under 360 degrees, so the comparison has to wrap rather than subtract, and a raw
-subtraction would report a 360-degree disagreement instead of the 0.0052 degrees below.
+subtraction would report a 360-degree disagreement instead of the 0.0052 degrees above.
 
 `sky()` costs about 0.2 ms once the JVM is warm, for all 26 stars and the eight event searches;
 the first call costs about 15 ms while the engine's classes initialise. Measured on 2026-09-29

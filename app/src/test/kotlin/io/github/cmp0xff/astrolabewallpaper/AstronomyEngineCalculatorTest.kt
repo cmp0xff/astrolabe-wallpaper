@@ -411,10 +411,14 @@ class AstronomyEngineCalculatorTest {
         const val REFRACTION_COMPARABLE_ALTITUDE_DEG = -1.0
 
         /**
-         * The spreads `docs/astronomy.md` publishes, as bounds for
-         * [documentedSpreadsAreEnforced]. Each is above the spread measured over the fixtures —
-         * Sun 0.0008 degrees, Moon 0.0014, planets 0.0042, magnitudes 0.13 — and well below the
-         * tolerances asserted elsewhere, so a dropped term fails here first.
+         * The spreads `docs/astronomy.md` publishes, as bounds for the spread tests. Each is
+         * above the spread measured over the fixtures — Sun 0.0008 degrees, Moon 0.0014,
+         * planets 0.0041, magnitudes 0.13 — and well below the tolerances asserted elsewhere, so
+         * a dropped term fails here first.
+         *
+         * [MAGNITUDE_SPREAD_LIMIT] is different in kind: magnitudes pass straight through from
+         * the engine, so no change to this repository's code can move them. It pins the engine
+         * revision and the transcription, not a reduction step.
          */
         const val SUN_SPREAD_LIMIT_DEG = 0.002
         const val MOON_SPREAD_LIMIT_DEG = 0.003

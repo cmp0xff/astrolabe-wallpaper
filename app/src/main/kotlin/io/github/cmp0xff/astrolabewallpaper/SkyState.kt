@@ -77,7 +77,7 @@ internal data class PlanetState(val planet: Planet, val position: Horizontal, va
  * constellation holding the star. [magnitude] is the catalog V magnitude, carried unchanged:
  * these are fixed stars, so neither their variability nor their distance is modelled. Both are
  * deliberate omissions rather than claims that the effects are negligible — Betelgeuse and
- * Antares vary by more than the magnitude tolerance below — and a dial that colours by
+ * Antares each vary by more than the app's 0.25 magnitude tolerance — and a dial that colours by
  * brightness is drawn from the catalogue value, not from a live estimate. Positions are reduced
  * from the catalog epoch and include the star's proper motion; see [StarCatalog].
  */

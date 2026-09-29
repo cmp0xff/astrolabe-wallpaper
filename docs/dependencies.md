@@ -57,10 +57,11 @@ Its only direct transitive dependency is `kotlin-stdlib-jdk8`. Conflict resoluti
 the 1.6.10 the engine asks for to 1.8.0, the version constrained by this project's declared
 `kotlin-stdlib:2.4.10`; `jdk8` in turn pulls `kotlin-stdlib-jdk7`, and both forward to
 `kotlin-stdlib`, which resolves to 2.4.10 as declared. The `jdk7` and `jdk8` artifacts have been
-empty since Kotlin 1.8.0 — each resolved jar holds under a kilobyte of class data across five
+empty since Kotlin 1.8.0 — each resolved 1.8.0 jar holds under a kilobyte of class data across five
 entries — so `kotlin-stdlib:2.4.10` is the only Kotlin runtime on the classpath.
 `./gradlew :app:dependencyInsight --configuration debugRuntimeClasspath --dependency
-kotlin-stdlib-jdk8` prints that chain.
+kotlin-stdlib-jdk8` prints the chain, and `unzip -l` on the two jars under
+`~/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/` shows the sizes.
 
 Vendoring remains the fallback if JitPack or upstream disappears: MIT permits it, and the Kotlin
 source at that revision is a single 10,674-line file. That count is taken at the pinned SHA, so it
@@ -70,8 +71,8 @@ vendoring over switching engines.
 ## Which Hipparcos stars are bundled, and how to reproduce the list
 
 The bundled catalogue is the result of this query, run 2026-09-29: 27 rows, less Alpha Centauri B
-(HIP 71681, four arcseconds from Rigil Kentaurus, so one naked-eye point and two labels on one spot
-of the dial) — the 26 stars in `StarCatalog.kt`. The query's `Vmag=<1.65` is VizieR's
+(HIP 71681, about fifteen arcseconds from Rigil Kentaurus, so one naked-eye point and two labels on
+one spot of the dial) — the 26 stars in `StarCatalog.kt`. The query's `Vmag=<1.65` is VizieR's
 strictly-less-than constraint, matching the `magnitude < 1.65` the code enforces; it is what
 excludes Elnath (HIP 25428), whose `Vmag` is exactly 1.65. The magnitudes and catalogue columns in
 `StarCatalog.kt` are transcribed from that result:

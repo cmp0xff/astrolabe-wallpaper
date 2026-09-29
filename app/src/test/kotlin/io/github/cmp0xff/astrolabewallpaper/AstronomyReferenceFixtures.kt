@@ -34,8 +34,8 @@ import java.time.ZoneOffset
  * - Hipparcos main catalogue, ESA 1997 (CDS I/239/hip_main), through VizieR,
  *   https://vizier.cds.unistra.fr/viz-bin/asu-tsv?-source=I/239/hip_main with `Vmag=<1.65` —
  *   VizieR's strictly-less-than constraint, which is why the row at exactly 1.65 is absent.
- *   Positions are `_RA.icrs` and `_DE.icrs`, the J2000 place with proper motion applied; the
- *   `starFixtures` below also use `RAICRS`/`DEICRS`, the same stars at J1991.25.
+ *   Positions are `_RA.icrs` and `_DE.icrs`, the J2000 place with proper motion applied, and
+ *   `catalogEpochFixtures` below uses `RAICRS`/`DEICRS`, the same stars at J1991.25.
  * - IAU SOFA reference implementation through pyerfa, https://github.com/liberfa/pyerfa:
  *   `erfa.atco13` reduces each star from its catalogue place through proper motion, parallax,
  *   light deflection, aberration, precession-nutation, Earth rotation, and standard refraction.
@@ -45,9 +45,10 @@ import java.time.ZoneOffset
  * invented. Times without a source entry are `null` because that source reports no such event.
  *
  * The `starFixtures` rows are reproducible by hand, which is why the SOFA call is spelled out.
- * `erfa.atco13` was called with the catalogue's J2000 place and its `pmRA` divided by `cos(dec)`
- * — the conversion from `mu_alpha * cos(delta)` to a rate of change of right ascension that
- * [StarCatalog] documents — `pmDE` unchanged, parallax and radial velocity zero, the site's
+ * `erfa.atco13` was called with the catalogue's J2000 place in radians, its `pmRA` divided by
+ * `cos(dec)` and converted from milliarcseconds per year to radians per year — the conversion
+ * from `mu_alpha * cos(delta)` to a rate of change of right ascension that [StarCatalog]
+ * documents — `pmDE` converted the same way, parallax and radial velocity zero, the site's
  * longitude and latitude in radians with height zero, `dut1`, `xp`, and `yp` zero, and
  * `phpa = 1013.25`, `tc = 15`, `rh = 0.5`, `wl = 0.55`. Those last four are the reference's own
  * refraction parameters, not the app's: the app uses the engine's Saemundsson fit, standardised
@@ -489,10 +490,11 @@ internal val positionFixtures: List<PositionFixture> =
     )
 
 // Hipparcos J2000 places reduced to the topocentric horizontal frame with SOFA.
-// Only fixtures above 15 degrees altitude are kept. Refraction is still degrees-free there
-// only in the sense that both models are small and close: at 15 degrees Saemundsson gives
-// about 3.7 arcminutes, and the two agree well inside the star tolerance. Below that the
-// app's fade toward the nadir and the reference's fixed value diverge quickly.
+// Only fixtures above 15 degrees altitude are kept, so that both refraction models are small
+// and their difference is inside the star tolerance: Saemundsson gives about 3.7 arcminutes
+// there. Lower altitudes are where the two models part company — the engine's extra fade
+// below -1 degree widens that further — which is why the position tests stop comparing
+// altitude at all below -1 degree.
 // Every one of the 26 bundled stars appears here at least once.
 internal val starFixtures: List<StarFixture> =
     listOf(
@@ -856,9 +858,9 @@ internal val starFixtures: List<StarFixture> =
             azimuthDeg = 75.01836,
             altitudeDeg = 29.48372,
         ),
-        // Achernar and Fomalhaut are far southern stars, so no instant at the other four sites
-        // lifts them above the 15-degree floor that this table keeps. Both culminate from the
-        // Cape, which covers them at once.
+        // Achernar and Fomalhaut are far southern stars, and no instant already in this table
+        // lifts either above the 15-degree floor it keeps. Both culminate from the Cape, which
+        // covers them at once.
         StarFixture(
             site = CAPE_TOWN,
             instant = Instant.parse("2026-09-15T23:00:00Z"),

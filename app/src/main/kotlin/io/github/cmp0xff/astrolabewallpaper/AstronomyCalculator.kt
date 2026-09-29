@@ -35,13 +35,20 @@ import java.time.Instant
  *   million years a `long` of epoch milliseconds spans. The documented range is 2026; this is
  *   the boundary of what the signature accepts at all.
  * - `IllegalArgumentException` from [Horizontal]'s range checks, which reject a non-finite
- *   azimuth or altitude, and from the engine's `constellation` when a position falls outside
- *   the catalogue's frame.
+ *   azimuth or altitude, and from the engine's `constellation` when the declination it is given
+ *   is outside -90..+90 degrees — reachable only through a star whose proper-motion-extrapolated
+ *   place has left the sphere.
  * - `ExceptionInInitializerError` from [StarCatalog] on first use if any bundled row violates
  *   its own invariants, followed by `NoClassDefFoundError` on later attempts in the same
  *   process. A malformed row is a build-time data error, but it surfaces here, on the first
  *   frame that needs a star.
- * - `InternalError` from the engine when a search or a boundary lookup cannot converge.
+ * - `io.github.cosinekitty.astronomy.InternalError` when an engine iteration, search, or
+ *   boundary lookup cannot converge. It is the engine's own class, which extends `Exception`,
+ *   and is **not** `java.lang.InternalError`; `catch (e: Exception)` covers it.
+ *
+ * The last two are `Error`s rather than `Exception`s in the case of the catalogue, so a caller
+ * that wraps `sky()` in `catch (e: Exception)` will not contain a malformed catalogue. That is
+ * deliberate: a build-time data error should not look like a runtime one.
  *
  * Logging belongs to the caller, not here: this layer is deliberately free of Android types so
  * it can be tested on the JVM, and it owns no logger. #5 owns the render loop and therefore

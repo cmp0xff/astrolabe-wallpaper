@@ -21,8 +21,8 @@ import kotlin.math.cos
  *   the catalogue is touched rather than quietly joining the dial.
  *
  * The Sun is absent because it is not an entry of this catalogue at all. Alpha Centauri B (HIP
- * 71681) is dropped: it trails Rigil Kentaurus by about four arcseconds, which is one naked-eye
- * point to an observer and two labels drawn on top of each other to a dial.
+ * 71681) is dropped: it trails Rigil Kentaurus by about fifteen arcseconds at the bundled epoch,
+ * which is one naked-eye point to an observer and two labels drawn on top of each other to a dial.
  */
 internal data class CatalogStar(
     /** IAU proper name, for example `Sirius`. */
