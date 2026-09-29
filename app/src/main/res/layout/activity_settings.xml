@@ -1,59 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/settings_scroll"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  android:fitsSystemWindows="true"
-  android:gravity="center_horizontal"
-  android:orientation="vertical"
-  android:padding="24dp">
-  <TextView
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:layout_marginBottom="24dp"
-    android:text="@string/wallpaper_description"
-    android:textAppearance="?android:attr/textAppearanceLarge" />
-  <TextView
-    android:id="@+id/location_current"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:text="@string/location_unset"
-    android:textAppearance="?android:attr/textAppearanceMedium" />
-  <Button
-    android:id="@+id/use_current_location"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:minHeight="48dp"
-    android:text="@string/use_current_location" />
-  <Button
-    android:id="@+id/refresh_location"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:minHeight="48dp"
-    android:text="@string/refresh_location" />
-  <EditText
-    android:id="@+id/latitude_input"
+  android:fillViewport="true"
+  android:fitsSystemWindows="true">
+  <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:hint="@string/latitude_hint"
-    android:importantForAutofill="no"
-    android:inputType="numberDecimal|numberSigned" />
-  <EditText
-    android:id="@+id/longitude_input"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:hint="@string/longitude_hint"
-    android:importantForAutofill="no"
-    android:inputType="numberDecimal|numberSigned" />
-  <Button
-    android:id="@+id/save_location"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:minHeight="48dp"
-    android:text="@string/save_location" />
-  <Button
-    android:id="@+id/open_preview"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:minHeight="48dp"
-    android:text="@string/open_preview" />
-</LinearLayout>
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="24dp">
+    <TextView
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginBottom="24dp"
+      android:text="@string/wallpaper_description"
+      android:textAppearance="?android:attr/textAppearanceLarge" />
+    <TextView
+      android:id="@+id/location_current"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:text="@string/location_unset"
+      android:textAppearance="?android:attr/textAppearanceMedium" />
+    <Button
+      android:id="@+id/use_current_location"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:text="@string/use_current_location" />
+    <Button
+      android:id="@+id/refresh_location"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:text="@string/refresh_location" />
+    <EditText
+      android:id="@+id/latitude_input"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:hint="@string/latitude_hint"
+      android:importantForAutofill="no"
+      android:inputType="numberDecimal|numberSigned" />
+    <EditText
+      android:id="@+id/longitude_input"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:hint="@string/longitude_hint"
+      android:importantForAutofill="no"
+      android:inputType="numberDecimal|numberSigned" />
+    <Button
+      android:id="@+id/save_location"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:text="@string/save_location" />
+    <Button
+      android:id="@+id/open_preview"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:text="@string/open_preview" />
+  </LinearLayout>
+</ScrollView>

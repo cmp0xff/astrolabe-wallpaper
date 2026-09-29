@@ -10,14 +10,14 @@ internal class LocationStore(context: Context) {
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     fun load(): ObservingLocation? {
-        val latitudeText = preferences.getString(KEY_LATITUDE, null)
-        val longitudeText = preferences.getString(KEY_LONGITUDE, null)
-        val sourceText = preferences.getString(KEY_SOURCE, null)
-        val latitude = latitudeText?.toDoubleOrNull()
-        val longitude = longitudeText?.toDoubleOrNull()
-        val source = sourceText?.let { value -> ObservingLocation.Source.entries.firstOrNull { it.name == value } }
+        // Read one snapshot without getString's ClassCastException for wrongly typed stored data.
+        val stored = preferences.all
+        val latitude = (stored[KEY_LATITUDE] as? String)?.toDoubleOrNull()
+        val longitude = (stored[KEY_LONGITUDE] as? String)?.toDoubleOrNull()
+        val sourceText = stored[KEY_SOURCE] as? String
+        val source = ObservingLocation.Source.entries.firstOrNull { it.name == sourceText }
         if (latitude == null || longitude == null || source == null) {
-            if (latitudeText != null || longitudeText != null || sourceText != null) {
+            if (stored.keys.any { it == KEY_LATITUDE || it == KEY_LONGITUDE || it == KEY_SOURCE }) {
                 Log.w(TAG, "discarding malformed observing location")
             }
             return null

@@ -23,7 +23,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
 
-/** Exercises the launcher lifecycle, the preview button, and manual location persistence. */
+/** Exercises launcher and preview behavior, permission results, and manual/current location persistence. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
 class SettingsActivityTest {
@@ -107,7 +107,7 @@ class SettingsActivityTest {
             val activity = controller.setup().get()
             shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
             val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+            shadowOf(locationManager).enableNetworkProvider()
             activity.findViewById<Button>(R.id.use_current_location).performClick()
             shadowOf(locationManager).simulateLocation(
                 LocationManager.NETWORK_PROVIDER,
@@ -135,7 +135,7 @@ class SettingsActivityTest {
             val activity = controller.setup().get()
             shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
             val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+            shadowOf(locationManager).enableNetworkProvider()
             activity.onRequestPermissionsResult(
                 REQUEST_LOCATION_PERMISSION,
                 arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),

@@ -6,9 +6,10 @@ personal APK; store distribution (F-Droid, Galaxy Store, Play Store) is a later
 evaluation.
 
 **Status: Android bootstrap.** The app provides an animated clock wallpaper — an
-astrolabe-style dial with hour, minute, and second hands — and a settings activity that
-opens Android's wallpaper preview. Strict local and CI checks produce a debug APK. The
-clock is verified on the physical device's home and lit lock screens (Android 16, API 36);
+astrolabe-style dial with hour, minute, and second hands — and settings that save a current
+approximate or manual observing location and open Android's wallpaper preview. Strict local
+and CI checks produce a debug APK. The clock is verified on the physical device's home and
+lit lock screens (Android 16, API 36);
 see [device testing](docs/device-testing.md).
 
 ## Planned experience

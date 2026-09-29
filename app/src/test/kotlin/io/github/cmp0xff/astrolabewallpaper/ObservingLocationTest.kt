@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Checks coordinate range validation and source classification for the observing location. */
+/** Checks coordinate range boundaries and rejection of non-finite observing locations. */
 class ObservingLocationTest {
     @Test
     fun validCoordinatesAccepted() {

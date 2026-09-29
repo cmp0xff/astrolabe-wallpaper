@@ -12,6 +12,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import java.text.DecimalFormat
+import java.text.NumberFormat
+import java.text.ParsePosition
 
 /** Opens Android's preview and manages the observing location. */
 class SettingsActivity : Activity() {
@@ -24,6 +27,7 @@ class SettingsActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        isForceFreshPending = savedInstanceState?.getBoolean(STATE_FORCE_FRESH_PENDING) == true
         setContentView(R.layout.activity_settings)
         findViewById<Button>(R.id.open_preview).setOnClickListener { openWallpaperPreview() }
         findViewById<Button>(
@@ -32,6 +36,11 @@ class SettingsActivity : Activity() {
         findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation(forceFresh = true) }
         findViewById<Button>(R.id.save_location).setOnClickListener { saveManualLocation() }
         displayLocation(locationStore.load())
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_FORCE_FRESH_PENDING, isForceFreshPending)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
@@ -89,24 +98,32 @@ class SettingsActivity : Activity() {
     }
 
     private fun saveManualLocation() {
-        val latitude = latitudeInput.text.toString().toDoubleOrNull()
-        val longitude = longitudeInput.text.toString().toDoubleOrNull()
-        if (latitude == null || longitude == null) {
-            showInvalidLocation()
-            return
-        }
-        if (!ObservingLocation.isValidLatitude(latitude) || !ObservingLocation.isValidLongitude(longitude)) {
-            showInvalidLocation()
+        val latitude = parseCoordinate(latitudeInput)
+        val longitude = parseCoordinate(longitudeInput)
+        val isLatitudeValid = latitude != null && ObservingLocation.isValidLatitude(latitude)
+        val isLongitudeValid = longitude != null && ObservingLocation.isValidLongitude(longitude)
+        if (!isLatitudeValid || !isLongitudeValid) {
+            Toast.makeText(this, R.string.location_invalid, Toast.LENGTH_LONG).show()
             return
         }
         val location = ObservingLocation(latitude, longitude, ObservingLocation.Source.MANUAL)
+        locationProvider.cancel()
         locationStore.save(location)
         displayLocation(location)
         Toast.makeText(this, R.string.location_saved, Toast.LENGTH_SHORT).show()
     }
 
-    private fun showInvalidLocation() {
-        Toast.makeText(this, R.string.location_invalid, Toast.LENGTH_LONG).show()
+    private fun parseCoordinate(input: EditText): Double? {
+        val text = input.text.toString().trim()
+        val format = NumberFormat.getNumberInstance(input.textLocale)
+        format.isGroupingUsed = false
+        // DecimalFormat omits the positive sign by default, but the signed input field accepts it.
+        if (format is DecimalFormat && text.startsWith("+")) {
+            format.positivePrefix = "+"
+        }
+        val position = ParsePosition(0)
+        val number = format.parse(text, position)
+        return if (position.index == text.length) number?.toDouble() else null
     }
 
     private fun displayLocation(location: ObservingLocation?) {
@@ -129,5 +146,6 @@ class SettingsActivity : Activity() {
 
     private companion object {
         const val REQUEST_LOCATION_PERMISSION = 1
+        const val STATE_FORCE_FRESH_PENDING = "force_fresh_pending"
     }
 }

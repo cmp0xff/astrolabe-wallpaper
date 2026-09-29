@@ -4,6 +4,7 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationManager
 import android.os.Looper
+import android.os.SystemClock
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -74,8 +75,17 @@ class LocationProviderTest {
     }
 
     @Test
+    fun fetchNullWithoutNetwork() {
+        shadowOf(locationManager).removeProvider(LocationManager.NETWORK_PROVIDER)
+        val results = mutableListOf<ObservingLocation?>()
+        LocationProvider(application).fetch { results.add(it) }
+        assertEquals(listOf<ObservingLocation?>(null), results)
+        assertTrue(shadowOf(locationManager).networkListeners().isEmpty())
+    }
+
+    @Test
     fun fetchTimesOutWithoutUpdate() {
-        shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+        shadowOf(locationManager).enableNetworkProvider()
         var isCalled = false
         var result: ObservingLocation? = null
         LocationProvider(application, timeoutMillis = SHORT_TIMEOUT).fetch { fetched ->
@@ -89,7 +99,7 @@ class LocationProviderTest {
 
     @Test
     fun fetchSingleUpdateFromProvider() {
-        shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+        shadowOf(locationManager).enableNetworkProvider()
         var result: ObservingLocation? = null
         LocationProvider(application, timeoutMillis = SHORT_TIMEOUT).fetch { result = it }
         shadowOf(locationManager).simulateLocation(
@@ -114,7 +124,7 @@ class LocationProviderTest {
             LocationManager.NETWORK_PROVIDER,
             location(latitude = 1.0, longitude = 2.0),
         )
-        shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, true)
+        shadowOf(locationManager).enableNetworkProvider()
         var result: ObservingLocation? = null
         LocationProvider(application, timeoutMillis = SHORT_TIMEOUT).fetch(forceFresh = true) { result = it }
         shadowOf(locationManager).simulateLocation(
@@ -136,6 +146,7 @@ class LocationProviderTest {
         val location = Location(LocationManager.NETWORK_PROVIDER)
         location.setLatitude(latitude)
         location.setLongitude(longitude)
+        location.elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
         return location
     }
 

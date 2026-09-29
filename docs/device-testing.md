@@ -145,5 +145,10 @@ Firmware build: withheld (embeds the model identifier)
 | 2026-09-28 | location off → refresh | "Could not get the current location" toast; logged "network location provider disabled"; prior selection preserved |
 | 2026-09-28 | corrupt stored prefs | Discarded invalid values; no crash; fell back to "No observing location set." |
 
-Unresolved limitations: the current-location display shows raw double precision (cosmetic, noted for a
-follow-up). The offline city chooser half of #3 is a separate follow-up issue.
+These physical-device observations apply to cf30cf5 only. The subsequent PR #23 review fixes
+(manual-save cancellation, permission-flow recreation, cache age, provider failure recovery,
+wrongly typed preferences, localized coordinate entry, and settings scrolling) have automated
+API 26/36 coverage but have not been rechecked on the physical device.
+
+Unresolved limitations: the current-location display uses raw double formatting; display precision
+and locale formatting remain cosmetic follow-up work. The offline city chooser remains outstanding under #3.

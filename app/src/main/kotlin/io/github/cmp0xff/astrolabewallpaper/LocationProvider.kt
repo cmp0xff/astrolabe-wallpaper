@@ -9,13 +9,15 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 
 /**
  * Fetches a single approximate observing location with a bounded timeout.
  *
- * The callback is always invoked on the main thread: synchronously for the permission-denied,
- * cached, and no-provider paths, and asynchronously for a fresh network request and its timeout.
+ * Call [fetch] and [cancel] on the main thread. Immediate results invoke the callback synchronously
+ * from [fetch]; fresh updates and timeouts are dispatched through the main looper.
+ * Cached fixes are accepted up to five minutes old; forceFresh always requests a new fix.
  */
 internal class LocationProvider(
     private val context: Context,
@@ -34,16 +36,11 @@ internal class LocationProvider(
             callback(null)
             return
         }
-        val cached = if (forceFresh) null else lastKnownLocation()
-        if (cached != null) {
-            callback(cached)
-            return
-        }
-        if (!locationManager.isProviderEnabled(NETWORK_PROVIDER)) {
-            Log.w(TAG, "network location provider disabled")
+        if (NETWORK_PROVIDER !in locationManager.allProviders) {
+            Log.w(TAG, "network location provider unavailable")
             callback(null)
         } else {
-            requestFreshLocation(callback)
+            fetchAvailableLocation(forceFresh, callback)
         }
     }
 
@@ -51,13 +48,38 @@ internal class LocationProvider(
     fun cancel() {
         requestGeneration++
         activeTimeout?.let { handler.removeCallbacks(it) }
-        activeListener?.let { locationManager.removeUpdates(it) }
+        val listener = activeListener
         activeListener = null
         activeTimeout = null
+        if (listener != null) {
+            try {
+                locationManager.removeUpdates(listener)
+            } catch (e: SecurityException) {
+                Log.w(TAG, "removing location updates denied", e)
+            }
+        }
     }
 
     private fun hasCoarsePermission(): Boolean =
         context.checkSelfPermission(ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+    private fun fetchAvailableLocation(forceFresh: Boolean, callback: (ObservingLocation?) -> Unit) {
+        val cached = if (forceFresh) null else lastKnownLocation()
+        when {
+            cached != null -> {
+                callback(cached)
+            }
+
+            !locationManager.isProviderEnabled(NETWORK_PROVIDER) -> {
+                Log.w(TAG, "network location provider disabled")
+                callback(null)
+            }
+
+            else -> {
+                requestFreshLocation(callback)
+            }
+        }
+    }
 
     // Only reached after hasCoarsePermission() passed in fetch().
     @SuppressLint("MissingPermission")
@@ -68,48 +90,53 @@ internal class LocationProvider(
             } catch (e: SecurityException) {
                 Log.w(TAG, "getLastKnownLocation denied", e)
                 null
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "cached network location unavailable", e)
+                null
             }
-        return location?.toObservingLocation()
+        return location?.takeIf { isRecent(it) }?.toObservingLocation()
+    }
+
+    private fun isRecent(location: Location): Boolean {
+        val timestamp = location.elapsedRealtimeNanos
+        val age = SystemClock.elapsedRealtimeNanos() - timestamp
+        val isRecent = timestamp > 0 && age in 0..MAX_CACHE_AGE_NANOS
+        if (!isRecent) {
+            Log.d(TAG, "cached network location discarded: stale or invalid elapsed timestamp")
+        }
+        return isRecent
     }
 
     private fun requestFreshLocation(callback: (ObservingLocation?) -> Unit) {
         val generation = requestGeneration
-        var isDelivered = false
-        var timeout = Runnable {}
+        val complete = { result: ObservingLocation? -> completeRequest(generation, result, callback) }
         val listener =
             object : LocationListener {
                 override fun onLocationChanged(location: Location) {
-                    if (generation == requestGeneration && !isDelivered) {
-                        isDelivered = true
-                        handler.removeCallbacks(timeout)
-                        activeListener = null
-                        activeTimeout = null
-                        callback(location.toObservingLocation())
+                    if (generation == requestGeneration) {
+                        complete(location.toObservingLocation())
                     }
                 }
 
-                // These are abstract below API 30 but default on API 30+, so they must be
-                // overridden for devices at the API 26 minimum even though this slice never
-                // reacts to them.
-                @Suppress("OVERRIDE_DEPRECATION")
-                override fun onProviderDisabled(provider: String) = Unit
+                // Implement every callback for API 26; newer releases provide default methods.
+                override fun onProviderDisabled(provider: String) {
+                    if (generation == requestGeneration) {
+                        Log.w(TAG, "network location provider disabled during acquisition")
+                        complete(null)
+                    }
+                }
 
-                @Suppress("OVERRIDE_DEPRECATION")
                 override fun onProviderEnabled(provider: String) = Unit
 
                 @Suppress("OVERRIDE_DEPRECATION")
                 override fun onStatusChanged(provider: String, status: Int, extras: Bundle?) = Unit
             }
         activeListener = listener
-        timeout =
+        val timeout =
             Runnable {
-                if (generation == requestGeneration && !isDelivered) {
-                    isDelivered = true
-                    locationManager.removeUpdates(listener)
-                    activeListener = null
-                    activeTimeout = null
+                if (generation == requestGeneration) {
                     Log.w(TAG, "network location update timed out after ${timeoutMillis}ms")
-                    callback(null)
+                    complete(null)
                 }
             }
         activeTimeout = timeout
@@ -118,13 +145,17 @@ internal class LocationProvider(
             requestSingleUpdate(NETWORK_PROVIDER, listener)
         } catch (e: SecurityException) {
             Log.w(TAG, "requestSingleUpdate denied", e)
-            if (generation == requestGeneration && !isDelivered) {
-                isDelivered = true
-                handler.removeCallbacks(timeout)
-                activeListener = null
-                activeTimeout = null
-                callback(null)
-            }
+            complete(null)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "network location request unavailable", e)
+            complete(null)
+        }
+    }
+
+    private fun completeRequest(generation: Int, result: ObservingLocation?, callback: (ObservingLocation?) -> Unit) {
+        if (generation == requestGeneration) {
+            cancel()
+            callback(result)
         }
     }
 
@@ -140,20 +171,22 @@ internal class LocationProvider(
     private companion object {
         const val ACCESS_COARSE_LOCATION = "android.permission.ACCESS_COARSE_LOCATION"
         const val DEFAULT_TIMEOUT_MILLIS = 10_000L
+        const val MAX_CACHE_AGE_NANOS = 300_000_000_000L
 
-        // Coarse permission cannot access the GPS provider (it requires ACCESS_FINE_LOCATION),
-        // so the network provider is the only usable source for approximate location.
+        // The network provider supports coarse permission across the API 26+ compatibility range.
         val NETWORK_PROVIDER = LocationManager.NETWORK_PROVIDER
         private const val TAG = "LocationProvider"
     }
 }
 
-internal fun Location.toObservingLocation(): ObservingLocation {
-    val location =
-        ObservingLocation(
-            latitude = latitude,
-            longitude = longitude,
-            source = ObservingLocation.Source.CURRENT_COARSE,
-        )
-    return location
+internal fun Location.toObservingLocation(): ObservingLocation? {
+    if (!ObservingLocation.isValidLatitude(latitude) || !ObservingLocation.isValidLongitude(longitude)) {
+        Log.w("LocationProvider", "network location discarded: invalid coordinates")
+        return null
+    }
+    return ObservingLocation(
+        latitude = latitude,
+        longitude = longitude,
+        source = ObservingLocation.Source.CURRENT_COARSE,
+    )
 }

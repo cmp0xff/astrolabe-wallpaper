@@ -2,6 +2,7 @@ package io.github.cmp0xff.astrolabewallpaper
 
 /** A validated observing location: coordinates plus how they were chosen. */
 internal data class ObservingLocation(val latitude: Double, val longitude: Double, val source: Source) {
+    /** Names are persisted by [LocationStore]; renaming a value requires a storage migration. */
     enum class Source { CURRENT_COARSE, MANUAL }
 
     init {
