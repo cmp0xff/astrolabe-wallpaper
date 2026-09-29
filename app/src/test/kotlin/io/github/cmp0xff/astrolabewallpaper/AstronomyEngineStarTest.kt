@@ -172,8 +172,8 @@ class AstronomyEngineStarTest {
          * The largest measured residual over [catalogEpochFixtures] is 1.25e-6 degrees, or
          * 0.0045 arcseconds, for the declination of Rigil Kentaurus — a star with by far the
          * largest proper motion in the catalogue. The next largest is about seventy times
-         * smaller, so this bound is set by that one star, and the other 25 sit at or near
-         * 1e-8 degrees, the precision the catalogue publishes its places to.
+         * smaller, so this bound is set by that one star, and the other 25 sit at or below
+         * 1e-8 degrees, at or under the precision the catalogue publishes its places to.
          *
          * 3e-6 degrees leaves 2.4 times the worst residual and still fails on a dropped
          * proper-motion term or a missing `cos(delta)`, which cost that star tens of arcseconds.

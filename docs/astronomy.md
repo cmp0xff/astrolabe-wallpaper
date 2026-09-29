@@ -169,13 +169,14 @@ the star rows were reduced with. Tolerances sit well above what the two implemen
 disagree by, so a regression fails while a rounding difference does not.
 
 "Measured spread" is the largest disagreement the committed fixtures actually show, which issue #4
-asks to be recorded against each tolerance. It is not left to prose: the `positionSpreadsAreEnforced`,
-`eventSpreadIsEnforced`, and `phaseSpreadIsEnforced` tests in `AstronomyEngineCalculatorTest`, and
-`starSpreadsAreEnforced` in `AstronomyEngineStarTest`, re-measure every row below against the same
-fixtures. Each bound sits one and a half to two and a half times the number beside it, so every row
-is falsifiable upward — a spread that grows fails — while the recorded figure has that much room to
-move before the bound does. A bound that shrinks *below* its row means this table is stale and has
-to move with it.
+asks to be recorded against each tolerance. It is not left to prose: each row below is re-measured
+against the same fixtures by `positionSpreadsAreEnforced`, `eventSpreadIsEnforced`, and
+`phaseSpreadIsEnforced` in `AstronomyEngineCalculatorTest` and `starSpreadsAreEnforced` in
+`AstronomyEngineStarTest`, and the proper-motion row by the tolerance of
+`properMotionReproducesEpoch`. Each bound sits one and a half to two and a half times the number
+beside it, so every row is falsifiable upward — a spread that grows fails — while the recorded
+figure has that much room to move before the bound does. A bound that shrinks *below* its row means
+this table is stale and has to move with it.
 
 | Quantity | Tolerance | Measured spread | Reference |
 | --- | --- | --- | --- |

@@ -46,9 +46,10 @@ import java.time.Instant
  *   boundary lookup cannot converge. It is the engine's own class, which extends `Exception`,
  *   and is **not** `java.lang.InternalError`; `catch (e: Exception)` covers it.
  *
- * The last two are `Error`s rather than `Exception`s in the case of the catalogue, so a caller
- * that wraps `sky()` in `catch (e: Exception)` will not contain a malformed catalogue. That is
- * deliberate: a build-time data error should not look like a runtime one.
+ * The two catalogue failures, `ExceptionInInitializerError` and its `NoClassDefFoundError`
+ * follow-on, are `Error`s rather than `Exception`s, so a caller that wraps `sky()` in
+ * `catch (e: Exception)` will not contain a malformed catalogue. That is deliberate: a
+ * build-time data error should not look like a runtime one.
  *
  * Logging belongs to the caller, not here: this layer is deliberately free of Android types so
  * it can be tested on the JVM, and it owns no logger. #5 owns the render loop and therefore

@@ -73,7 +73,10 @@ internal class SiteFixture(val name: String, val latitudeDeg: Double, val longit
             )
 }
 
-/** One body's reference position at a fixture instant. [magnitude] is null where unused. */
+/**
+ * One body's reference position at a fixture instant. [magnitude] is null where the app models no
+ * magnitude for the body, which is the Sun only; every other row carries the reference's own.
+ */
 internal data class BodyFixture(
     val body: String,
     val azimuthDeg: Double,
@@ -858,8 +861,8 @@ internal val starFixtures: List<StarFixture> =
             azimuthDeg = 75.01836,
             altitudeDeg = 29.48372,
         ),
-        // Achernar and Fomalhaut are far southern stars, and no instant already in this table
-        // lifts either above the 15-degree floor it keeps. Both culminate from the Cape, which
+        // Achernar and Fomalhaut are far southern stars, and neither is above the 15-degree floor
+        // this table keeps at any of its other instants. Both culminate from the Cape, which
         // covers them at once.
         StarFixture(
             site = CAPE_TOWN,
