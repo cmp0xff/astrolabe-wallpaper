@@ -63,11 +63,12 @@ Every AI-authored commit must include a body recording:
 - Verification actually performed, with unrun checks and limitations stated.
 
 End each AI-authored commit with **exactly one** `Co-Authored-By` trailer naming
-the actual disclosed model and its provider's no-reply address. Use the client
-identity only if the model is unavailable. For an OpenAI model, use
-`Co-Authored-By: <disclosed model> <noreply@openai.com>` with the actual model name
-substituted. Inspect the complete message before committing to prevent duplicate
-trailers. Never invent model versions, tests, decisions, or review evidence.
+the actual disclosed model and its provider's no-reply address, for example
+`Co-Authored-By: deepseek-v4-flash-vision-exp <noreply@deepseek.com>`. Name the
+model itself, not the client, harness, or tool that drove it; the client identity
+is acceptable only when the model is unavailable. Inspect the complete message
+before committing to prevent duplicate trailers. Never invent model versions,
+tests, decisions, or review evidence.
 
 Preserve Git signing. Do not disable signing to work around unavailable agent
 access. Confirm the created commit is signed and verify it before the handoff.
