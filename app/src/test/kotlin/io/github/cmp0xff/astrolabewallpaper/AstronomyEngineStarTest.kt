@@ -95,7 +95,10 @@ class AstronomyEngineStarTest {
         //
         // This is also the only test that catches a missing `cos(delta)`: at the 2026 instants
         // the starPositionsMatchSofa fixtures use, that error is about 0.03 degrees, well inside
-        // the 0.1 degree the position test allows.
+        // the 0.1 degree the position test allows. That makes the row set load-bearing, so it is
+        // checked against the catalogue rather than trusted: a trimmed table would otherwise keep
+        // passing while quietly dropping the comparison.
+        assertEquals(StarCatalog.stars.map { it.name }.toSet(), catalogEpochFixtures.map { it.name }.toSet())
         for (fixture in catalogEpochFixtures) {
             val star = StarCatalog.stars.single { it.name == fixture.name }
             assertEquals(
@@ -127,7 +130,7 @@ class AstronomyEngineStarTest {
         for ((name, designation) in names.zip(designations)) {
             assertTrue("$name has a blank designation", designation.isNotBlank())
         }
-        // Alpha Centauri B is four arcseconds from A and would draw a second label on the same
+        // Alpha Centauri B is about fifteen arcseconds from A and would draw a second label on the same
         // point of the dial, so the catalogue carries only the primary.
         assertTrue("Rigil Kentaurus is expected", "Rigil Kentaurus" in names)
         assertTrue("Alpha Centauri B must not be listed", names.none { it.contains("Centauri B") })
@@ -167,11 +170,15 @@ class AstronomyEngineStarTest {
 
         /**
          * The largest measured residual over [catalogEpochFixtures] is 1.25e-6 degrees, or
-         * 0.0045 arcseconds, for the declination of Rigil Kentaurus; the next largest is fourteen
-         * times smaller. That residual is the catalogue's own quantization — `pmDE` is published
-         * to 0.01 milliarcseconds per year — not an error in the reduction, so it does not shrink.
-         * 3e-6 degrees leaves about two and a half times that residual, tight enough that a
-         * dropped or misplaced term fails rather than hiding inside the old 0.0001.
+         * 0.0045 arcseconds, for the declination of Rigil Kentaurus — a star with by far the
+         * largest proper motion in the catalogue. The next largest is about seventy times
+         * smaller, so this bound is set by that one star, and the other 25 sit at or near
+         * 1e-8 degrees, the precision the catalogue publishes its places to.
+         *
+         * 3e-6 degrees leaves 2.4 times the worst residual and still fails on a dropped
+         * proper-motion term or a missing `cos(delta)`, which cost that star tens of arcseconds.
+         * What it cannot see is a sub-arcsecond slip in one of the slower stars: this is one
+         * bound for all 26 rows, not one bound per row.
          */
         const val EPOCH_TOLERANCE_DEG = 3.0e-6
 

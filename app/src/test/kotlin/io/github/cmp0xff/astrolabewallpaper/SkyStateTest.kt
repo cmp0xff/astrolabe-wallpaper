@@ -12,8 +12,8 @@ class SkyStateTest {
     fun horizontalAcceptsTheSphere() {
         // The range checks are inclusive at both ends: 360 names the same bearing as 0, and a
         // body sits exactly on the horizon or exactly at the nadir rather than just beside it.
-        // Constructing each corner is the real assertion — a rejected value throws here — and
-        // the values are read back so that this says more than "three constructors returned".
+        // Constructing these is the assertion — a rejected value throws here — and the boundary
+        // is what the rejections below pin, one thousandth of a degree outside it.
         val corners =
             listOf(
                 Horizontal(azimuthDeg = 0.0, altitudeDeg = -RIGHT_ANGLE_DEGREES),
@@ -26,18 +26,18 @@ class SkyStateTest {
             angleDifferenceDeg(first = corners[0].azimuthDeg, second = corners[1].azimuthDeg),
             0.0,
         )
-        assertEquals(
-            "the accepted bounds come back unchanged",
-            listOf(-RIGHT_ANGLE_DEGREES, RIGHT_ANGLE_DEGREES, 0.0),
-            corners.map { it.altitudeDeg },
-        )
+        assertRejected { Horizontal(azimuthDeg = FULL_TURN_DEGREES + 0.001, altitudeDeg = 0.0) }
+        assertRejected { Horizontal(azimuthDeg = 0.0, altitudeDeg = RIGHT_ANGLE_DEGREES + 0.001) }
+        assertRejected { Horizontal(azimuthDeg = 0.0, altitudeDeg = -RIGHT_ANGLE_DEGREES - 0.001) }
     }
 
     @Test
     fun theSeamAcceptsAFakeCalculator() {
-        // The point of [AstronomyCalculator] being an interface: a caller can hold one without
-        // an engine behind it. Nothing else in the suite exercises that, because every other
-        // test constructs the engine-backed implementation directly.
+        // The point of [AstronomyCalculator] being an interface: a caller can hold one without an
+        // engine behind it. The real content is the type — a class outside the engine implements
+        // it, and the value is bound through the interface, so any change to the interface breaks
+        // this at compile time. The assertions below only confirm the stub is wired in; they
+        // compare a Sky the test handed over with the same Sky coming back.
         val rise = Instant.parse("2026-06-21T03:42:45Z")
         val calculator: AstronomyCalculator =
             FakeCalculator(
