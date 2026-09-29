@@ -33,6 +33,7 @@ Caveats: <!-- Unrun checks, unresolved questions, or limitations; say none if no
 
 </details>
 
-<!-- Replace with the same disclosed model/client identity and provider no-reply
-     address used in AI-authored source commits. Omit if no AI-authored source work. -->
-Co-Authored-By: <model or client> <provider no-reply address>
+<!-- Replace with the same disclosed model and provider no-reply address used in
+     the AI-authored source commits. Name the model, not the client. Omit if no
+     AI-authored source work. -->
+Co-Authored-By: <actual model> <provider no-reply address>
