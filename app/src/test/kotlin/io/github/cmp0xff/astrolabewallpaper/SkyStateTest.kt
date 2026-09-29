@@ -34,22 +34,23 @@ class SkyStateTest {
     @Test
     fun theSeamAcceptsAFakeCalculator() {
         // The point of [AstronomyCalculator] being an interface: a caller can hold one without an
-        // engine behind it. The real content is the type — a class outside the engine implements
-        // it, and the value is bound through the interface, so any change to the interface breaks
-        // this at compile time. The assertions below only confirm the stub is wired in; they
-        // compare a Sky the test handed over with the same Sky coming back.
+        // engine behind it, and any change to the interface breaks this at compile time. The
+        // assertions below cover the other half of the seam — that what a caller passes through
+        // the interface reaches the implementation, arguments included — rather than reading back
+        // the Sky the stub was handed, which a stub cannot get wrong.
         val rise = Instant.parse("2026-06-21T03:42:45Z")
-        val calculator: AstronomyCalculator =
+        val fake =
             FakeCalculator(
                 sky(
                     RiseSetEvent(EventKind.SUNRISE, rise),
                     RiseSetEvent(EventKind.SUNSET, null),
                 ),
             )
+        val calculator: AstronomyCalculator = fake
         val result = calculator.sky(FIXTURE_INSTANT, SITE)
+        assertEquals("the call reaches the implementation", FIXTURE_INSTANT to SITE, fake.seen)
         assertEquals(rise, result.eventTime(EventKind.SUNRISE))
         assertNull(result.eventTime(EventKind.SUNSET))
-        assertEquals("Tau", result.sun.constellation)
     }
 
     @Test
@@ -146,7 +147,13 @@ class SkyStateTest {
 
     /** A calculator with nothing behind it, which is the whole reason the seam is an interface. */
     private class FakeCalculator(private val fixed: Sky) : AstronomyCalculator {
-        override fun sky(time: Instant, location: ObservingLocation): Sky = fixed
+        var seen: Pair<Instant, ObservingLocation>? = null
+            private set
+
+        override fun sky(time: Instant, location: ObservingLocation): Sky {
+            seen = time to location
+            return fixed
+        }
     }
 
     private companion object {

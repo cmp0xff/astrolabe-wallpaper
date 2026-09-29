@@ -66,6 +66,10 @@ class AstronomyEngineCalculatorTest {
 
     @Test
     fun lunarPhasesMatchUsnoInstants() {
+        // The table is the only external reference for the Moon's phase, and an empty or
+        // one-sided table would make every comparison below vanish without failing.
+        assertTrue("no full-moon fixture", lunarPhaseFixtures.any { it.isFull })
+        assertTrue("no new-moon fixture", lunarPhaseFixtures.any { !it.isFull })
         for (fixture in lunarPhaseFixtures) {
             val sky = calculator.sky(fixture.instant, GREENWICH.location)
             val where = "${fixture.phase} at ${fixture.instant}"
@@ -88,6 +92,12 @@ class AstronomyEngineCalculatorTest {
 
     @Test
     fun eventsMatchHorizonsCrossings() {
+        // The table is the only external reference for solar events, and these assertions are the
+        // properties #4 asks the event check to cover: both hemispheres, and the polar cases where
+        // an event does not happen at all. Without them a trimmed table would pass vacuously.
+        assertTrue("no northern event fixture", eventFixtures.any { it.site.latitudeDeg > 0 })
+        assertTrue("no southern event fixture", eventFixtures.any { it.site.latitudeDeg < 0 })
+        assertTrue("no polar event fixture", eventFixtures.any { it.usnoPolarNote != null })
         for (fixture in eventFixtures) {
             val sky = calculator.sky(utcMidnight(fixture.date), fixture.site.location)
             for (kind in EventKind.entries) {
@@ -128,6 +138,13 @@ class AstronomyEngineCalculatorTest {
 
     @Test
     fun sunMatchesIauConstellations() {
+        // Four instants that resolve to four different constellations: trimming the table to one
+        // row would leave the check passing against a single boundary region.
+        assertEquals(
+            "the fixtures should resolve to four different constellations",
+            SUN_CONSTELLATION_COUNT,
+            sunConstellationFixtures.map { it.constellation }.toSet().size,
+        )
         for (fixture in sunConstellationFixtures) {
             val sky = calculator.sky(fixture.instant, fixture.site.location)
             assertEquals(
@@ -409,6 +426,9 @@ class AstronomyEngineCalculatorTest {
         const val EVENT_TOLERANCE_SECONDS = 60L
         const val USNO_TOLERANCE_SECONDS = 60L
         const val REFRACTION_COMPARABLE_ALTITUDE_DEG = -1.0
+
+        /** The four IAU constellations the Sun is checked in: Pisces, Taurus, Virgo, Sagittarius. */
+        const val SUN_CONSTELLATION_COUNT = 4
 
         /**
          * The spreads `docs/astronomy.md` publishes, as bounds for the spread tests. Each is
