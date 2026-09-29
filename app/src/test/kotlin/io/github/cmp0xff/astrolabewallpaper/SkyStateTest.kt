@@ -10,14 +10,46 @@ import java.time.Instant
 class SkyStateTest {
     @Test
     fun horizontalAcceptsTheSphere() {
-        // Constructing the inclusive bounds is the assertion: a rejected value would throw here.
+        // The range checks are inclusive at both ends: 360 names the same bearing as 0, and a
+        // body sits exactly on the horizon or exactly at the nadir rather than just beside it.
+        // Constructing each corner is the real assertion — a rejected value throws here — and
+        // the values are read back so that this says more than "three constructors returned".
         val corners =
             listOf(
-                Horizontal(azimuthDeg = 0.0, altitudeDeg = -90.0),
-                Horizontal(azimuthDeg = 360.0, altitudeDeg = 90.0),
+                Horizontal(azimuthDeg = 0.0, altitudeDeg = -RIGHT_ANGLE_DEGREES),
+                Horizontal(azimuthDeg = FULL_TURN_DEGREES, altitudeDeg = RIGHT_ANGLE_DEGREES),
                 Horizontal(azimuthDeg = 359.999, altitudeDeg = 0.0),
             )
-        assertEquals(3, corners.size)
+        assertEquals(
+            "due north is spelled two ways",
+            0.0,
+            angleDifferenceDeg(first = corners[0].azimuthDeg, second = corners[1].azimuthDeg),
+            0.0,
+        )
+        assertEquals(
+            "the accepted bounds come back unchanged",
+            listOf(-RIGHT_ANGLE_DEGREES, RIGHT_ANGLE_DEGREES, 0.0),
+            corners.map { it.altitudeDeg },
+        )
+    }
+
+    @Test
+    fun theSeamAcceptsAFakeCalculator() {
+        // The point of [AstronomyCalculator] being an interface: a caller can hold one without
+        // an engine behind it. Nothing else in the suite exercises that, because every other
+        // test constructs the engine-backed implementation directly.
+        val rise = Instant.parse("2026-06-21T03:42:45Z")
+        val calculator: AstronomyCalculator =
+            FakeCalculator(
+                sky(
+                    RiseSetEvent(EventKind.SUNRISE, rise),
+                    RiseSetEvent(EventKind.SUNSET, null),
+                ),
+            )
+        val result = calculator.sky(FIXTURE_INSTANT, SITE)
+        assertEquals(rise, result.eventTime(EventKind.SUNRISE))
+        assertNull(result.eventTime(EventKind.SUNSET))
+        assertEquals("Tau", result.sun.constellation)
     }
 
     @Test
@@ -45,8 +77,21 @@ class SkyStateTest {
 
     @Test
     fun eventTimeRejectsIncompleteSky() {
-        val failure = runCatching { sky(RiseSetEvent(EventKind.SUNRISE, null)).eventTime(EventKind.SUNSET) }
-        assertTrue("expected a lookup failure", failure.isFailure)
+        // A Sky missing a kind is malformed, and the lookup says so instead of answering `null`:
+        // null has to stay reserved for "the event does not happen", which is a fact about the
+        // sky rather than a gap in the record.
+        val thrown = failureOf { sky(RiseSetEvent(EventKind.SUNRISE, null)).eventTime(EventKind.SUNSET) }
+        assertTrue("expected NoSuchElementException, got ${thrown.name()}", thrown is NoSuchElementException)
+    }
+
+    @Test
+    fun eventTimeRejectsDuplicateKinds() {
+        val thrown =
+            failureOf {
+                sky(RiseSetEvent(EventKind.SUNRISE, null), RiseSetEvent(EventKind.SUNRISE, null))
+                    .eventTime(EventKind.SUNRISE)
+            }
+        assertTrue("expected IllegalArgumentException, got ${thrown.name()}", thrown is IllegalArgumentException)
     }
 
     @Test
@@ -91,13 +136,26 @@ class SkyStateTest {
 
     // A modified copy is the reachable path that re-runs the constructor's invariants.
     private fun assertRejected(modify: () -> Any) {
-        val failure = runCatching { modify() }.exceptionOrNull()
-        val actual = failure?.let { it::class.simpleName } ?: "no exception"
-        assertTrue("expected IllegalArgumentException but got $actual", failure is IllegalArgumentException)
+        val failure = failureOf(modify)
+        assertTrue("expected IllegalArgumentException but got ${failure.name()}", failure is IllegalArgumentException)
+    }
+
+    private fun failureOf(block: () -> Any?): Throwable? = runCatching(block).exceptionOrNull()
+
+    private fun Throwable?.name(): String = this?.let { it::class.simpleName } ?: "no exception"
+
+    /** A calculator with nothing behind it, which is the whole reason the seam is an interface. */
+    private class FakeCalculator(private val fixed: Sky) : AstronomyCalculator {
+        override fun sky(time: Instant, location: ObservingLocation): Sky = fixed
     }
 
     private companion object {
         val UP = Horizontal(azimuthDeg = 0.0, altitudeDeg = 90.0)
+        val FIXTURE_INSTANT: Instant = Instant.parse("2026-06-21T12:00:00Z")
+
+        /** Reaches [FakeCalculator] only, which ignores it: no engine sees this location. */
+        val SITE =
+            ObservingLocation(latitude = 51.4779, longitude = 0.0, source = ObservingLocation.Source.MANUAL)
         const val FULL_MOON_MAGNITUDE = -12.7
     }
 }

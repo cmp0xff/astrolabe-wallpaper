@@ -21,19 +21,21 @@ import java.time.ZoneOffset
  *   `APPARENT='REFRACTED'` — apparent places including atmospheric refraction, matching what
  *   the app reports. Solar-event times use the same service with `APPARENT='AIRLESS'`: a whole
  *   UTC day of the Sun's centre elevation at one-minute steps, linearly interpolated to the
- *   crossing of the standard altitudes. Those are -50 arcminutes for the upper limb at
- *   sunrise and sunset (34 arcminutes of near-horizon refraction plus the 16-arcminute solar
- *   semidiameter) and -6, -12, and -18 degrees for the civil, nautical, and astronomical
- *   twilights. Interpolating a smooth curve sampled once a minute costs at most a couple of
- *   seconds, far inside the event tolerance.
+ *   crossing of the standard altitudes. Those are -50 arcminutes for the Sun's centre at
+ *   sunrise and sunset — the -34 arcminutes of near-horizon refraction at the upper limb, less
+ *   the 16-arcminute solar semidiameter — and -6, -12, and -18 degrees for the civil, nautical,
+ *   and astronomical twilights. Interpolating a smooth curve sampled once a minute costs at most
+ *   a couple of seconds, far inside the event tolerance.
  * - United States Naval Observatory Astronomical Applications API,
  *   https://aa.usno.navy.mil/data/api. An independent second opinion: sunrise, sunset, and
  *   civil twilight published to the minute, and the equinox and solstice instants used as
  *   fixture instants. The `usno*` fields record it; `usnoPolarNote` is its own statement that
  *   an event does not happen at all that day.
  * - Hipparcos main catalogue, ESA 1997 (CDS I/239/hip_main), through VizieR,
- *   https://vizier.cds.unistra.fr/viz-bin/asu-tsv?-source=I/239/hip_main with `Vmag=<1.65`.
- *   Positions are `_RA.icrs` and `_DE.icrs`, the J2000 place with proper motion applied.
+ *   https://vizier.cds.unistra.fr/viz-bin/asu-tsv?-source=I/239/hip_main with `Vmag=<1.65` —
+ *   VizieR's strictly-less-than constraint, which is why the row at exactly 1.65 is absent.
+ *   Positions are `_RA.icrs` and `_DE.icrs`, the J2000 place with proper motion applied; the
+ *   `starFixtures` below also use `RAICRS`/`DEICRS`, the same stars at J1991.25.
  * - IAU SOFA reference implementation through pyerfa, https://github.com/liberfa/pyerfa:
  *   `erfa.atco13` reduces each star from its catalogue place through proper motion, parallax,
  *   light deflection, aberration, precession-nutation, Earth rotation, and standard refraction.
@@ -41,6 +43,22 @@ import java.time.ZoneOffset
  *
  * Where a source publishes only minutes, the value is quoted to the minute; no digit has been
  * invented. Times without a source entry are `null` because that source reports no such event.
+ *
+ * The `starFixtures` rows are reproducible by hand, which is why the SOFA call is spelled out.
+ * `erfa.atco13` was called with the catalogue's J2000 place and its `pmRA` divided by `cos(dec)`
+ * — the conversion from `mu_alpha * cos(delta)` to a rate of change of right ascension that
+ * [StarCatalog] documents — `pmDE` unchanged, parallax and radial velocity zero, the site's
+ * longitude and latitude in radians with height zero, `dut1`, `xp`, and `yp` zero, and
+ * `phpa = 1013.25`, `tc = 15`, `rh = 0.5`, `wl = 0.55`. Those last four are the reference's own
+ * refraction parameters, not the app's: the app uses the engine's Saemundsson fit, standardised
+ * at 1010 mb and 10 degrees, so the two refract differently. Every star row kept here is above
+ * 15 degrees of altitude, where that difference is far inside the star tolerance. Repeating the
+ * call with pyerfa 2.0.1 reproduces all of these rows to within 0.000005 degrees.
+ *
+ * No generator script is committed. Fetching needs the network and these tests must stay
+ * offline, so keeping the retrieval out of the build was preferred over a script nobody runs;
+ * the pinned pyerfa plus the parameters above is the recipe, and re-running it is also how the
+ * catalogue's completeness claim would be re-checked.
  */
 
 /** An observing location used by the fixtures, named after the place it stands for. */
@@ -139,7 +157,6 @@ internal fun utcInstant(date: LocalDate, time: LocalTime?): Instant? =
 internal fun angleDifferenceDeg(first: Double, second: Double): Double =
     (first - second + HALF_TURN_DEGREES + FULL_TURN_DEGREES) % FULL_TURN_DEGREES - HALF_TURN_DEGREES
 
-private const val FULL_TURN_DEGREES = 360.0
 private const val HALF_TURN_DEGREES = 180.0
 
 // Observing locations, WGS-84 degrees, north and east positive.
@@ -167,7 +184,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 102.805313,
                         altitudeDeg = 40.068553,
-                        magnitude = -26.707,
                     ),
                     BodyFixture(
                         body = "Moon",
@@ -229,7 +245,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 180.459472,
                         altitudeDeg = 15.142566,
-                        magnitude = -26.778,
                     ),
                     BodyFixture(
                         body = "Moon",
@@ -291,7 +306,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 226.648532,
                         altitudeDeg = 28.684297,
-                        magnitude = -26.751,
                     ),
                 ),
         ),
@@ -305,7 +319,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 289.757455,
                         altitudeDeg = -43.818091,
-                        magnitude = -26.778,
                     ),
                 ),
         ),
@@ -319,7 +332,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 340.893472,
                         altitudeDeg = 30.171335,
-                        magnitude = -26.707,
                     ),
                     BodyFixture(
                         body = "Moon",
@@ -351,7 +363,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 89.775252,
                         altitudeDeg = 51.193475,
-                        magnitude = -26.751,
                     ),
                     BodyFixture(
                         body = "Moon",
@@ -371,7 +382,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 14.26124,
                         altitudeDeg = 12.115819,
-                        magnitude = -26.707,
                     ),
                     BodyFixture(
                         body = "Moon",
@@ -391,7 +401,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 195.11397,
                         altitudeDeg = -11.444628,
-                        magnitude = -26.778,
                     ),
                 ),
         ),
@@ -461,7 +470,6 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 3.976911,
                         altitudeDeg = -37.810039,
-                        magnitude = -26.734,
                     ),
                 ),
         ),
@@ -475,15 +483,17 @@ internal val positionFixtures: List<PositionFixture> =
                         body = "Sun",
                         azimuthDeg = 180.71552,
                         altitudeDeg = 61.106056,
-                        magnitude = -26.711,
                     ),
                 ),
         ),
     )
 
 // Hipparcos J2000 places reduced to the topocentric horizontal frame with SOFA.
-// Only fixtures above 15 degrees altitude are kept, where refraction is under an
-// arcminute and the two refraction models cannot diverge.
+// Only fixtures above 15 degrees altitude are kept. Refraction is still degrees-free there
+// only in the sense that both models are small and close: at 15 degrees Saemundsson gives
+// about 3.7 arcminutes, and the two agree well inside the star tolerance. Below that the
+// app's fade toward the nadir and the reference's fixed value diverge quickly.
+// Every one of the 26 bundled stars appears here at least once.
 internal val starFixtures: List<StarFixture> =
     listOf(
         StarFixture(
@@ -845,6 +855,25 @@ internal val starFixtures: List<StarFixture> =
             constellation = "Gem",
             azimuthDeg = 75.01836,
             altitudeDeg = 29.48372,
+        ),
+        // Achernar and Fomalhaut are far southern stars, so no instant at the other four sites
+        // lifts them above the 15-degree floor that this table keeps. Both culminate from the
+        // Cape, which covers them at once.
+        StarFixture(
+            site = CAPE_TOWN,
+            instant = Instant.parse("2026-09-15T23:00:00Z"),
+            name = "Achernar",
+            constellation = "Eri",
+            azimuthDeg = 150.4347,
+            altitudeDeg = 60.76058,
+        ),
+        StarFixture(
+            site = CAPE_TOWN,
+            instant = Instant.parse("2026-09-15T23:00:00Z"),
+            name = "Fomalhaut",
+            constellation = "PsA",
+            azimuthDeg = 287.41707,
+            altitudeDeg = 77.65736,
         ),
     )
 

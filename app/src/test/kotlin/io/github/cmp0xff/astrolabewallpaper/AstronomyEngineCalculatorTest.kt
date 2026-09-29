@@ -47,9 +47,10 @@ class AstronomyEngineCalculatorTest {
         var compared = 0
         for (fixture in positionFixtures) {
             val sky = calculator.sky(fixture.instant, fixture.site.location)
-            // The Sun has no modelled magnitude here, and the catalogue value says nothing about
-            // the algorithm, so it is filtered out rather than asserted against.
-            val comparable = fixture.bodies.filter { it.magnitude != null && it.body != SUN }
+            // A null magnitude is a body this app models no magnitude for. The Sun is the one
+            // such body: its fixture rows record a position and nothing else, because there is
+            // nothing in [SolarState] to compare a solar magnitude against.
+            val comparable = fixture.bodies.filter { it.magnitude != null }
             for (body in comparable) {
                 assertEquals(
                     "${fixture.label}/${body.body} magnitude",
@@ -179,6 +180,86 @@ class AstronomyEngineCalculatorTest {
     }
 
     @Test
+    fun positionSpreadsAreEnforced() {
+        // docs/astronomy.md publishes, per quantity, the spread this fixture set actually shows
+        // against its reference. Those are claims about these files and nothing else measures
+        // them, so these tests do. Each bound is that spread with room to spare: loose enough that
+        // last-bit arithmetic cannot move it, tight enough that dropping a reduction step cannot
+        // hide inside it. A failure means the documentation has to move as well.
+        val sun = worstSpreadOfOneBody(SUN)
+        val moon = worstSpreadOfOneBody(MOON)
+        val planets = worstSpreadOfPlanets()
+        assertTrue("Sun azimuth spread ${sun.azimuth}", sun.azimuth <= SUN_SPREAD_LIMIT_DEG)
+        assertTrue("Sun altitude spread ${sun.altitude}", sun.altitude <= SUN_SPREAD_LIMIT_DEG)
+        assertTrue("Moon azimuth spread ${moon.azimuth}", moon.azimuth <= MOON_SPREAD_LIMIT_DEG)
+        assertTrue("Moon altitude spread ${moon.altitude}", moon.altitude <= MOON_SPREAD_LIMIT_DEG)
+        assertTrue("planet azimuth spread ${planets.azimuth}", planets.azimuth <= PLANET_SPREAD_LIMIT_DEG)
+        assertTrue("planet altitude spread ${planets.altitude}", planets.altitude <= PLANET_SPREAD_LIMIT_DEG)
+        val magnitude = worstMagnitude()
+        assertTrue("magnitude spread $magnitude", magnitude <= MAGNITUDE_SPREAD_LIMIT)
+    }
+
+    @Test
+    fun eventSpreadIsEnforced() {
+        var worst = 0L
+        for (fixture in eventFixtures) {
+            val sky = calculator.sky(utcMidnight(fixture.date), fixture.site.location)
+            for (kind in EventKind.entries) {
+                val expected = expectedEvent(fixture, kind)
+                val actual = sky.eventTime(kind)
+                if (expected != null && actual != null) {
+                    worst = maxOf(a = worst, b = abs(Duration.between(expected, actual).seconds))
+                }
+            }
+        }
+        assertTrue("event spread $worst s", worst <= EVENT_SPREAD_LIMIT_SECONDS)
+    }
+
+    @Test
+    fun phaseSpreadIsEnforced() {
+        // This is also the phase-wrap case: both new-moon fixtures land just below 360 degrees of
+        // ecliptic longitude, so a raw subtraction would report a 360-degree disagreement rather
+        // than the 0.0052 degrees measured here.
+        var worst = 0.0
+        for (fixture in lunarPhaseFixtures) {
+            val sky = calculator.sky(fixture.instant, GREENWICH.location)
+            val target = if (fixture.isFull) FULL_MOON_LONGITUDE_DEG else NEW_MOON_LONGITUDE_DEG
+            worst = maxOf(a = worst, b = abs(angleDifferenceDeg(first = sky.moon.phaseLongitudeDeg, second = target)))
+        }
+        assertTrue("lunar phase spread $worst", worst <= PHASE_SPREAD_LIMIT_DEG)
+    }
+
+    @Test
+    fun skyIsDefinedAtBothPoles() {
+        // Azimuth is not a meaningful direction at a pole — every bearing is south from the
+        // north pole — so the risk is a reduction that returns NaN or an out-of-range angle
+        // there, which [Horizontal] would reject and turn into a thrown exception in the middle
+        // of a render. The engine's azimuth is a normalised atan2 and stays finite, so the
+        // calculator is expected to answer. Nothing else covers a latitude so far from the
+        // fixtures' 78.22 degrees, and [ObservingLocation] accepts exactly 90.
+        for (latitude in listOf(90.0, -90.0)) {
+            val site =
+                ObservingLocation(
+                    latitude = latitude,
+                    longitude = 0.0,
+                    source = ObservingLocation.Source.MANUAL,
+                )
+            for (instant in POLAR_INSTANTS) {
+                val sky = calculator.sky(instant, site)
+                val where = "latitude $latitude at $instant"
+                assertEquals("$where stars", StarCatalog.stars.size, sky.stars.size)
+                assertEquals("$where planets", Planet.entries.size, sky.planets.size)
+                // A pole sees no solar event at all: over one UTC day the Sun's altitude there
+                // moves only by the day's change in declination, under half a degree, and the
+                // nearest of the eight thresholds is 50 arcminutes away.
+                for (kind in EventKind.entries) {
+                    assertNull("$where $kind must not occur", sky.eventTime(kind))
+                }
+            }
+        }
+    }
+
+    @Test
     fun skyReportsEveryBodyAndEvent() {
         val sky = calculator.sky(Instant.parse("2026-06-21T12:00:00Z"), GREENWICH.location)
         assertEquals(Planet.entries.size, sky.planets.size)
@@ -187,6 +268,45 @@ class AstronomyEngineCalculatorTest {
         for (kind in EventKind.entries) {
             assertEquals("$kind appears once", 1, sky.events.count { it.kind == kind })
         }
+    }
+
+    private data class Spread(val azimuth: Double, val altitude: Double)
+
+    private fun worstSpreadOfOneBody(body: String): Spread = worstSpread { it == body }
+
+    private fun worstSpreadOfPlanets(): Spread =
+        worstSpread { name -> Planet.entries.any { planet -> planet.body.name == name } }
+
+    private fun worstSpread(matches: (String) -> Boolean): Spread {
+        var azimuth = 0.0
+        var altitude = 0.0
+        for (fixture in positionFixtures) {
+            val sky = calculator.sky(fixture.instant, fixture.site.location)
+            for (row in fixture.bodies) {
+                if (!matches(row.body)) continue
+                val actual = positionOf(sky, row.body)
+                val bearingOff = abs(angleDifferenceDeg(first = actual.azimuthDeg, second = row.azimuthDeg))
+                azimuth = maxOf(a = azimuth, b = bearingOff)
+                // The altitude comparison stops below -1 degree for the reason the position tests
+                // give, so this spread covers the same rows they compare.
+                if (row.altitudeDeg >= REFRACTION_COMPARABLE_ALTITUDE_DEG) {
+                    altitude = maxOf(a = altitude, b = abs(actual.altitudeDeg - row.altitudeDeg))
+                }
+            }
+        }
+        return Spread(azimuth = azimuth, altitude = altitude)
+    }
+
+    private fun worstMagnitude(): Double {
+        var worst = 0.0
+        for (fixture in positionFixtures) {
+            val sky = calculator.sky(fixture.instant, fixture.site.location)
+            for (row in fixture.bodies) {
+                val reference = row.magnitude ?: continue
+                worst = maxOf(a = worst, b = abs(magnitudeOf(sky, row.body) - reference))
+            }
+        }
+        return worst
     }
 
     private fun assertPositions(expectedBodies: Array<String>, toleranceDeg: Double) {
@@ -289,5 +409,26 @@ class AstronomyEngineCalculatorTest {
         const val EVENT_TOLERANCE_SECONDS = 60L
         const val USNO_TOLERANCE_SECONDS = 60L
         const val REFRACTION_COMPARABLE_ALTITUDE_DEG = -1.0
+
+        /**
+         * The spreads `docs/astronomy.md` publishes, as bounds for
+         * [documentedSpreadsAreEnforced]. Each is above the spread measured over the fixtures —
+         * Sun 0.0008 degrees, Moon 0.0014, planets 0.0042, magnitudes 0.13 — and well below the
+         * tolerances asserted elsewhere, so a dropped term fails here first.
+         */
+        const val SUN_SPREAD_LIMIT_DEG = 0.002
+        const val MOON_SPREAD_LIMIT_DEG = 0.003
+        const val PLANET_SPREAD_LIMIT_DEG = 0.008
+        const val MAGNITUDE_SPREAD_LIMIT = 0.2
+        const val EVENT_SPREAD_LIMIT_SECONDS = 5L
+        const val PHASE_SPREAD_LIMIT_DEG = 0.01
+
+        /** Instants spread across the year for [skyIsDefinedAtBothPoles]. */
+        val POLAR_INSTANTS: List<Instant> =
+            listOf(
+                Instant.parse("2026-03-20T12:00:00Z"),
+                Instant.parse("2026-06-21T00:00:00Z"),
+                Instant.parse("2026-12-21T12:00:00Z"),
+            )
     }
 }
