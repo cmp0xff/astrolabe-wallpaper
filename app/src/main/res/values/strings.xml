@@ -4,4 +4,16 @@
   <string name="wallpaper_description">A quiet, static astrolabe dial.</string>
   <string name="open_preview">Open wallpaper preview</string>
   <string name="preview_unavailable">Wallpaper preview is unavailable on this device.</string>
+  <string name="location_unset">No observing location set.</string>
+  <string name="use_current_location">Use current location</string>
+  <string name="refresh_location">Refresh location</string>
+  <string name="save_location">Save coordinates</string>
+  <string name="latitude_hint">Latitude (-90 to 90)</string>
+  <string name="longitude_hint">Longitude (-180 to 180)</string>
+  <string name="location_fetch_failed">Could not get the current location. Enter coordinates manually.</string>
+  <string name="location_permission_denied">Location permission denied. Enter coordinates manually.</string>
+  <string name="location_invalid">Enter a valid latitude and longitude.</string>
+  <string name="location_saved">Location saved.</string>
+  <string name="location_current_source">current</string>
+  <string name="location_manual_source">manual</string>
 </resources>

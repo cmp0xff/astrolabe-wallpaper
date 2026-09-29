@@ -25,8 +25,9 @@ sdk = manifest.find('uses-sdk')
 check(sdk is not None, 'missing uses-sdk element')
 check(sdk.get(android + 'minSdkVersion') == '26', 'minSdkVersion must be 26')
 check(sdk.get(android + 'targetSdkVersion') == '37', 'targetSdkVersion must be 37')
-permission_tags = [e.tag for e in manifest.iter() if e.tag.startswith('uses-permission')]
-check(not permission_tags, 'bootstrap must not request permissions')
+permission_names = [e.get(android + 'name') for e in manifest.iter() if e.tag.startswith('uses-permission')]
+check(permission_names == ['android.permission.ACCESS_COARSE_LOCATION'],
+      'unexpected permissions: expected only ACCESS_COARSE_LOCATION')
 application = manifest.find('application')
 check(application is not None, 'missing application element')
 check(application.get(android + 'debuggable') == 'true', 'application must be debuggable')

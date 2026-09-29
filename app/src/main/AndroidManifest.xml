@@ -4,6 +4,8 @@
   <!-- Wallpaper support is the core feature; devices lacking it cannot run this app. -->
   <uses-feature android:name="android.software.live_wallpaper" android:required="true"
     tools:ignore="UnsupportedChromeOsHardware" />
+  <!-- Approximate location only, for the observing location used by astronomy. -->
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
   <application
     android:allowBackup="false"
     android:fullBackupContent="false"

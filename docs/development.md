@@ -101,6 +101,13 @@ PR. Removing a finding by lowering global severity or excluding production/test 
 | --- | --- | --- |
 | detekt `UnnecessaryInnerClass` | `ClockEngine : WallpaperService.Engine()` needs its enclosing service because the superclass is a Java non-static inner class. detekt does not recognize that implicit outer-instance use. | Only `ClockEngine`, annotated in source |
 | Kotlin `DEPRECATION` | The preview test reads a `ComponentName` with the legacy `getParcelableExtra` overload because the typed overload is unavailable on its API 26 test environment. | Only the local test value reading this extra |
+| Kotlin `DEPRECATION` | `LocationManager.requestSingleUpdate` is the single-update API available since API 9; its API 30 replacement `getCurrentLocation` is unavailable on devices at the API 26 minimum. | Only the `LocationProvider.requestSingleUpdate` helper, annotated in source |
+| Kotlin `OVERRIDE_DEPRECATION` | `LocationListener.onStatusChanged` is required on API 26 but deprecated on newer releases; status notifications need no action for this single fix. The required enabled/disabled callbacks are not deprecated; disabling completes the request with a logged failure. | Only the `LocationProvider` listener's `onStatusChanged` override, annotated in source |
+| Lint `MissingPermission` | `LocationManager.getLastKnownLocation` / `requestSingleUpdate` run only after `fetch` has confirmed `ACCESS_COARSE_LOCATION` at runtime; lint cannot see the helper-method guard. | Only the two `LocationProvider` methods, annotated in source |
+| Lint `SetTextI18n` | The settings tests type literal coordinates into the manual `EditText` fields; they are test inputs, not user-facing text. | Only the three `SettingsActivityTest` input methods and `SettingsActivityAcquisitionTest.saveManualLocation`, annotated in source |
+| Kotlin `DEPRECATION` | The provider tests use Robolectric's deprecated `ShadowLocationManager.setLastKnownLocation` to seed exact cached timestamps, including missing or future timestamps. | Only `LocationProviderTest.fetchReturnsCachedLocation`, `LocationProviderTest.fetchFreshIgnoresCache`, and `LocationProviderCacheTest.seedCache`, annotated in source |
+| Kotlin `DEPRECATION` | Robolectric's deprecated `getLocationUpdateListeners` has no replacement exposing registered listeners. Race tests must retain a listener to simulate callbacks already queued before cancellation and verify registration cleanup. | Only the test helper `ShadowLocationManager.networkListeners`, annotated in source |
+| Lint `Range` | The malformed-fix test intentionally injects a `NaN` latitude into a platform `Location` to verify rejection and request cleanup. | Only `LocationProviderLifecycleTest.malformedFixFailsOnce`, annotated in source |
 | Lint `QueryPermissionsNeeded` | `queryIntentServices` in the manifest test restricts the query to its own package, which is always visible. Adding external package queries would misstate app needs. | Only `wallpaperDeclaration` test method |
 | Lint `UnsupportedChromeOsHardware` | `android.software.live_wallpaper` is required because wallpaper rendering is the app's core feature; devices lacking it cannot provide that feature. | Only that manifest `uses-feature` element |
 | Lint `AndroidGradlePluginVersion` | Lint suggests Gradle 9.7.1 over 9.6.1. The explicit 9.6.1 pin follows the selected detekt compatibility family; network-discovered upgrade suggestions must not change this bootstrap's agreed toolchain. | Only `gradle/wrapper/gradle-wrapper.properties`, via `app/lint.xml` |
@@ -123,7 +130,8 @@ second while visible and cancels the pending tick when hidden or destroyed.
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`, with application ID
 `io.github.cmp0xff.astrolabewallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
-wallpaper declaration, absence of requested permissions, and debug signature, then records SHA-256.
+wallpaper declaration, that the only requested permission is `ACCESS_COARSE_LOCATION`, the debug flag
+and signature, then records SHA-256.
 The stable release ID is `io.github.cmp0xff.astrolabewallpaper`; release signing belongs to #7.
 Debug signing keys are disposable and local/CI APKs may require uninstalling the previous debug app.
 

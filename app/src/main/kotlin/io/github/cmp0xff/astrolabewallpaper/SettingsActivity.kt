@@ -1,22 +1,55 @@
 package io.github.cmp0xff.astrolabewallpaper
 
+import android.Manifest
 import android.app.Activity
 import android.app.WallpaperManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.text.NumberFormat
+import java.text.ParsePosition
 
-/** Opens Android's preview so the user chooses whether and where to apply the wallpaper. */
+/** Opens Android's preview and manages the observing location. */
 class SettingsActivity : Activity() {
+    private val locationStore by lazy { LocationStore(applicationContext) }
+    private val locationProvider by lazy { LocationProvider(applicationContext) }
+    private val locationCurrent by lazy { findViewById<TextView>(R.id.location_current) }
+    private val latitudeInput by lazy { findViewById<EditText>(R.id.latitude_input) }
+    private val longitudeInput by lazy { findViewById<EditText>(R.id.longitude_input) }
+    private var isForceFreshPending = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        isForceFreshPending = savedInstanceState?.getBoolean(STATE_FORCE_FRESH_PENDING) == true
         setContentView(R.layout.activity_settings)
-        findViewById<Button>(R.id.open_preview).setOnClickListener {
-            openWallpaperPreview()
-        }
+        // The layout's inputType filter drops the locale decimal separator; see CoordinateKeyListener.
+        latitudeInput.keyListener = CoordinateKeyListener(latitudeInput.textLocale)
+        longitudeInput.keyListener = CoordinateKeyListener(longitudeInput.textLocale)
+        findViewById<Button>(R.id.open_preview).setOnClickListener { openWallpaperPreview() }
+        findViewById<Button>(
+            R.id.use_current_location,
+        ).setOnClickListener { requestCurrentLocation(forceFresh = false) }
+        findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation(forceFresh = true) }
+        findViewById<Button>(R.id.save_location).setOnClickListener { saveManualLocation() }
+        displayLocation(locationStore.load())
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(STATE_FORCE_FRESH_PENDING, isForceFreshPending)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        locationProvider.cancel()
+        super.onDestroy()
     }
 
     private fun openWallpaperPreview() {
@@ -30,5 +63,98 @@ class SettingsActivity : Activity() {
         } catch (_: ActivityNotFoundException) {
             Toast.makeText(this, R.string.preview_unavailable, Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun requestCurrentLocation(forceFresh: Boolean) {
+        val hasPermission =
+            checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!hasPermission) {
+            isForceFreshPending = forceFresh
+            requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), REQUEST_LOCATION_PERMISSION)
+            return
+        }
+        fetchCurrentLocation(forceFresh)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQUEST_LOCATION_PERMISSION) {
+            return
+        }
+        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            fetchCurrentLocation(isForceFreshPending)
+        } else {
+            Toast.makeText(this, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+        }
+        isForceFreshPending = false
+    }
+
+    private fun fetchCurrentLocation(forceFresh: Boolean) {
+        locationProvider.fetch(forceFresh = forceFresh) { location ->
+            if (location != null) {
+                locationStore.save(location)
+                displayLocation(location)
+            } else {
+                // Preserve the previous selection; prompt for manual entry.
+                Toast.makeText(this, R.string.location_fetch_failed, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun saveManualLocation() {
+        val latitude = parseCoordinate(latitudeInput)
+        val longitude = parseCoordinate(longitudeInput)
+        val isLatitudeValid = latitude != null && ObservingLocation.isValidLatitude(latitude)
+        val isLongitudeValid = longitude != null && ObservingLocation.isValidLongitude(longitude)
+        if (!isLatitudeValid || !isLongitudeValid) {
+            Toast.makeText(this, R.string.location_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+        val location = ObservingLocation(latitude, longitude, ObservingLocation.Source.MANUAL)
+        locationProvider.cancel()
+        locationStore.save(location)
+        displayLocation(location)
+        Toast.makeText(this, R.string.location_saved, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun parseCoordinate(input: EditText): Double? {
+        val text = input.text.toString().trim()
+        val locale = input.textLocale
+        val decimal = DecimalFormatSymbols.getInstance(locale).decimalSeparator
+        // Coordinates are written with '.' in every locale; accept it as an alias for the locale
+        // separator so a German comma-decimal keyboard and a coordinate-style dot both parse.
+        val normalized = text.replace(oldChar = '.', newChar = decimal)
+        val format = NumberFormat.getNumberInstance(locale)
+        format.isGroupingUsed = false
+        // DecimalFormat omits the positive sign by default, but the signed input field accepts it.
+        if (format is DecimalFormat && normalized.startsWith("+")) {
+            format.positivePrefix = "+"
+        }
+        val position = ParsePosition(0)
+        val number = format.parse(normalized, position)
+        return if (position.index == normalized.length) number?.toDouble() else null
+    }
+
+    private fun displayLocation(location: ObservingLocation?) {
+        locationCurrent.text =
+            if (location == null) {
+                getString(R.string.location_unset)
+            } else {
+                formatLocation(location)
+            }
+    }
+
+    private fun formatLocation(location: ObservingLocation): String {
+        val source =
+            when (location.source) {
+                ObservingLocation.Source.CURRENT_COARSE -> getString(R.string.location_current_source)
+                ObservingLocation.Source.MANUAL -> getString(R.string.location_manual_source)
+            }
+        return "${location.latitude}, ${location.longitude} ($source)"
+    }
+
+    private companion object {
+        const val REQUEST_LOCATION_PERMISSION = 1
+        const val STATE_FORCE_FRESH_PENDING = "force_fresh_pending"
     }
 }
