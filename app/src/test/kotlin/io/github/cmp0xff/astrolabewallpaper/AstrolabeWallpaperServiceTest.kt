@@ -103,4 +103,39 @@ class AstrolabeWallpaperServiceTest {
         looper.idleFor(Duration.ofSeconds(2))
         assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
     }
+
+    // A destroyed-then-recreated surface must resume ticking: onSurfaceDestroyed cancels the loop,
+    // and only onSurfaceChanged can restart it when visibility never changes.
+    @Test
+    fun surfaceRecreationResumesTicks() {
+        val engine = controller.get().onCreateEngine()
+        val looper = shadowOf(Looper.getMainLooper())
+        val holder = engine.surfaceHolder
+
+        engine.onVisibilityChanged(true)
+        assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
+
+        engine.onSurfaceDestroyed(holder)
+        assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
+
+        engine.onSurfaceChanged(holder, SURFACE_FORMAT, SURFACE_WIDTH, SURFACE_HEIGHT)
+        assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
+    }
+
+    @Test
+    fun hiddenSurfaceStaysCancelled() {
+        val engine = controller.get().onCreateEngine()
+        val looper = shadowOf(Looper.getMainLooper())
+        val holder = engine.surfaceHolder
+
+        engine.onVisibilityChanged(false)
+        engine.onSurfaceChanged(holder, SURFACE_FORMAT, SURFACE_WIDTH, SURFACE_HEIGHT)
+        assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
+    }
+
+    private companion object {
+        const val SURFACE_FORMAT = 1
+        const val SURFACE_WIDTH = 200
+        const val SURFACE_HEIGHT = 200
+    }
 }
