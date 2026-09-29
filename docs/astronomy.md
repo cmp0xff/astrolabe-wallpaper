@@ -22,7 +22,7 @@ JUnit with no Robolectric environment.
 | Quantity | Unit |
 | --- | --- |
 | Azimuth, altitude, phase angle, phase longitude, constellation boundaries | degrees |
-| Right ascension, hour angle | sidereal hours — only inside the engine boundary, never in `Sky` |
+| Right ascension | sidereal hours — only inside the engine boundary, never in `Sky` |
 | Magnitude | Johnson V, as the engine's or the catalogue's model reports it |
 | Distance | astronomical units, internal to Astronomy Engine; not exposed |
 | Time | `java.time.Instant`, UTC, millisecond resolution |
@@ -37,20 +37,25 @@ timezone. The clock follows the phone's timezone; the astronomy follows the save
 | --- | --- | --- |
 | Horizontal (HOR) | — | `Horizontal.azimuthDeg`, `altitudeDeg`: clockwise from north, up from the mathematical horizon |
 | Equatorial of date (EQD) | Date and time of the observation | The intermediate step for the Sun, Moon, and planets |
-| Equatorial J2000 (EQJ) | J2000.0 | The star catalogue's own frame, and where constellation labels are resolved |
-| Equatorial B1875 | B1875.0 | Inside the engine only: IAU constellation boundaries are defined there |
+| Equatorial J2000 (EQJ) | J2000.0 | The star catalogue's own frame, and the frame a constellation lookup is made from |
+| Equatorial B1875 | B1875.0 | Inside the engine: the IAU constellation boundaries are tabulated there |
+| Ecliptic of date | Date and time of the observation | `MoonState.phaseLongitudeDeg`, the Moon's ecliptic longitude less the Sun's |
+
+The ecliptic frame appears exactly once: the phase longitude is an ecliptic quantity by
+definition, since the Moon's phase is its elongation from the Sun along the ecliptic. Every other
+angle in `Sky` is horizontal or equatorial.
 
 Positions of the Sun, Moon, and planets are computed with `Aberration.Corrected` at
 `EquatorEpoch.OfDate`, then converted with `Refraction.Normal`. This is the standard topocentric
 path: aberration matters because the light takes time to arrive, and of-date coordinates are what
 a horizon conversion needs.
 
-**Constellation labels are resolved in J2000, not of date.** The IAU boundaries are fixed in
-right ascension and declination at B1875, so feeding them of-date coordinates would introduce
-precession error — about a third of a degree since 2000, enough to land on the wrong side of a
-boundary for a body near one. `Sky` carries the three-letter IAU abbreviation (`Tau`, `CMa`),
-not the full name, because that is what star charts and dials print; the full name is a
-presentation choice for #5.
+**Constellation labels are resolved from J2000, not of date.** The IAU boundaries are tabulated at
+B1875, and the engine's `constellation` takes a J2000 position and precesses it there itself.
+Feeding it of-date coordinates would add precession since 2000 — about a third of a degree, enough
+to land on the wrong side of a boundary for a body near one. `Sky` carries the three-letter IAU
+abbreviation (`Tau`, `CMa`), not the full name, because that is what star charts and dials print;
+the full name is a presentation choice for #5.
 
 ## Fixed stars
 
@@ -69,43 +74,48 @@ from the equator, by a factor of two for Rigil Kentaurus at declination -60 degr
 `properMotionReproducesEpoch` test pins this: it steps each star's J2000 place back 8.75 Julian
 years and requires the result to match the catalogue's own published J1991.25 place.
 
-The catalogue is every Hipparcos main-catalogue entry brighter than V = 1.65 — 26 stars after
-dropping Alpha Centauri B, which trails A by four arcseconds and would draw two labels on one
-point of the dial. Provenance and the query are in [dependencies.md](dependencies.md).
+The catalogue is the result of the Hipparcos query recorded in
+[dependencies.md](dependencies.md): every main-catalogue entry with `Vmag < 1.65`, which is 27
+rows, less Alpha Centauri B (HIP 71681) — 26 stars. Alpha Centauri B trails Rigil Kentaurus by
+four arcseconds and would draw two labels on one point of the dial. Re-running that query is what
+establishes the set; the suite pins the 26 recorded rows and cannot re-derive them offline, so the
+query is recorded rather than only its result. The cut itself is a rendering choice rather than a
+requirement, and it excludes Elnath (HIP 25428), which sits exactly on it.
 
 Two deliberate simplifications apply to stars only:
 
 - **No annual aberration.** The planetary path corrects for it; the star rotation chain above
-  does not. The effect is at most 20 arcseconds, 0.006 degrees.
+  does not. The effect is about 20 arcseconds, 0.0056 degrees.
 - **No annual parallax.** The Earth's orbit displaces the nearest star by under an arcsecond.
 
-Both are far inside the star tolerance below, and both are visible in the measured spread: the
-star fixtures disagree with their SOFA reference by up to 0.02 degrees, against 0.005 degrees for
-the Sun and planets.
+Both are far inside the star tolerance below, and the first is visible in the measured spread: the
+star fixtures disagree with their SOFA reference by up to 0.020 degrees — mostly this aberration —
+against at most 0.004 degrees for the Sun, Moon, and planets, whose path corrects for it.
 
 ## Refraction
 
-Positions and the horizon events use `Refraction.Normal`: the Saemundsson formula for a standard
-atmosphere, the same model family JPL Horizons uses. It assumes sea-level pressure, 15 °C, and a
-standard atmosphere, so a very hot or a very low-pressure day will shift a horizon event by a few
+Positions and the horizon events use `Refraction.Normal`: the engine's Saemundsson fit,
+`1.02 / tan(h + 10.3 / (h + 5.11))` arcminutes above -1 degree of altitude. It is standardised at
+1010 mb and 10 °C, so a very hot or a very low-pressure day will shift a horizon event by a few
 seconds. That is well inside the tolerance, and modelling actual weather is out of scope.
 
 Two consequences are worth recording:
 
-- The engine fades refraction toward the nadir below -1 degree of altitude, while the Horizons
-  reference holds it at the -1 degree value. The two therefore diverge by up to about a third of
-  a degree for bodies well below the horizon, and the position tests compare **azimuth only**
-  there: refraction lifts altitude but does not turn bearing. Above -1 degree everything is
-  compared.
+- The engine fades refraction toward the nadir below -1 degree of altitude — 38.8 arcminutes of
+  Saemundsson there, scaled by `(h + 90) / 89` — while the Horizons reference keeps the -1 degree
+  value. The two therefore diverge as a body descends: 0.32 degrees for the Sun at -44 degrees,
+  the lowest fixture, and more below that. The position tests compare **azimuth only** there:
+  refraction lifts altitude but does not turn bearing. Above -1 degree everything is compared.
 - The observer's height above the ellipsoid is fixed at zero. The saved observing location is a
   coarse position, and the horizon dip a few hundred metres of altitude produces is far below the
   tolerances here.
 
-The rise/set convention is the standard one: the Sun's *upper limb* crosses the horizon,
-including the conventional 34 arcminutes of near-horizon refraction. The three twilights are
-defined by the Sun's **centre** crossing -6, -12, and -18 degrees airlessly. The engine uses
-UT1 ≈ UTC, which can be off by up to 0.9 seconds from real UT1 — under 0.004 degrees of Earth
-rotation, and again inside the tolerances.
+The rise/set convention is the standard one: the Sun's *upper limb* crosses the horizon, including
+the conventional 34 arcminutes of near-horizon refraction, which puts the centre about 50
+arcminutes below it. The three twilights are defined by the Sun's **centre** crossing -6, -12, and
+-18 degrees airlessly, which is what makes them a different engine call rather than the same one
+with a different altitude. The engine uses UT1 ≈ UTC, which can be off by up to 0.9 seconds from
+real UT1 — under 0.004 degrees of Earth rotation, and again inside the tolerances.
 
 ## Supported date range
 
@@ -113,7 +123,10 @@ Astronomy Engine targets ±1 arcminute against the USNO's NOVAS reference, and i
 documentation validates equinoxes and solstices only for 1800–2100 (within 2 minutes). The
 fixtures here span 2026. This app has no requirement outside the present era, so it inherits the
 engine's range rather than narrowing it, and nothing in this repository has been verified outside
-2026. Very large or negative `Instant` values are not rejected; they are simply unverified.
+2026. Very large or negative `Instant` values are not rejected; they are simply unverified. An
+instant far enough out that `toEpochMilli` overflows a `long` — roughly ±292 million years — does
+throw, which is the first entry in the failure contract below, and pre-1970 instants need no
+special handling: the event window still starts at UTC midnight of the right day.
 
 ## Events and their window
 
@@ -129,25 +142,47 @@ the next UTC day belongs to that day's window and appears in a call with an inst
 `eventWindowIsTheUtcDay` test pins the contract using Quito, whose nautical dusk lands just after
 midnight UTC.
 
+## Failure behaviour
+
+`sky()` catches nothing and logs nothing, and a `null` event time is always a statement about the
+sky rather than a failed calculation. What it *can* throw is listed on `AstronomyCalculator`:
+`ArithmeticException` for an instant outside the range of epoch milliseconds, `IllegalArgumentException`
+from a position that fails a range check, `ExceptionInInitializerError` if a bundled catalogue row
+is malformed, and the engine's `InternalError` when a search cannot converge. Nothing here swallows
+any of them, which is the letter of the project rule; logging them is the caller's job, because
+this layer is deliberately free of Android types and owns no logger. #5 owns the render loop and
+therefore owns what a failure does to a frame.
+
+When a kind is absent from a `Sky` rather than its time being `null`, `eventTime` throws rather
+than answering `null` — see the KDoc on `SkyState.kt` for why the two are kept distinct.
+
 ## Accuracy against independent references
 
 Expected values in the tests never come from Astronomy Engine. They come from the USNO and JPL
 Horizons for the Sun, Moon, planets, and solar events; from the Hipparcos catalogue plus an IAU
 SOFA reduction for the stars; and from published USNO lunar phases and season instants. The
-fixture file records every source and request. Tolerances sit well above what the two
-implementations actually disagree by, so a regression fails while a rounding difference does not.
+fixture file records each source and the request used to obtain it, including the SOFA parameters
+the star rows were reduced with. Tolerances sit well above what the two implementations actually
+disagree by, so a regression fails while a rounding difference does not.
+
+"Measured spread" is the largest disagreement the committed fixtures actually show, which issue #4
+asks to be recorded against each tolerance. It is not left to prose: the `positionSpreadsAreEnforced`,
+`eventSpreadIsEnforced`, and `phaseSpreadIsEnforced` tests in `AstronomyEngineCalculatorTest`, and
+`starSpreadsAreEnforced` in `AstronomyEngineStarTest`, re-measure every row below and fail if a
+spread exceeds the bound set for it. Those tests and this table are the only places the spreads are
+written down, so a bound can only move together with the number it documents.
 
 | Quantity | Tolerance | Measured spread | Reference |
 | --- | --- | --- | --- |
-| Sun azimuth and altitude | 0.05° | under 0.001° | JPL Horizons, apparent and refracted |
+| Sun azimuth and altitude | 0.05° | 0.0008° | JPL Horizons, apparent and refracted |
 | Planet azimuth and altitude | 0.05° | 0.004° (Neptune) | JPL Horizons |
-| Moon azimuth and altitude | 0.1° | 0.001° | JPL Horizons |
-| Star azimuth and altitude | 0.1° | 0.02° | Hipparcos catalogue reduced with IAU SOFA |
+| Moon azimuth and altitude | 0.1° | 0.0014° | JPL Horizons |
+| Star azimuth and altitude | 0.1° | 0.020° (Spica) | Hipparcos catalogue reduced with IAU SOFA |
 | Planet and Moon magnitudes | 0.25 mag | 0.13 mag (Neptune) | JPL Horizons apparent magnitude |
 | Sunrise, sunset, and twilight | 60 s | 3 s | JPL Horizons crossings, cross-checked against USNO |
-| Lunar phase at a published phase instant | 0.05° of ecliptic longitude | 0.005° | USNO lunar phases |
-| Proper motion over the 8.75-year catalogue step | 0.0001° | 0.0000007° (0.0024 arcsec) | Hipparcos J1991.25 place |
-| Sun constellation | exact match | — | IAU boundaries at the USNO season instants |
+| Lunar phase at a published phase instant | 0.05° of ecliptic longitude | 0.0052° | USNO lunar phases |
+| Proper motion over the 8.75-year catalogue step | 3e-6° | 1.3e-6° (0.0045 arcsec, Rigil Kentaurus) | Hipparcos J1991.25 place |
+| Sun constellation | exact match | — | IAU boundaries; three of the four instants are USNO season instants |
 
 The altitude comparison is skipped for reference positions below -1 degree, for the refraction
 reason above. The 60-second event tolerance sits at the tight end of the 1–2 minutes the
@@ -155,9 +190,16 @@ acceptance criteria allow, and the two implementations actually agree to within 
 of which is the reference's own, since the fixture crossing is interpolated from one-minute
 samples.
 
-`sky()` costs about 1.4 ms on the JVM for all 26 stars and the 8 event searches. The wallpaper
-redraws about once a second, so this is not a battery concern, but #5 should compute the stars
-once per frame rather than once per star.
+The lunar-phase row is also the phase-wrap case: both new-moon fixtures land at an ecliptic
+longitude just under 360 degrees, so the comparison has to wrap rather than subtract, and a raw
+subtraction would report a 360-degree disagreement instead of the 0.0052 degrees below.
+
+`sky()` costs about 0.2 ms once the JVM is warm, for all 26 stars and the eight event searches;
+the first call costs about 15 ms while the engine's classes initialise. Measured on 2026-09-29
+with Temurin 21.0.12.1 on macOS on ten cores, by warming 2000 calls and then averaging 1000. No
+committed test measures it, so it is an observation rather than a bound. The wallpaper redraws
+about once a second, so neither figure is a battery concern. The rotation matrix the star path
+needs is already built once per call rather than once per star.
 
 ## What is not verified here
 
@@ -165,7 +207,12 @@ once per frame rather than once per star.
   layers, waking, and lock-screen behaviour are #5 and #6, and need the physical device.
 - **Nothing outside 2026** — see the date range above.
 - **The Moon's topocentric parallax at the horizon** is the engine's, not independently checked
-  here beyond the two polar and two moon-phase fixtures.
+  here beyond the polar day and night cases and the four published lunar-phase instants.
+- **Nothing at exactly ±90 degrees latitude against a reference.** `skyIsDefinedAtBothPoles`
+  establishes that the calculator answers rather than throwing there, which is the risk a pole
+  creates inside `Horizontal`. Azimuth is not a meaningful bearing at a pole — every direction is
+  south from the north pole — so there is no reference value to compare, only the requirement that
+  a location `ObservingLocation` accepts does not fail mid-render.
 - **Asteroid, comet, and rise/set-for-the-Moon** cases are out of scope for #4.
 
 Run the tests with `./gradlew qualityGate`, or `./gradlew :app:testDebugUnitTest` for the tests

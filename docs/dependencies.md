@@ -45,22 +45,36 @@ at a pinned revision if JitPack or upstream becomes unavailable — preferred ov
 engines, since the JVM/Kotlin astronomical-calculation field is otherwise thin.
 
 Rechecked 2026-09-29 for #4, immediately before integration: still not archived, still MIT, still at
-`v2.1.19` (2023-12-14) with its last commit on `master` on 2025-01-27 and 48 open issues. The
-dormancy is unchanged, so the mitigation stands as written. Upstream is **not** vendored: the
-Kotlin/JVM artifact resolves from JitPack, pinned to commit `61dc07020aaa6885d2c7f688a4d82beaf6edb9ef`,
-which is what tag `v2.1.19` points at. JitPack builds a revision once and caches the result per SHA,
-so the coordinate — not a version range — is the pin. The JitPack build for that SHA is already
-`ok`. Its only transitive dependency is `kotlin-stdlib-jdk8:1.6.10`, which resolves to this
-project's declared `kotlin-stdlib:2.4.10`.
+`v2.1.19` (2023-12-14) with its last commit on `master` on 2025-01-27 and 36 open issues. That
+counts issues only; GitHub's `open_issues_count`, which the earlier check did not distinguish,
+also counts the 12 open pull requests and so reads 48. The dormancy is unchanged, so the
+mitigation stands as written. Upstream is **not** vendored: the Kotlin/JVM artifact resolves from
+JitPack, pinned to commit `61dc07020aaa6885d2c7f688a4d82beaf6edb9ef`, which is what the annotated
+tag `v2.1.19` dereferences to. JitPack builds a revision once and caches the result per SHA, so the
+coordinate — not a version range — is the pin. The JitPack build for that SHA is already `ok`.
+
+Its only direct transitive dependency is `kotlin-stdlib-jdk8`. Conflict resolution raises that from
+the 1.6.10 the engine asks for to 1.8.0, the version constrained by this project's declared
+`kotlin-stdlib:2.4.10`; `jdk8` in turn pulls `kotlin-stdlib-jdk7`, and both forward to
+`kotlin-stdlib`, which resolves to 2.4.10 as declared. The `jdk7` and `jdk8` artifacts have been
+empty since Kotlin 1.8.0 — each resolved jar holds under a kilobyte of class data across five
+entries — so `kotlin-stdlib:2.4.10` is the only Kotlin runtime on the classpath.
+`./gradlew :app:dependencyInsight --configuration debugRuntimeClasspath --dependency
+kotlin-stdlib-jdk8` prints that chain.
 
 Vendoring remains the fallback if JitPack or upstream disappears: MIT permits it, and the Kotlin
-source is a single 10,674-line file. Prefer that over switching engines.
+source at that revision is a single 10,674-line file. That count is taken at the pinned SHA, so it
+is a property of the pin rather than of upstream's current state, and it does not drift. Prefer
+vendoring over switching engines.
 
 ## Which Hipparcos stars are bundled, and how to reproduce the list
 
-The bundled catalogue is every Hipparcos main-catalogue entry brighter than V = 1.65, minus Alpha
-Centauri B (four arcseconds from A, so one naked-eye point and two labels on one spot of the dial).
-The magnitudes and catalogue columns in `StarCatalog.kt` come from this query, run 2026-09-29:
+The bundled catalogue is the result of this query, run 2026-09-29: 27 rows, less Alpha Centauri B
+(HIP 71681, four arcseconds from Rigil Kentaurus, so one naked-eye point and two labels on one spot
+of the dial) — the 26 stars in `StarCatalog.kt`. The query's `Vmag=<1.65` is VizieR's
+strictly-less-than constraint, matching the `magnitude < 1.65` the code enforces; it is what
+excludes Elnath (HIP 25428), whose `Vmag` is exactly 1.65. The magnitudes and catalogue columns in
+`StarCatalog.kt` are transcribed from that result:
 
 ```sh
 curl -s -G "https://vizier.cds.unistra.fr/viz-bin/asu-tsv" \
@@ -78,8 +92,13 @@ curl -s -G "https://vizier.cds.unistra.fr/viz-bin/asu-tsv" \
 - Proper names are the IAU-approved names, cross-checked against
   [SIMBAD](https://simbad.cds.unistra.fr) identifiers.
 
-Nothing about the catalogue is secret or licensed: it is published astronomical data, reproduced
-here as 26 rows of numbers rather than as a bundled file with its own notice. The
-[CDS VizieR terms](https://cds.unistra.fr/vizier-org/licences_vizier.html) are satisfied by
-attribution, which this section and the `StarCatalog.kt` header provide. Re-check them before
-distribution in #7 and #8.
+The result was checked against the committed rows on 2026-09-29: all 26 of them match this query
+row for row on right ascension, declination, both proper motions, and magnitude, and the only row
+the query returns that the code does not carry is HIP 71681. That check needs the network, so it
+is not part of the build; re-running the query is what repeats it.
+
+Nothing about the catalogue is secret, and nothing about it is restrictively licensed: it is
+published astronomical data, reproduced here as 26 rows of numbers rather than as a bundled file
+with its own notice. The [CDS VizieR terms](https://cds.unistra.fr/vizier-org/licences_vizier.html)
+are satisfied by attribution, which this section and the `StarCatalog.kt` header — which names CDS,
+VizieR, and the `I/239/hip_main` table — provide. Re-check them before distribution in #7 and #8.
