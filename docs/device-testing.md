@@ -130,8 +130,9 @@ the `2026-09-28` rows cover those transitions. Always On Display is out of scope
 
 ## Location slice (#3)
 
-Test build: local debug `app-debug.apk` from `feat/3-current-location` at cf30cf5 (APK SHA-256
-7299ef24f4758ea53409650e8b1551319e3801f5654c71b1fdd1540a4e236647).
+Test build: local debug `app-debug.apk` from `feat/3-current-location` at a845a5d, the rebase of the
+review fixes onto `main` at 7dbff58 (APK SHA-256
+cf285da99ffc8b7cc3cc667b51fcf3042d01fd836751d17f16dd2391ed323310).
 
 Android version: 16 (API 36)
 Firmware build: withheld (embeds the model identifier)
@@ -144,11 +145,23 @@ Firmware build: withheld (embeds the model identifier)
 | 2026-09-28 | deny permission | Permission-denied toast; prior selection preserved |
 | 2026-09-28 | location off → refresh | "Could not get the current location" toast; logged "network location provider disabled"; prior selection preserved |
 | 2026-09-28 | corrupt stored prefs | Discarded invalid values; no crash; fell back to "No observing location set." |
+| 2026-09-29 | manual coordinates + relaunch | Entered `45.5, -120.25`, saved with **Save coordinates** ("Location saved." toast); the display read `45.5, -120.25 (manual)` and held it through a force-stop and relaunch |
+| 2026-09-29 | use current location (grant) | The prompt asked only for the approximate location; granting stored a real network fix as CURRENT_COARSE, the display switched to `(current)`, and no failure was logged |
+| 2026-09-29 | refresh | A fresh provider registration completed after one update; the current value was retained |
 
-These physical-device observations apply to cf30cf5 only. The subsequent PR #23 review fixes
-(manual-save cancellation, permission-flow recreation, cache age, provider failure recovery,
-wrongly typed preferences, localized coordinate entry, and settings scrolling) have automated
-API 26/36 coverage but have not been rechecked on the physical device.
+The `2026-09-28` rows apply to cf30cf5 only, and their failure paths (denial, disabled location,
+corrupt preferences) have not been re-run since; those remain historical evidence alongside the
+automated failure tests. The three happy paths above were re-verified on the rebased build on
+`2026-09-29`. The rebase changed no application source, so the re-run and the API 26/36 suite
+together cover the PR #23 review fixes (manual-save cancellation, permission-flow recreation, cache
+age, provider failure recovery, wrongly typed preferences, localized coordinate entry, and settings
+scrolling) on the post-merge codebase.
+
+Coordinate entry is locale-aware. `SettingsActivityLocaleTest` pins that under `de-rDE` the decimal
+separator is a comma, so `45,5` is accepted and a dot-separated `8.5` is rejected as a grouping
+separator. The deployment device's locale is German (`de-DE`), and `adb` synthetic input cannot
+produce the comma its keyboard would, so the `2026-09-29` manual-entry check was driven with the
+app's locale overridden to `en-US`, matching the coordinates recorded above.
 
 Unresolved limitations: the current-location display uses raw double formatting; display precision
 and locale formatting remain cosmetic follow-up work. The offline city chooser remains outstanding under #3.
