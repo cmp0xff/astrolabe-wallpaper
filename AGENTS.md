@@ -21,6 +21,29 @@ strict checking policy, and individually justified exceptions.
 - Keep changes small and readable. Add meaningful tests for behavior changes;
   documentation-only work needs appropriate content and link checks.
 
+## Test scope and proportionality
+
+- Before adding a test, identify the distinct, plausible production regression it
+  catches and check whether existing coverage already catches it.
+- Prefer extending an existing test or adding a small table of cases. Do not
+  automatically create a test for every function, type, or implementation branch.
+- Test observable production behavior. Avoid tests of fake implementations,
+  generated getters, language guarantees, or assertions that reproduce the implementation.
+- Test at the lowest effective layer. Repeat a scenario at another layer only
+  when it protects against a different failure, such as incorrect Canvas rendering
+  despite correct geometry.
+- Choose meaningful boundary cases instead of multiplying every combination of
+  settings, locations, themes, and platform versions. Use small local helpers
+  without introducing a generic testing framework.
+- Preserve independent astronomical references and meaningful migration,
+  malformed-data, permission-race, cancellation, and lifecycle coverage. Similar
+  tests involving different stores or callbacks can protect different failures.
+- For reversible, low-impact changes, existing tests, compilation, lint, and
+  inspection may be sufficient. New tests must provide additional regression value.
+- Remove obsolete or redundant tests when changing behavior, checking that unique
+  assertions remain covered. Do not optimize for test counts, coverage percentages,
+  or line-count quotas.
+
 ## Architecture and product constraints
 
 - Use Kotlin, Canvas, and `WallpaperService` with a small settings app. Keep

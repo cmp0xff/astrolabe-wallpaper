@@ -46,17 +46,6 @@ class SettingsActivityTest {
     }
 
     @Test
-    fun activityCanBeRecreated() {
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            controller.setup().recreate()
-            assertEquals(
-                controller.get().getString(R.string.open_preview),
-                controller.get().findViewById<Button>(R.id.open_preview).text,
-            )
-        }
-    }
-
-    @Test
     @SuppressLint("SetTextI18n")
     fun manualCoordsSurviveRecreate() {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
@@ -118,34 +107,6 @@ class SettingsActivityTest {
                 "37.42, -122.08 (current)",
                 activity.findViewById<TextView>(R.id.location_current).text.toString(),
             )
-            assertEquals(
-                ObservingLocation(
-                    latitude = 37.42,
-                    longitude = -122.08,
-                    source = ObservingLocation.Source.CURRENT_COARSE,
-                ),
-                LocationStore(activity).load(),
-            )
-        }
-    }
-
-    @Test
-    fun grantCallbackFetchesLocation() {
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            val activity = controller.setup().get()
-            shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
-            val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            shadowOf(locationManager).enableNetworkProvider()
-            activity.onRequestPermissionsResult(
-                REQUEST_LOCATION_PERMISSION,
-                arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
-                intArrayOf(PackageManager.PERMISSION_GRANTED),
-            )
-            shadowOf(locationManager).simulateLocation(
-                LocationManager.NETWORK_PROVIDER,
-                location(latitude = 37.42, longitude = -122.08),
-            )
-            shadowOf(Looper.getMainLooper()).idle()
             assertEquals(
                 ObservingLocation(
                     latitude = 37.42,

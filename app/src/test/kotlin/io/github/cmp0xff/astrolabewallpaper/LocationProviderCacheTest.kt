@@ -33,7 +33,8 @@ class LocationProviderCacheTest {
     }
 
     @Test
-    fun acceptsZeroAge() {
+    fun disabledProviderAllowsCache() {
+        shadowOf(locationManager).setProviderEnabled(LocationManager.NETWORK_PROVIDER, false)
         seedCache(SystemClock.elapsedRealtimeNanos())
         LocationProvider(application).fetch { results.add(it) }
         assertEquals(listOf(CACHED_LOCATION), results)

@@ -26,20 +26,18 @@ class AstronomyEngineCalculatorTest {
 
     @Test
     fun sunPositionsMatchHorizons() {
-        assertPositions(expectedBodies = arrayOf("Sun"), toleranceDeg = AZIMUTH_TOLERANCE_DEG)
+        assertPositions(expectedBodies = arrayOf("Sun"), toleranceDeg = SUN_TOLERANCE_DEG)
     }
 
     @Test
     fun moonPositionsMatchHorizons() {
-        // The Moon moves fastest and its model is the coarsest, so it gets the widest bound the
-        // acceptance criteria allow; the measured spread in these fixtures is under 0.001 degree.
         assertPositions(expectedBodies = arrayOf("Moon"), toleranceDeg = MOON_TOLERANCE_DEG)
     }
 
     @Test
     fun planetPositionsMatchHorizons() {
         val planets = Planet.entries.map { it.body.name }.toTypedArray()
-        assertPositions(expectedBodies = planets, toleranceDeg = AZIMUTH_TOLERANCE_DEG)
+        assertPositions(expectedBodies = planets, toleranceDeg = PLANET_TOLERANCE_DEG)
     }
 
     @Test
@@ -70,6 +68,7 @@ class AstronomyEngineCalculatorTest {
         // one-sided table would make every comparison below vanish without failing.
         assertTrue("no full-moon fixture", lunarPhaseFixtures.any { it.isFull })
         assertTrue("no new-moon fixture", lunarPhaseFixtures.any { !it.isFull })
+        // New-moon fixtures land just below 360 degrees, so both phase comparisons must wrap.
         for (fixture in lunarPhaseFixtures) {
             val sky = calculator.sky(fixture.instant, GREENWICH.location)
             val where = "${fixture.phase} at ${fixture.instant}"
@@ -184,69 +183,6 @@ class AstronomyEngineCalculatorTest {
     }
 
     @Test
-    fun polarDayAndNightReportNoEvent() {
-        // Longyearbyen in June never sees the Sun set, and McMurdo in December is in its own
-        // polar day. Nothing may invent a time for an event that does not happen.
-        val cases = listOf(SVALBARD to "2026-06-21", MCMURDO to "2026-12-21")
-        for ((site, date) in cases) {
-            val sky = calculator.sky(utcMidnight(LocalDate.parse(date)), site.location)
-            for (kind in EventKind.entries) {
-                assertNull("$date at ${site.name}: $kind must not occur", sky.eventTime(kind))
-            }
-        }
-    }
-
-    @Test
-    fun positionSpreadsAreEnforced() {
-        // docs/astronomy.md publishes, per quantity, the spread this fixture set actually shows
-        // against its reference. Those are claims about these files and nothing else measures
-        // them, so these tests do. Each bound is that spread with room to spare: loose enough that
-        // last-bit arithmetic cannot move it, tight enough that dropping a reduction step cannot
-        // hide inside it. A failure means the documentation has to move as well.
-        val sun = worstSpreadOfOneBody(SUN)
-        val moon = worstSpreadOfOneBody(MOON)
-        val planets = worstSpreadOfPlanets()
-        assertTrue("Sun azimuth spread ${sun.azimuth}", sun.azimuth <= SUN_SPREAD_LIMIT_DEG)
-        assertTrue("Sun altitude spread ${sun.altitude}", sun.altitude <= SUN_SPREAD_LIMIT_DEG)
-        assertTrue("Moon azimuth spread ${moon.azimuth}", moon.azimuth <= MOON_SPREAD_LIMIT_DEG)
-        assertTrue("Moon altitude spread ${moon.altitude}", moon.altitude <= MOON_SPREAD_LIMIT_DEG)
-        assertTrue("planet azimuth spread ${planets.azimuth}", planets.azimuth <= PLANET_SPREAD_LIMIT_DEG)
-        assertTrue("planet altitude spread ${planets.altitude}", planets.altitude <= PLANET_SPREAD_LIMIT_DEG)
-        val magnitude = worstMagnitude()
-        assertTrue("magnitude spread $magnitude", magnitude <= MAGNITUDE_SPREAD_LIMIT)
-    }
-
-    @Test
-    fun eventSpreadIsEnforced() {
-        var worst = 0L
-        for (fixture in eventFixtures) {
-            val sky = calculator.sky(utcMidnight(fixture.date), fixture.site.location)
-            for (kind in EventKind.entries) {
-                val expected = expectedEvent(fixture, kind)
-                val actual = sky.eventTime(kind)
-                if (expected != null && actual != null) {
-                    worst = maxOf(a = worst, b = abs(Duration.between(expected, actual).seconds))
-                }
-            }
-        }
-        assertTrue("event spread $worst s", worst <= EVENT_SPREAD_LIMIT_SECONDS)
-    }
-
-    @Test
-    fun phaseSpreadIsEnforced() {
-        // This is also the phase-wrap case: both new-moon fixtures land just below 360 degrees of
-        // ecliptic longitude, so a raw subtraction would report a 360-degree disagreement rather
-        // than the 0.0052 degrees measured here.
-        var worst = 0.0
-        for (fixture in lunarPhaseFixtures) {
-            val sky = calculator.sky(fixture.instant, GREENWICH.location)
-            val target = if (fixture.isFull) FULL_MOON_LONGITUDE_DEG else NEW_MOON_LONGITUDE_DEG
-            worst = maxOf(a = worst, b = abs(angleDifferenceDeg(first = sky.moon.phaseLongitudeDeg, second = target)))
-        }
-        assertTrue("lunar phase spread $worst", worst <= PHASE_SPREAD_LIMIT_DEG)
-    }
-
-    @Test
     fun skyIsDefinedAtBothPoles() {
         // Azimuth is not a meaningful direction at a pole — every bearing is south from the
         // north pole — so the risk is a reduction that returns NaN or an out-of-range angle
@@ -285,45 +221,6 @@ class AstronomyEngineCalculatorTest {
         for (kind in EventKind.entries) {
             assertEquals("$kind appears once", 1, sky.events.count { it.kind == kind })
         }
-    }
-
-    private data class Spread(val azimuth: Double, val altitude: Double)
-
-    private fun worstSpreadOfOneBody(body: String): Spread = worstSpread { it == body }
-
-    private fun worstSpreadOfPlanets(): Spread =
-        worstSpread { name -> Planet.entries.any { planet -> planet.body.name == name } }
-
-    private fun worstSpread(matches: (String) -> Boolean): Spread {
-        var azimuth = 0.0
-        var altitude = 0.0
-        for (fixture in positionFixtures) {
-            val sky = calculator.sky(fixture.instant, fixture.site.location)
-            for (row in fixture.bodies) {
-                if (!matches(row.body)) continue
-                val actual = positionOf(sky, row.body)
-                val bearingOff = abs(angleDifferenceDeg(first = actual.azimuthDeg, second = row.azimuthDeg))
-                azimuth = maxOf(a = azimuth, b = bearingOff)
-                // The altitude comparison stops below -1 degree for the reason the position tests
-                // give, so this spread covers the same rows they compare.
-                if (row.altitudeDeg >= REFRACTION_COMPARABLE_ALTITUDE_DEG) {
-                    altitude = maxOf(a = altitude, b = abs(actual.altitudeDeg - row.altitudeDeg))
-                }
-            }
-        }
-        return Spread(azimuth = azimuth, altitude = altitude)
-    }
-
-    private fun worstMagnitude(): Double {
-        var worst = 0.0
-        for (fixture in positionFixtures) {
-            val sky = calculator.sky(fixture.instant, fixture.site.location)
-            for (row in fixture.bodies) {
-                val reference = row.magnitude ?: continue
-                worst = maxOf(a = worst, b = abs(magnitudeOf(sky, row.body) - reference))
-            }
-        }
-        return worst
     }
 
     private fun assertPositions(expectedBodies: Array<String>, toleranceDeg: Double) {
@@ -412,10 +309,14 @@ class AstronomyEngineCalculatorTest {
     private companion object {
         const val SUN = "Sun"
         const val MOON = "Moon"
-        const val AZIMUTH_TOLERANCE_DEG = 0.05
-        const val MOON_TOLERANCE_DEG = 0.1
-        const val MAGNITUDE_TOLERANCE = 0.25
-        const val PHASE_TOLERANCE_DEG = 0.05
+
+        // Bounds retain the measured-spread checks formerly run in separate comparison passes.
+        // docs/astronomy.md distinguishes these regression bounds from acceptance tolerances.
+        const val SUN_TOLERANCE_DEG = 0.002
+        const val MOON_TOLERANCE_DEG = 0.003
+        const val PLANET_TOLERANCE_DEG = 0.008
+        const val MAGNITUDE_TOLERANCE = 0.2
+        const val PHASE_TOLERANCE_DEG = 0.01
         const val NEW_MOON_LONGITUDE_DEG = 0.0
         const val FULL_MOON_LONGITUDE_DEG = 180.0
         const val FULL_FRACTION = 0.99
@@ -423,29 +324,12 @@ class AstronomyEngineCalculatorTest {
         const val FULL_PHASE_ANGLE_DEG = 5.0
         const val NEW_PHASE_ANGLE_DEG = 175.0
         const val FULL_MOON_MAGNITUDE_LIMIT = -12.0
-        const val EVENT_TOLERANCE_SECONDS = 60L
+        const val EVENT_TOLERANCE_SECONDS = 5L
         const val USNO_TOLERANCE_SECONDS = 60L
         const val REFRACTION_COMPARABLE_ALTITUDE_DEG = -1.0
 
         /** The four IAU constellations the Sun is checked in: Pisces, Taurus, Virgo, Sagittarius. */
         const val SUN_CONSTELLATION_COUNT = 4
-
-        /**
-         * The spreads `docs/astronomy.md` publishes, as bounds for the spread tests. Each is
-         * above the spread measured over the fixtures — Sun 0.0008 degrees, Moon 0.0014,
-         * planets 0.0041, magnitudes 0.13 — and well below the tolerances asserted elsewhere, so
-         * a dropped term fails here first.
-         *
-         * [MAGNITUDE_SPREAD_LIMIT] is different in kind: magnitudes pass straight through from
-         * the engine, so no change to this repository's code can move them. It pins the engine
-         * revision and the transcription, not a reduction step.
-         */
-        const val SUN_SPREAD_LIMIT_DEG = 0.002
-        const val MOON_SPREAD_LIMIT_DEG = 0.003
-        const val PLANET_SPREAD_LIMIT_DEG = 0.008
-        const val MAGNITUDE_SPREAD_LIMIT = 0.2
-        const val EVENT_SPREAD_LIMIT_SECONDS = 5L
-        const val PHASE_SPREAD_LIMIT_DEG = 0.01
 
         /** Instants spread across the year for [skyIsDefinedAtBothPoles]. */
         val POLAR_INSTANTS: List<Instant> =

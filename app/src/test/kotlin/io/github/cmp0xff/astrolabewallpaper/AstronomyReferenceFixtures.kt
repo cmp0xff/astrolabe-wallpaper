@@ -92,10 +92,11 @@ internal data class PositionFixture(
     val bodies: List<BodyFixture>,
 )
 
-/** One star's reference position, from Hipparcos reduced with the SOFA chain. */
+/** Star observations sharing one site and instant, from Hipparcos reduced with SOFA. */
+internal data class StarScenario(val site: SiteFixture, val instant: Instant, val stars: List<StarFixture>)
+
+/** One star's horizontal coordinates in degrees and its SIMBAD constellation. */
 internal data class StarFixture(
-    val site: SiteFixture,
-    val instant: Instant,
     val name: String,
     val constellation: String,
     val azimuthDeg: Double,
@@ -184,59 +185,15 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-06-21T08:24:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 102.805313,
-                        altitudeDeg = 40.068553,
-                    ),
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 48.961976,
-                        altitudeDeg = -26.692793,
-                        magnitude = -9.833,
-                    ),
-                    BodyFixture(
-                        body = "Mercury",
-                        azimuthDeg = 83.869493,
-                        altitudeDeg = 22.739509,
-                        magnitude = 0.912,
-                    ),
-                    BodyFixture(
-                        body = "Venus",
-                        azimuthDeg = 72.404142,
-                        altitudeDeg = 11.540836,
-                        magnitude = -4.024,
-                    ),
-                    BodyFixture(
-                        body = "Mars",
-                        azimuthDeg = 151.789807,
-                        altitudeDeg = 54.485156,
-                        magnitude = 1.297,
-                    ),
-                    BodyFixture(
-                        body = "Jupiter",
-                        azimuthDeg = 80.475448,
-                        altitudeDeg = 19.494436,
-                        magnitude = -1.827,
-                    ),
-                    BodyFixture(
-                        body = "Saturn",
-                        azimuthDeg = 208.539921,
-                        altitudeDeg = 38.389956,
-                        magnitude = 0.812,
-                    ),
-                    BodyFixture(
-                        body = "Uranus",
-                        azimuthDeg = 137.393349,
-                        altitudeDeg = 53.258088,
-                        magnitude = 5.818,
-                    ),
-                    BodyFixture(
-                        body = "Neptune",
-                        azimuthDeg = 217.768936,
-                        altitudeDeg = 32.72827,
-                        magnitude = 7.774,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 102.805313, altitudeDeg = 40.068553),
+                    BodyFixture(body = "Moon", azimuthDeg = 48.961976, altitudeDeg = -26.692793, magnitude = -9.833),
+                    BodyFixture(body = "Mercury", azimuthDeg = 83.869493, altitudeDeg = 22.739509, magnitude = 0.912),
+                    BodyFixture(body = "Venus", azimuthDeg = 72.404142, altitudeDeg = 11.540836, magnitude = -4.024),
+                    BodyFixture(body = "Mars", azimuthDeg = 151.789807, altitudeDeg = 54.485156, magnitude = 1.297),
+                    BodyFixture(body = "Jupiter", azimuthDeg = 80.475448, altitudeDeg = 19.494436, magnitude = -1.827),
+                    BodyFixture(body = "Saturn", azimuthDeg = 208.539921, altitudeDeg = 38.389956, magnitude = 0.812),
+                    BodyFixture(body = "Uranus", azimuthDeg = 137.393349, altitudeDeg = 53.258088, magnitude = 5.818),
+                    BodyFixture(body = "Neptune", azimuthDeg = 217.768936, altitudeDeg = 32.72827, magnitude = 7.774),
                 ),
         ),
         PositionFixture(
@@ -245,59 +202,15 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-12-21T12:00:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 180.459472,
-                        altitudeDeg = 15.142566,
-                    ),
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 36.653915,
-                        altitudeDeg = -7.357389,
-                        magnitude = -11.919,
-                    ),
-                    BodyFixture(
-                        body = "Mercury",
-                        azimuthDeg = 186.96439,
-                        altitudeDeg = 14.208799,
-                        magnitude = -0.865,
-                    ),
-                    BodyFixture(
-                        body = "Venus",
-                        azimuthDeg = 228.225717,
-                        altitudeDeg = 13.437286,
-                        magnitude = -4.681,
-                    ),
-                    BodyFixture(
-                        body = "Mars",
-                        azimuthDeg = 291.984709,
-                        altitudeDeg = -2.135219,
-                        magnitude = 0.041,
-                    ),
-                    BodyFixture(
-                        body = "Jupiter",
-                        azimuthDeg = 302.439319,
-                        altitudeDeg = -6.696584,
-                        magnitude = -2.337,
-                    ),
-                    BodyFixture(
-                        body = "Saturn",
-                        azimuthDeg = 82.946944,
-                        altitudeDeg = -3.806996,
-                        magnitude = 0.696,
-                    ),
-                    BodyFixture(
-                        body = "Uranus",
-                        azimuthDeg = 28.262226,
-                        altitudeDeg = -12.838646,
-                        magnitude = 5.611,
-                    ),
-                    BodyFixture(
-                        body = "Neptune",
-                        azimuthDeg = 88.841271,
-                        altitudeDeg = -1.068997,
-                        magnitude = 7.75,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 180.459472, altitudeDeg = 15.142566),
+                    BodyFixture(body = "Moon", azimuthDeg = 36.653915, altitudeDeg = -7.357389, magnitude = -11.919),
+                    BodyFixture(body = "Mercury", azimuthDeg = 186.96439, altitudeDeg = 14.208799, magnitude = -0.865),
+                    BodyFixture(body = "Venus", azimuthDeg = 228.225717, altitudeDeg = 13.437286, magnitude = -4.681),
+                    BodyFixture(body = "Mars", azimuthDeg = 291.984709, altitudeDeg = -2.135219, magnitude = 0.041),
+                    BodyFixture(body = "Jupiter", azimuthDeg = 302.439319, altitudeDeg = -6.696584, magnitude = -2.337),
+                    BodyFixture(body = "Saturn", azimuthDeg = 82.946944, altitudeDeg = -3.806996, magnitude = 0.696),
+                    BodyFixture(body = "Uranus", azimuthDeg = 28.262226, altitudeDeg = -12.838646, magnitude = 5.611),
+                    BodyFixture(body = "Neptune", azimuthDeg = 88.841271, altitudeDeg = -1.068997, magnitude = 7.75),
                 ),
         ),
         PositionFixture(
@@ -306,11 +219,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-03-20T14:46:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 226.648532,
-                        altitudeDeg = 28.684297,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 226.648532, altitudeDeg = 28.684297),
                 ),
         ),
         PositionFixture(
@@ -319,11 +228,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-12-21T20:50:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 289.757455,
-                        altitudeDeg = -43.818091,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 289.757455, altitudeDeg = -43.818091),
                 ),
         ),
         PositionFixture(
@@ -332,29 +237,10 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-06-21T12:00:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 340.893472,
-                        altitudeDeg = 30.171335,
-                    ),
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 76.436534,
-                        altitudeDeg = 18.295794,
-                        magnitude = -9.919,
-                    ),
-                    BodyFixture(
-                        body = "Jupiter",
-                        azimuthDeg = 13.779159,
-                        altitudeDeg = 33.92807,
-                        magnitude = -1.826,
-                    ),
-                    BodyFixture(
-                        body = "Saturn",
-                        azimuthDeg = 270.136565,
-                        altitudeDeg = -4.982521,
-                        magnitude = 0.812,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 340.893472, altitudeDeg = 30.171335),
+                    BodyFixture(body = "Moon", azimuthDeg = 76.436534, altitudeDeg = 18.295794, magnitude = -9.919),
+                    BodyFixture(body = "Jupiter", azimuthDeg = 13.779159, altitudeDeg = 33.92807, magnitude = -1.826),
+                    BodyFixture(body = "Saturn", azimuthDeg = 270.136565, altitudeDeg = -4.982521, magnitude = 0.812),
                 ),
         ),
         PositionFixture(
@@ -363,17 +249,8 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-03-20T14:46:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 89.775252,
-                        altitudeDeg = 51.193475,
-                    ),
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 76.473775,
-                        altitudeDeg = 31.986666,
-                        magnitude = -6.211,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 89.775252, altitudeDeg = 51.193475),
+                    BodyFixture(body = "Moon", azimuthDeg = 76.473775, altitudeDeg = 31.986666, magnitude = -6.211),
                 ),
         ),
         PositionFixture(
@@ -382,17 +259,8 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-06-21T00:00:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 14.26124,
-                        altitudeDeg = 12.115819,
-                    ),
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 295.92868,
-                        altitudeDeg = -2.342771,
-                        magnitude = -9.667,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 14.26124, altitudeDeg = 12.115819),
+                    BodyFixture(body = "Moon", azimuthDeg = 295.92868, altitudeDeg = -2.342771, magnitude = -9.667),
                 ),
         ),
         PositionFixture(
@@ -401,11 +269,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-12-21T12:00:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 195.11397,
-                        altitudeDeg = -11.444628,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 195.11397, altitudeDeg = -11.444628),
                 ),
         ),
         PositionFixture(
@@ -414,12 +278,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-01-03T10:03:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 332.631099,
-                        altitudeDeg = -7.260228,
-                        magnitude = -12.789,
-                    ),
+                    BodyFixture(body = "Moon", azimuthDeg = 332.631099, altitudeDeg = -7.260228, magnitude = -12.789),
                 ),
         ),
         PositionFixture(
@@ -428,12 +287,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-01-18T19:52:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 273.309468,
-                        altitudeDeg = -33.632805,
-                        magnitude = -4.251,
-                    ),
+                    BodyFixture(body = "Moon", azimuthDeg = 273.309468, altitudeDeg = -33.632805, magnitude = -4.251),
                 ),
         ),
         PositionFixture(
@@ -442,12 +296,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-09-26T16:49:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 76.113224,
-                        altitudeDeg = -5.958474,
-                        magnitude = -12.682,
-                    ),
+                    BodyFixture(body = "Moon", azimuthDeg = 76.113224, altitudeDeg = -5.958474, magnitude = -12.682),
                 ),
         ),
         PositionFixture(
@@ -456,12 +305,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-08-12T17:37:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Moon",
-                        azimuthDeg = 274.332728,
-                        altitudeDeg = 15.797505,
-                        magnitude = -3.971,
-                    ),
+                    BodyFixture(body = "Moon", azimuthDeg = 274.332728, altitudeDeg = 15.797505, magnitude = -3.971),
                 ),
         ),
         PositionFixture(
@@ -470,11 +314,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-09-23T00:05:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 3.976911,
-                        altitudeDeg = -37.810039,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 3.976911, altitudeDeg = -37.810039),
                 ),
         ),
         PositionFixture(
@@ -483,11 +323,7 @@ internal val positionFixtures: List<PositionFixture> =
             instant = Instant.parse("2026-06-05T12:00:00Z"),
             bodies =
                 listOf(
-                    BodyFixture(
-                        body = "Sun",
-                        azimuthDeg = 180.71552,
-                        altitudeDeg = 61.106056,
-                    ),
+                    BodyFixture(body = "Sun", azimuthDeg = 180.71552, altitudeDeg = 61.106056),
                 ),
         ),
     )
@@ -499,386 +335,184 @@ internal val positionFixtures: List<PositionFixture> =
 // below -1 degree widens that further — which is why the position tests stop comparing
 // altitude at all below -1 degree.
 // Every one of the 26 bundled stars appears here at least once.
-internal val starFixtures: List<StarFixture> =
+internal val starFixtures: List<StarScenario> =
     listOf(
-        StarFixture(
+        StarScenario(
             site = GREENWICH,
             instant = Instant.parse("2026-06-21T22:00:00Z"),
-            name = "Arcturus",
-            constellation = "Boo",
-            azimuthDeg = 221.77046,
-            altitudeDeg = 51.72762,
+            stars =
+                listOf(
+                    StarFixture(
+                        name = "Arcturus",
+                        constellation = "Boo",
+                        azimuthDeg = 221.77046,
+                        altitudeDeg = 51.72762,
+                    ),
+                    StarFixture(name = "Vega", constellation = "Lyr", azimuthDeg = 99.31967, altitudeDeg = 59.9591),
+                    StarFixture(name = "Altair", constellation = "Aql", azimuthDeg = 110.5515, altitudeDeg = 26.67119),
+                    StarFixture(name = "Spica", constellation = "Vir", azimuthDeg = 220.15852, altitudeDeg = 19.00599),
+                    StarFixture(name = "Deneb", constellation = "Cyg", azimuthDeg = 68.59202, altitudeDeg = 44.68507),
+                ),
         ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-06-21T22:00:00Z"),
-            name = "Vega",
-            constellation = "Lyr",
-            azimuthDeg = 99.31967,
-            altitudeDeg = 59.9591,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-06-21T22:00:00Z"),
-            name = "Altair",
-            constellation = "Aql",
-            azimuthDeg = 110.5515,
-            altitudeDeg = 26.67119,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-06-21T22:00:00Z"),
-            name = "Spica",
-            constellation = "Vir",
-            azimuthDeg = 220.15852,
-            altitudeDeg = 19.00599,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-06-21T22:00:00Z"),
-            name = "Deneb",
-            constellation = "Cyg",
-            azimuthDeg = 68.59202,
-            altitudeDeg = 44.68507,
-        ),
-        StarFixture(
+        StarScenario(
             site = GREENWICH,
             instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Arcturus",
-            constellation = "Boo",
-            azimuthDeg = 93.46879,
-            altitudeDeg = 27.40574,
+            stars =
+                listOf(
+                    StarFixture(
+                        name = "Arcturus",
+                        constellation = "Boo",
+                        azimuthDeg = 93.46879,
+                        altitudeDeg = 27.40574,
+                    ),
+                    StarFixture(name = "Capella", constellation = "Aur", azimuthDeg = 289.09254, altitudeDeg = 48.3114),
+                    StarFixture(
+                        name = "Procyon",
+                        constellation = "CMi",
+                        azimuthDeg = 218.09545,
+                        altitudeDeg = 37.67453,
+                    ),
+                    StarFixture(
+                        name = "Betelgeuse",
+                        constellation = "Ori",
+                        azimuthDeg = 246.18016,
+                        altitudeDeg = 26.88443,
+                    ),
+                    StarFixture(
+                        name = "Aldebaran",
+                        constellation = "Tau",
+                        azimuthDeg = 269.11981,
+                        altitudeDeg = 22.10521,
+                    ),
+                    StarFixture(name = "Pollux", constellation = "Gem", azimuthDeg = 232.23651, altitudeDeg = 58.59511),
+                    StarFixture(
+                        name = "Regulus",
+                        constellation = "Leo",
+                        azimuthDeg = 167.95685,
+                        altitudeDeg = 49.85616,
+                    ),
+                    StarFixture(name = "Castor", constellation = "Gem", azimuthDeg = 240.43104, altitudeDeg = 60.31597),
+                    StarFixture(
+                        name = "Bellatrix",
+                        constellation = "Ori",
+                        azimuthDeg = 252.14423,
+                        altitudeDeg = 21.67903,
+                    ),
+                ),
         ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Capella",
-            constellation = "Aur",
-            azimuthDeg = 289.09254,
-            altitudeDeg = 48.3114,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Procyon",
-            constellation = "CMi",
-            azimuthDeg = 218.09545,
-            altitudeDeg = 37.67453,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Betelgeuse",
-            constellation = "Ori",
-            azimuthDeg = 246.18016,
-            altitudeDeg = 26.88443,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Aldebaran",
-            constellation = "Tau",
-            azimuthDeg = 269.11981,
-            altitudeDeg = 22.10521,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Pollux",
-            constellation = "Gem",
-            azimuthDeg = 232.23651,
-            altitudeDeg = 58.59511,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Regulus",
-            constellation = "Leo",
-            azimuthDeg = 167.95685,
-            altitudeDeg = 49.85616,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Castor",
-            constellation = "Gem",
-            azimuthDeg = 240.43104,
-            altitudeDeg = 60.31597,
-        ),
-        StarFixture(
-            site = GREENWICH,
-            instant = Instant.parse("2026-01-15T02:00:00Z"),
-            name = "Bellatrix",
-            constellation = "Ori",
-            azimuthDeg = 252.14423,
-            altitudeDeg = 21.67903,
-        ),
-        StarFixture(
+        StarScenario(
             site = CAPE_TOWN,
             instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Arcturus",
-            constellation = "Boo",
-            azimuthDeg = 343.45326,
-            altitudeDeg = 35.3437,
+            stars =
+                listOf(
+                    StarFixture(
+                        name = "Arcturus",
+                        constellation = "Boo",
+                        azimuthDeg = 343.45326,
+                        altitudeDeg = 35.3437,
+                    ),
+                    StarFixture(
+                        name = "Rigil Kentaurus",
+                        constellation = "Cen",
+                        azimuthDeg = 188.50362,
+                        altitudeDeg = 62.48288,
+                    ),
+                    StarFixture(name = "Hadar", constellation = "Cen", azimuthDeg = 197.41269, altitudeDeg = 61.22173),
+                    StarFixture(name = "Acrux", constellation = "Cru", azimuthDeg = 208.32036, altitudeDeg = 51.12545),
+                    StarFixture(name = "Spica", constellation = "Vir", azimuthDeg = 306.39011, altitudeDeg = 56.6925),
+                    StarFixture(name = "Antares", constellation = "Sco", azimuthDeg = 71.11377, altitudeDeg = 71.77486),
+                    StarFixture(name = "Mimosa", constellation = "Cru", azimuthDeg = 211.10756, altitudeDeg = 55.02267),
+                    StarFixture(name = "Gacrux", constellation = "Cru", azimuthDeg = 216.77667, altitudeDeg = 54.27543),
+                    StarFixture(name = "Shaula", constellation = "Sco", azimuthDeg = 106.64219, altitudeDeg = 61.18163),
+                ),
         ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Rigil Kentaurus",
-            constellation = "Cen",
-            azimuthDeg = 188.50362,
-            altitudeDeg = 62.48288,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Hadar",
-            constellation = "Cen",
-            azimuthDeg = 197.41269,
-            altitudeDeg = 61.22173,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Acrux",
-            constellation = "Cru",
-            azimuthDeg = 208.32036,
-            altitudeDeg = 51.12545,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Spica",
-            constellation = "Vir",
-            azimuthDeg = 306.39011,
-            altitudeDeg = 56.6925,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Antares",
-            constellation = "Sco",
-            azimuthDeg = 71.11377,
-            altitudeDeg = 71.77486,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Mimosa",
-            constellation = "Cru",
-            azimuthDeg = 211.10756,
-            altitudeDeg = 55.02267,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Gacrux",
-            constellation = "Cru",
-            azimuthDeg = 216.77667,
-            altitudeDeg = 54.27543,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-06-21T20:00:00Z"),
-            name = "Shaula",
-            constellation = "Sco",
-            azimuthDeg = 106.64219,
-            altitudeDeg = 61.18163,
-        ),
-        StarFixture(
+        StarScenario(
             site = QUITO,
             instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Sirius",
-            constellation = "CMa",
-            azimuthDeg = 246.19342,
-            altitudeDeg = 44.88799,
+            stars =
+                listOf(
+                    StarFixture(name = "Sirius", constellation = "CMa", azimuthDeg = 246.19342, altitudeDeg = 44.88799),
+                    StarFixture(name = "Canopus", constellation = "Car", azimuthDeg = 209.56678, altitudeDeg = 24.0748),
+                    StarFixture(
+                        name = "Arcturus",
+                        constellation = "Boo",
+                        azimuthDeg = 69.77693,
+                        altitudeDeg = 18.82526,
+                    ),
+                    StarFixture(name = "Capella", constellation = "Aur", azimuthDeg = 318.97784, altitudeDeg = 17.2803),
+                    StarFixture(name = "Rigel", constellation = "Ori", azimuthDeg = 261.09368, altitudeDeg = 24.54678),
+                    StarFixture(
+                        name = "Procyon",
+                        constellation = "CMi",
+                        azimuthDeg = 280.84914,
+                        altitudeDeg = 60.53435,
+                    ),
+                    StarFixture(
+                        name = "Betelgeuse",
+                        constellation = "Ori",
+                        azimuthDeg = 279.14017,
+                        altitudeDeg = 34.61205,
+                    ),
+                    StarFixture(name = "Acrux", constellation = "Cru", azimuthDeg = 161.06155, altitudeDeg = 19.4931),
+                    StarFixture(name = "Spica", constellation = "Vir", azimuthDeg = 103.22738, altitudeDeg = 31.90851),
+                    StarFixture(name = "Pollux", constellation = "Gem", azimuthDeg = 319.16715, altitudeDeg = 51.47772),
+                    StarFixture(name = "Mimosa", constellation = "Cru", azimuthDeg = 156.57055, altitudeDeg = 19.80782),
+                    StarFixture(name = "Regulus", constellation = "Leo", azimuthDeg = 34.00417, altitudeDeg = 75.46016),
+                    StarFixture(name = "Adhara", constellation = "CMa", azimuthDeg = 228.90969, altitudeDeg = 42.73944),
+                    StarFixture(name = "Castor", constellation = "Gem", azimuthDeg = 321.16611, altitudeDeg = 47.16808),
+                    StarFixture(name = "Gacrux", constellation = "Cru", azimuthDeg = 155.91405, altitudeDeg = 23.10885),
+                    StarFixture(
+                        name = "Bellatrix",
+                        constellation = "Ori",
+                        azimuthDeg = 277.2642,
+                        altitudeDeg = 27.26172,
+                    ),
+                ),
         ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Canopus",
-            constellation = "Car",
-            azimuthDeg = 209.56678,
-            altitudeDeg = 24.0748,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Arcturus",
-            constellation = "Boo",
-            azimuthDeg = 69.77693,
-            altitudeDeg = 18.82526,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Capella",
-            constellation = "Aur",
-            azimuthDeg = 318.97784,
-            altitudeDeg = 17.2803,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Rigel",
-            constellation = "Ori",
-            azimuthDeg = 261.09368,
-            altitudeDeg = 24.54678,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Procyon",
-            constellation = "CMi",
-            azimuthDeg = 280.84914,
-            altitudeDeg = 60.53435,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Betelgeuse",
-            constellation = "Ori",
-            azimuthDeg = 279.14017,
-            altitudeDeg = 34.61205,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Acrux",
-            constellation = "Cru",
-            azimuthDeg = 161.06155,
-            altitudeDeg = 19.4931,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Spica",
-            constellation = "Vir",
-            azimuthDeg = 103.22738,
-            altitudeDeg = 31.90851,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Pollux",
-            constellation = "Gem",
-            azimuthDeg = 319.16715,
-            altitudeDeg = 51.47772,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Mimosa",
-            constellation = "Cru",
-            azimuthDeg = 156.57055,
-            altitudeDeg = 19.80782,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Regulus",
-            constellation = "Leo",
-            azimuthDeg = 34.00417,
-            altitudeDeg = 75.46016,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Adhara",
-            constellation = "CMa",
-            azimuthDeg = 228.90969,
-            altitudeDeg = 42.73944,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Castor",
-            constellation = "Gem",
-            azimuthDeg = 321.16611,
-            altitudeDeg = 47.16808,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Gacrux",
-            constellation = "Cru",
-            azimuthDeg = 155.91405,
-            altitudeDeg = 23.10885,
-        ),
-        StarFixture(
-            site = QUITO,
-            instant = Instant.parse("2026-03-20T03:00:00Z"),
-            name = "Bellatrix",
-            constellation = "Ori",
-            azimuthDeg = 277.2642,
-            altitudeDeg = 27.26172,
-        ),
-        StarFixture(
+        StarScenario(
             site = SVALBARD,
             instant = Instant.parse("2026-12-21T18:00:00Z"),
-            name = "Vega",
-            constellation = "Lyr",
-            azimuthDeg = 285.48553,
-            altitudeDeg = 36.56822,
-        ),
-        StarFixture(
-            site = SVALBARD,
-            instant = Instant.parse("2026-12-21T18:00:00Z"),
-            name = "Capella",
-            constellation = "Aur",
-            azimuthDeg = 103.90562,
-            altitudeDeg = 50.12256,
-        ),
-        StarFixture(
-            site = SVALBARD,
-            instant = Instant.parse("2026-12-21T18:00:00Z"),
-            name = "Aldebaran",
-            constellation = "Tau",
-            azimuthDeg = 123.07526,
-            altitudeDeg = 23.34869,
-        ),
-        StarFixture(
-            site = SVALBARD,
-            instant = Instant.parse("2026-12-21T18:00:00Z"),
-            name = "Pollux",
-            constellation = "Gem",
-            azimuthDeg = 73.47625,
-            altitudeDeg = 25.19937,
-        ),
-        StarFixture(
-            site = SVALBARD,
-            instant = Instant.parse("2026-12-21T18:00:00Z"),
-            name = "Deneb",
-            constellation = "Cyg",
-            azimuthDeg = 257.54556,
-            altitudeDeg = 49.17078,
-        ),
-        StarFixture(
-            site = SVALBARD,
-            instant = Instant.parse("2026-12-21T18:00:00Z"),
-            name = "Castor",
-            constellation = "Gem",
-            azimuthDeg = 75.01836,
-            altitudeDeg = 29.48372,
+            stars =
+                listOf(
+                    StarFixture(name = "Vega", constellation = "Lyr", azimuthDeg = 285.48553, altitudeDeg = 36.56822),
+                    StarFixture(
+                        name = "Capella",
+                        constellation = "Aur",
+                        azimuthDeg = 103.90562,
+                        altitudeDeg = 50.12256,
+                    ),
+                    StarFixture(
+                        name = "Aldebaran",
+                        constellation = "Tau",
+                        azimuthDeg = 123.07526,
+                        altitudeDeg = 23.34869,
+                    ),
+                    StarFixture(name = "Pollux", constellation = "Gem", azimuthDeg = 73.47625, altitudeDeg = 25.19937),
+                    StarFixture(name = "Deneb", constellation = "Cyg", azimuthDeg = 257.54556, altitudeDeg = 49.17078),
+                    StarFixture(name = "Castor", constellation = "Gem", azimuthDeg = 75.01836, altitudeDeg = 29.48372),
+                ),
         ),
         // Achernar and Fomalhaut are far southern stars, and neither is above the 15-degree floor
         // this table keeps at any of its other instants. Both culminate from the Cape, which
         // covers them at once.
-        StarFixture(
+        StarScenario(
             site = CAPE_TOWN,
             instant = Instant.parse("2026-09-15T23:00:00Z"),
-            name = "Achernar",
-            constellation = "Eri",
-            azimuthDeg = 150.4347,
-            altitudeDeg = 60.76058,
-        ),
-        StarFixture(
-            site = CAPE_TOWN,
-            instant = Instant.parse("2026-09-15T23:00:00Z"),
-            name = "Fomalhaut",
-            constellation = "PsA",
-            azimuthDeg = 287.41707,
-            altitudeDeg = 77.65736,
+            stars =
+                listOf(
+                    StarFixture(
+                        name = "Achernar",
+                        constellation = "Eri",
+                        azimuthDeg = 150.4347,
+                        altitudeDeg = 60.76058,
+                    ),
+                    StarFixture(
+                        name = "Fomalhaut",
+                        constellation = "PsA",
+                        azimuthDeg = 287.41707,
+                        altitudeDeg = 77.65736,
+                    ),
+                ),
         ),
     )
 
@@ -1028,136 +662,32 @@ internal val eventFixtures: List<EventFixture> =
 // columns RAICRS / DEICRS), which is 8.75 Julian years before the J2000 place.
 internal val catalogEpochFixtures: List<CatalogEpochFixture> =
     listOf(
-        CatalogEpochFixture(
-            name = "Sirius",
-            rightAscensionDeg = 101.28854105,
-            declinationDeg = -16.71314306,
-        ),
-        CatalogEpochFixture(
-            name = "Canopus",
-            rightAscensionDeg = 95.98787763,
-            declinationDeg = -52.69571799,
-        ),
-        CatalogEpochFixture(
-            name = "Arcturus",
-            rightAscensionDeg = 213.91811403,
-            declinationDeg = 19.18726997,
-        ),
-        CatalogEpochFixture(
-            name = "Rigil Kentaurus",
-            rightAscensionDeg = 219.92041034,
-            declinationDeg = -60.83514707,
-        ),
-        CatalogEpochFixture(
-            name = "Vega",
-            rightAscensionDeg = 279.23410832,
-            declinationDeg = 38.78299311,
-        ),
-        CatalogEpochFixture(
-            name = "Capella",
-            rightAscensionDeg = 79.17206517,
-            declinationDeg = 45.99902927,
-        ),
-        CatalogEpochFixture(
-            name = "Rigel",
-            rightAscensionDeg = 78.63446353,
-            declinationDeg = -8.20163919,
-        ),
-        CatalogEpochFixture(
-            name = "Procyon",
-            rightAscensionDeg = 114.82724194,
-            declinationDeg = 5.22750767,
-        ),
-        CatalogEpochFixture(
-            name = "Achernar",
-            rightAscensionDeg = 24.42813204,
-            declinationDeg = -57.23666007,
-        ),
-        CatalogEpochFixture(
-            name = "Betelgeuse",
-            rightAscensionDeg = 88.79287161,
-            declinationDeg = 7.40703634,
-        ),
-        CatalogEpochFixture(
-            name = "Hadar",
-            rightAscensionDeg = 210.95601898,
-            declinationDeg = -60.3729784,
-        ),
-        CatalogEpochFixture(
-            name = "Altair",
-            rightAscensionDeg = 297.6945086,
-            declinationDeg = 8.86738491,
-        ),
-        CatalogEpochFixture(
-            name = "Acrux",
-            rightAscensionDeg = 186.64975585,
-            declinationDeg = -63.09905586,
-        ),
-        CatalogEpochFixture(
-            name = "Aldebaran",
-            rightAscensionDeg = 68.98000195,
-            declinationDeg = 16.50976164,
-        ),
-        CatalogEpochFixture(
-            name = "Spica",
-            rightAscensionDeg = 201.2983523,
-            declinationDeg = -11.16124491,
-        ),
-        CatalogEpochFixture(
-            name = "Antares",
-            rightAscensionDeg = 247.35194804,
-            declinationDeg = -26.43194608,
-        ),
-        CatalogEpochFixture(
-            name = "Pollux",
-            rightAscensionDeg = 116.33068263,
-            declinationDeg = 28.02631031,
-        ),
-        CatalogEpochFixture(
-            name = "Fomalhaut",
-            rightAscensionDeg = 344.41177323,
-            declinationDeg = -29.62183701,
-        ),
-        CatalogEpochFixture(
-            name = "Mimosa",
-            rightAscensionDeg = 191.93049537,
-            declinationDeg = -59.68873246,
-        ),
-        CatalogEpochFixture(
-            name = "Deneb",
-            rightAscensionDeg = 310.3579727,
-            declinationDeg = 45.28033423,
-        ),
-        CatalogEpochFixture(
-            name = "Regulus",
-            rightAscensionDeg = 152.09358075,
-            declinationDeg = 11.96719513,
-        ),
-        CatalogEpochFixture(
-            name = "Adhara",
-            rightAscensionDeg = 104.65644451,
-            declinationDeg = -28.97208931,
-        ),
-        CatalogEpochFixture(
-            name = "Castor",
-            rightAscensionDeg = 113.65001898,
-            declinationDeg = 31.88863645,
-        ),
-        CatalogEpochFixture(
-            name = "Gacrux",
-            rightAscensionDeg = 187.79137202,
-            declinationDeg = -57.11256922,
-        ),
-        CatalogEpochFixture(
-            name = "Shaula",
-            rightAscensionDeg = 263.40219373,
-            declinationDeg = -37.10374835,
-        ),
-        CatalogEpochFixture(
-            name = "Bellatrix",
-            rightAscensionDeg = 81.28278416,
-            declinationDeg = 6.34973451,
-        ),
+        CatalogEpochFixture(name = "Sirius", rightAscensionDeg = 101.28854105, declinationDeg = -16.71314306),
+        CatalogEpochFixture(name = "Canopus", rightAscensionDeg = 95.98787763, declinationDeg = -52.69571799),
+        CatalogEpochFixture(name = "Arcturus", rightAscensionDeg = 213.91811403, declinationDeg = 19.18726997),
+        CatalogEpochFixture(name = "Rigil Kentaurus", rightAscensionDeg = 219.92041034, declinationDeg = -60.83514707),
+        CatalogEpochFixture(name = "Vega", rightAscensionDeg = 279.23410832, declinationDeg = 38.78299311),
+        CatalogEpochFixture(name = "Capella", rightAscensionDeg = 79.17206517, declinationDeg = 45.99902927),
+        CatalogEpochFixture(name = "Rigel", rightAscensionDeg = 78.63446353, declinationDeg = -8.20163919),
+        CatalogEpochFixture(name = "Procyon", rightAscensionDeg = 114.82724194, declinationDeg = 5.22750767),
+        CatalogEpochFixture(name = "Achernar", rightAscensionDeg = 24.42813204, declinationDeg = -57.23666007),
+        CatalogEpochFixture(name = "Betelgeuse", rightAscensionDeg = 88.79287161, declinationDeg = 7.40703634),
+        CatalogEpochFixture(name = "Hadar", rightAscensionDeg = 210.95601898, declinationDeg = -60.3729784),
+        CatalogEpochFixture(name = "Altair", rightAscensionDeg = 297.6945086, declinationDeg = 8.86738491),
+        CatalogEpochFixture(name = "Acrux", rightAscensionDeg = 186.64975585, declinationDeg = -63.09905586),
+        CatalogEpochFixture(name = "Aldebaran", rightAscensionDeg = 68.98000195, declinationDeg = 16.50976164),
+        CatalogEpochFixture(name = "Spica", rightAscensionDeg = 201.2983523, declinationDeg = -11.16124491),
+        CatalogEpochFixture(name = "Antares", rightAscensionDeg = 247.35194804, declinationDeg = -26.43194608),
+        CatalogEpochFixture(name = "Pollux", rightAscensionDeg = 116.33068263, declinationDeg = 28.02631031),
+        CatalogEpochFixture(name = "Fomalhaut", rightAscensionDeg = 344.41177323, declinationDeg = -29.62183701),
+        CatalogEpochFixture(name = "Mimosa", rightAscensionDeg = 191.93049537, declinationDeg = -59.68873246),
+        CatalogEpochFixture(name = "Deneb", rightAscensionDeg = 310.3579727, declinationDeg = 45.28033423),
+        CatalogEpochFixture(name = "Regulus", rightAscensionDeg = 152.09358075, declinationDeg = 11.96719513),
+        CatalogEpochFixture(name = "Adhara", rightAscensionDeg = 104.65644451, declinationDeg = -28.97208931),
+        CatalogEpochFixture(name = "Castor", rightAscensionDeg = 113.65001898, declinationDeg = 31.88863645),
+        CatalogEpochFixture(name = "Gacrux", rightAscensionDeg = 187.79137202, declinationDeg = -57.11256922),
+        CatalogEpochFixture(name = "Shaula", rightAscensionDeg = 263.40219373, declinationDeg = -37.10374835),
+        CatalogEpochFixture(name = "Bellatrix", rightAscensionDeg = 81.28278416, declinationDeg = 6.34973451),
     )
 
 // Lunar phase instants published by USNO (aa.usno.navy.mil/api/moon/phases/year).

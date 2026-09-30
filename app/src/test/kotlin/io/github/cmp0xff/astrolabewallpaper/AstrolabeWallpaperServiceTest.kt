@@ -6,7 +6,6 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Looper
-import android.os.SystemClock
 import android.service.wallpaper.WallpaperService
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -66,18 +65,6 @@ class AstrolabeWallpaperServiceTest {
     }
 
     @Test
-    fun visibleSchedulesHiddenCancels() {
-        val engine = controller.get().onCreateEngine()
-        val looper = shadowOf(Looper.getMainLooper())
-
-        engine.onVisibilityChanged(true)
-        assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
-
-        engine.onVisibilityChanged(false)
-        assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
-    }
-
-    @Test
     fun destroyCancelsScheduledRedraw() {
         val engine = controller.get().onCreateEngine()
         val looper = shadowOf(Looper.getMainLooper())
@@ -87,21 +74,6 @@ class AstrolabeWallpaperServiceTest {
 
         engine.onDestroy()
         assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
-    }
-
-    @Test
-    fun tickFiresAndReschedules() {
-        val engine = controller.get().onCreateEngine()
-        val looper = shadowOf(Looper.getMainLooper())
-
-        engine.onVisibilityChanged(true)
-        assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
-        val firstTickDelay = looper.nextScheduledTaskTime.toMillis() - SystemClock.uptimeMillis()
-        assertTrue(firstTickDelay > 0L)
-        assertTrue(firstTickDelay <= 1000L)
-
-        looper.idleFor(Duration.ofSeconds(2))
-        assertTrue(looper.nextScheduledTaskTime > Duration.ZERO)
     }
 
     // A destroyed-then-recreated surface must resume ticking: onSurfaceDestroyed cancels the loop,

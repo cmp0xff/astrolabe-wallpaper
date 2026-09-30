@@ -8,33 +8,22 @@ import java.time.LocalTime
 /** Checks the pure hand-angle mapping and its invariants independently of Android code. */
 class ClockStateTest {
     @Test
-    fun twelveOClockAlignsAllHands() {
-        assertAngles(time = LocalTime.of(12, 0, 0), hourAngle = 0f, minuteAngle = 0f, secondAngle = 0f)
-    }
-
-    @Test
-    fun threeOClockHourHandAt90() {
-        assertAngles(time = LocalTime.of(3, 0, 0), hourAngle = 90f, minuteAngle = 0f, secondAngle = 0f)
-    }
-
-    @Test
-    fun sixOClockHourHandAt180() {
-        assertAngles(time = LocalTime.of(6, 0, 0), hourAngle = 180f, minuteAngle = 0f, secondAngle = 0f)
-    }
-
-    @Test
-    fun threeFifteenSweepsHourHand() {
-        assertAngles(time = LocalTime.of(3, 15, 0), hourAngle = 97.5f, minuteAngle = 90f, secondAngle = 0f)
-    }
-
-    @Test
-    fun secondHandAtThirtySeconds() {
-        assertAngles(time = LocalTime.of(0, 0, 30), hourAngle = 0.25f, minuteAngle = 3f, secondAngle = 180f)
-    }
-
-    @Test
-    fun elevenFiftyNineBeforeMidnight() {
-        assertAngles(time = LocalTime.of(23, 59, 59), hourAngle = 359.9917f, minuteAngle = 359.9f, secondAngle = 354f)
+    fun knownTimesMapToExpectedAngles() {
+        val cases =
+            listOf(
+                LocalTime.of(12, 0, 0) to ClockState(hourAngle = 0f, minuteAngle = 0f, secondAngle = 0f),
+                LocalTime.of(3, 0, 0) to ClockState(hourAngle = 90f, minuteAngle = 0f, secondAngle = 0f),
+                LocalTime.of(6, 0, 0) to ClockState(hourAngle = 180f, minuteAngle = 0f, secondAngle = 0f),
+                LocalTime.of(3, 15, 0) to ClockState(hourAngle = 97.5f, minuteAngle = 90f, secondAngle = 0f),
+                LocalTime.of(0, 0, 30) to ClockState(hourAngle = 0.25f, minuteAngle = 3f, secondAngle = 180f),
+                LocalTime.of(23, 59, 59) to ClockState(hourAngle = 359.9917f, minuteAngle = 359.9f, secondAngle = 354f),
+            )
+        for ((time, expected) in cases) {
+            val actual = clockState(time)
+            assertEquals("hour at $time", expected.hourAngle, actual.hourAngle, ANGLE_TOLERANCE)
+            assertEquals("minute at $time", expected.minuteAngle, actual.minuteAngle, ANGLE_TOLERANCE)
+            assertEquals("second at $time", expected.secondAngle, actual.secondAngle, ANGLE_TOLERANCE)
+        }
     }
 
     @Test
@@ -69,13 +58,6 @@ class ClockStateTest {
         assertRejected { it.copy(hourAngle = Float.NaN) }
         assertRejected { it.copy(minuteAngle = Float.POSITIVE_INFINITY) }
         assertRejected { it.copy(secondAngle = Float.NEGATIVE_INFINITY) }
-    }
-
-    private fun assertAngles(time: LocalTime, hourAngle: Float, minuteAngle: Float, secondAngle: Float) {
-        val state = clockState(time)
-        assertEquals(hourAngle, state.hourAngle, ANGLE_TOLERANCE)
-        assertEquals(minuteAngle, state.minuteAngle, ANGLE_TOLERANCE)
-        assertEquals(secondAngle, state.secondAngle, ANGLE_TOLERANCE)
     }
 
     // A modified copy is the reachable path that re-runs the constructor's invariants.

@@ -23,65 +23,26 @@ class AstronomyEngineStarTest {
     private val calculator = AstronomyEngineCalculator()
 
     @Test
-    fun starPositionsMatchSofa() {
-        var compared = 0
-        for (fixture in starFixtures) {
-            val sky = calculator.sky(fixture.instant, fixture.site.location)
-            val star = sky.stars.single { it.name == fixture.name }
-            val where = "${fixture.name} from ${fixture.site.name} at ${fixture.instant}"
-            assertTrue(
-                "$where azimuth: expected ${fixture.azimuthDeg}, found ${star.position.azimuthDeg}",
-                abs(
-                    angleDifferenceDeg(first = star.position.azimuthDeg, second = fixture.azimuthDeg),
-                ) <= STAR_TOLERANCE_DEG,
-            )
-            assertEquals(
-                "$where altitude",
-                fixture.altitudeDeg,
-                star.position.altitudeDeg,
-                STAR_TOLERANCE_DEG,
-            )
-            compared++
-        }
-        assertTrue("no star positions were compared", compared > 0)
-    }
-
-    @Test
-    fun starConstellationsMatchSimbad() {
-        for (fixture in starFixtures) {
-            val sky = calculator.sky(fixture.instant, fixture.site.location)
-            val star = sky.stars.single { it.name == fixture.name }
-            assertEquals(
-                "${fixture.name} constellation",
-                fixture.constellation,
-                star.constellation,
-            )
-        }
-    }
-
-    @Test
-    fun starSpreadsAreEnforced() {
-        // The star row of the spread table in docs/astronomy.md, measured here rather than left
-        // to prose. The spread is what the app's omitted annual aberration and parallax cost
-        // against the SOFA chain, so it should stay where it is; a jump means one of the
-        // reductions moved. Measured: 0.020 degrees of azimuth, 0.007 of altitude.
-        var azimuth = 0.0
-        var altitude = 0.0
-        // Every bundled star has to appear somewhere in this table, which is what makes the
-        // spread above a statement about the whole catalogue rather than about part of it.
-        assertEquals(StarCatalog.stars.map { it.name }.toSet(), starFixtures.map { it.name }.toSet())
-        for (fixture in starFixtures) {
-            val sky = calculator.sky(fixture.instant, fixture.site.location)
-            val star = sky.stars.single { it.name == fixture.name }
-            azimuth =
-                maxOf(
-                    a = azimuth,
-                    b = abs(angleDifferenceDeg(first = star.position.azimuthDeg, second = fixture.azimuthDeg)),
+    fun starReferencesMatch() {
+        // Every catalogue member has an independent horizontal reference somewhere in the six
+        // scenarios; an accidentally trimmed fixture table must not pass without comparing it.
+        val referenceNames = starFixtures.flatMap { it.stars }.map { it.name }.toSet()
+        assertEquals(StarCatalog.stars.map { it.name }.toSet(), referenceNames)
+        for (scenario in starFixtures) {
+            val sky = calculator.sky(scenario.instant, scenario.site.location)
+            for (fixture in scenario.stars) {
+                val star = sky.stars.single { it.name == fixture.name }
+                val where = "${fixture.name} from ${scenario.site.name} at ${scenario.instant}"
+                assertTrue(
+                    "$where azimuth: expected ${fixture.azimuthDeg}, found ${star.position.azimuthDeg}",
+                    abs(
+                        angleDifferenceDeg(first = star.position.azimuthDeg, second = fixture.azimuthDeg),
+                    ) <= STAR_TOLERANCE_DEG,
                 )
-            altitude = maxOf(a = altitude, b = abs(star.position.altitudeDeg - fixture.altitudeDeg))
+                assertEquals("$where altitude", fixture.altitudeDeg, star.position.altitudeDeg, STAR_TOLERANCE_DEG)
+                assertEquals("$where constellation", fixture.constellation, star.constellation)
+            }
         }
-        assertTrue("star azimuth spread $azimuth", azimuth <= STAR_SPREAD_LIMIT_DEG)
-        assertTrue("star altitude spread $altitude", altitude <= STAR_SPREAD_LIMIT_DEG)
     }
 
     @Test
@@ -93,9 +54,9 @@ class AstronomyEngineStarTest {
         // ascension. Ignoring that factor for Rigil Kentaurus, the fastest star here, puts the
         // result out by 34 arcseconds instead of the 0.0045 arcsecond that this tolerance holds.
         //
-        // This is also the only test that catches a missing `cos(delta)`: at the 2026 instants
-        // the starPositionsMatchSofa fixtures use, that error is about 0.03 degrees, well inside
-        // the 0.1 degree the position test allows. That makes the row set load-bearing, so it is
+        // This also catches a missing `cos(delta)` directly: at the 2026 instants the horizontal
+        // fixtures use, that error is about 0.03 degrees, inside their 0.04-degree bound.
+        // That makes the independent epoch references essential, so the row set is
         // checked against the catalogue rather than trusted: a trimmed table would otherwise keep
         // passing while quietly dropping the comparison.
         assertEquals(StarCatalog.stars.map { it.name }.toSet(), catalogEpochFixtures.map { it.name }.toSet())
@@ -157,13 +118,13 @@ class AstronomyEngineStarTest {
         /**
          * The star fixtures compare an app that ignores annual aberration against a SOFA chain
          * that includes it, a 20-arcsecond effect, and a linear proper motion against a rigorous
-         * one. Both are far below a tenth of a degree, and the measured spread is under two
-         * hundredths, so 0.1 degree leaves room while still failing on a real error.
+         * one. The 0.04-degree bound retains twice the measured 0.020-degree spread while
+         * allowing less than the 0.1-degree acceptance tolerance.
          *
          * This test alone would pass if the `cos(delta)` conversion were dropped;
          * [properMotionReproducesEpoch] is what catches that.
          */
-        const val STAR_TOLERANCE_DEG = 0.1
+        const val STAR_TOLERANCE_DEG = 0.04
 
         /** J2000.0 is 8.75 Julian years after the Hipparcos epoch J1991.25. */
         const val EPOCH_GAP_YEARS = 8.75
@@ -182,11 +143,6 @@ class AstronomyEngineStarTest {
          */
         const val EPOCH_TOLERANCE_DEG = 3.0e-6
 
-        /**
-         * The spread `docs/astronomy.md` publishes for stars, as a bound for
-         * [starSpreadsAreEnforced]: twice the 0.020 degrees measured over [starFixtures].
-         */
-        const val STAR_SPREAD_LIMIT_DEG = 0.04
         const val BRIGHT_STAR_COUNT = 26
         const val EXACT = 0.0
     }
