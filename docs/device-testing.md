@@ -274,3 +274,15 @@ locale; the `Double.toString()` it replaces printed every digit the `Double` car
 is untouched: `save()` still writes the full `Double`, so a stored coordinate keeps the precision it
 was entered with. Reading the rounded readout and retyping it is what now loses precision, because
 the entry fields are not seeded from the saved site; that residual is tracked in #38.
+
+## Orloj foundation verification (#4, #5)
+
+Physical-device checks have not been performed for the Orloj foundation. JVM reference and
+projection tests plus Robolectric Canvas renders are automated evidence only. On a physical
+device, inspect the 24-hour scale and single civil hand in preview, on home, and on the lit lock
+screen; verify saved-site timezone and both layer toggles after hide/show, surface recreation,
+process restart, and reboot. Check representative northern, southern, equatorial, and polar
+sites without recording personal coordinates. Check that removing app data leaves a usable
+civil clock and that Settings explains the missing observing site. Record the test APK/source
+revision and Android version under the privacy constraints above. Battery and frame-cost
+qualification remain #6.

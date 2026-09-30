@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="app_name">Astrolabe Wallpaper</string>
-  <string name="wallpaper_description">A quiet, static astrolabe dial.</string>
+  <string name="wallpaper_description">An Orloj-inspired astronomical clock.</string>
   <string name="open_preview">Open wallpaper preview</string>
   <string name="preview_unavailable">Wallpaper preview is unavailable on this device.</string>
   <string name="location_unset">No observing location set.</string>
@@ -18,4 +18,7 @@
   <string name="location_saved">Location saved.</string>
   <string name="location_current_source">current</string>
   <string name="location_manual_source">manual</string>
+  <string name="zodiac_ring">Zodiac ring</string>
+  <string name="day_and_night">Day and night</string>
+  <string name="dial_location_help">Save an observing location to show the zodiac and sky geometry. Without one, only the civil clock is shown.</string>
 </resources>

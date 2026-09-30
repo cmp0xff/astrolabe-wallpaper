@@ -27,6 +27,7 @@ explicitly format Kotlin source, tests, and Gradle scripts. CI never reformats f
 - [Product design and observing-site contract](docs/design.md)
 - [Development setup, checking policy, and build artifacts](docs/development.md)
 - [Astronomy calculations and implementation limits](docs/astronomy.md)
+- [Orloj dial geometry and scope](docs/orloj.md)
 - [Dependency and artwork provenance](docs/dependencies.md)
 - [Physical-device procedures and evidence](docs/device-testing.md)
 - [Bootstrap verification](docs/bootstrap-verification.md)

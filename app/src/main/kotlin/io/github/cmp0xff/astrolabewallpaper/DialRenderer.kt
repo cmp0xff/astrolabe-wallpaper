@@ -2,151 +2,153 @@ package io.github.cmp0xff.astrolabewallpaper
 
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Typeface
 import android.util.Log
 import kotlin.math.cos
 import kotlin.math.sin
 
-/**
- * Renders the astrolabe clock dial onto a [Canvas].
- *
- * [ClockState] angles are degrees measured clockwise from 12 o'clock (screen up; the dial carries no
- * geographic orientation). The canvas is cleared to [BACKGROUND_COLOR] before the tick marks and
- * hands are drawn, and a degenerate canvas or dial is skipped with a log line. The renderer owns a
- * mutable [Paint], so callers must confine an instance to a single thread. Rendering is best-effort:
- * a skipped frame is reported through the log rather than a return value.
- */
+/** Draws a 24-hour civil dial and optional site geometry; instances are confined to the rendering thread. */
 internal class DialRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val plate = OrlojPlateRenderer()
+    private val zodiac = ZodiacRenderer()
+    private val hand =
+        Path().apply {
+            moveTo(0f, -HAND_LENGTH)
+            lineTo(HAND_TIP_WIDTH, -HAND_SHOULDER)
+            lineTo(HAND_SHAFT_WIDTH, -HAND_SHOULDER)
+            lineTo(HAND_SHAFT_WIDTH, HAND_TAIL)
+            lineTo(-HAND_SHAFT_WIDTH, HAND_TAIL)
+            lineTo(-HAND_SHAFT_WIDTH, -HAND_SHOULDER)
+            lineTo(-HAND_TIP_WIDTH, -HAND_SHOULDER)
+            close()
+        }
 
-    /** Clears [canvas] and draws the centered dial ticks and hands for [state]. */
-    fun renderDial(canvas: Canvas, state: ClockState) {
+    /** Each frame uses civil time and geometric values from the caller's single instant. */
+    fun renderDial(
+        canvas: Canvas,
+        state: ClockState,
+        geometry: AstrolabeGeometry? = null,
+        layers: DialLayers = DialLayers(),
+    ) {
         if (canvas.width <= 0 || canvas.height <= 0) {
             Log.w(TAG, "skipping render: empty canvas ${canvas.width}x${canvas.height}")
             return
         }
-        canvas.drawColor(BACKGROUND_COLOR)
-        val centerX = canvas.width / CENTER_DIVISOR
-        val centerY = canvas.height / CENTER_DIVISOR
+        canvas.drawColor(DialStyle.BACKGROUND)
         val radius = minOf(a = canvas.width, b = canvas.height) * RADIUS_FRACTION
-        // Reject a dial too small for its own tick geometry before building it.
-        if (radius <= MIN_DIAL_RADIUS) {
-            Log.w(TAG, "skipping dial: radius $radius <= minimum $MIN_DIAL_RADIUS")
+        if (radius < MIN_DIAL_RADIUS) {
+            Log.w(TAG, "skipping dial: radius $radius < minimum $MIN_DIAL_RADIUS")
             return
         }
-        val dial = Dial(centerX = centerX, centerY = centerY, radius = radius)
-        drawTickMarks(canvas, dial)
-        drawHand(
-            canvas = canvas,
-            dial = dial,
-            length = dial.radius * HOUR_HAND_LENGTH,
-            angleDegrees = state.hourAngle,
-            strokeWidth = HOUR_HAND_WIDTH,
-        )
-        drawHand(
-            canvas = canvas,
-            dial = dial,
-            length = dial.radius * MINUTE_HAND_LENGTH,
-            angleDegrees = state.minuteAngle,
-            strokeWidth = MINUTE_HAND_WIDTH,
-        )
-        drawHand(
-            canvas = canvas,
-            dial = dial,
-            length = dial.radius * SECOND_HAND_LENGTH,
-            angleDegrees = state.secondAngle,
-            strokeWidth = SECOND_HAND_WIDTH,
-        )
-    }
-
-    private fun drawTickMarks(canvas: Canvas, dial: Dial) {
-        for (index in 0 until TICKS_PER_REVOLUTION) {
-            val isHourTick = index % TICKS_PER_HOUR == 0
-            val tickLength = if (isHourTick) HOUR_TICK_LENGTH else MINUTE_TICK_LENGTH
-            val tickWidth = if (isHourTick) HOUR_TICK_WIDTH else MINUTE_TICK_WIDTH
-            configureDialPaint(tickWidth)
-            drawRadiusLine(
-                canvas = canvas,
-                dial = dial,
-                innerRadius = dial.radius - tickLength,
-                outerRadius = dial.radius,
-                angleDegrees = index * DEGREES_PER_TICK,
-            )
+        val checkpoint = canvas.save()
+        try {
+            canvas.translate(canvas.width / CENTER_DIVISOR, canvas.height / CENTER_DIVISOR)
+            canvas.scale(radius / OUTER_RADIUS, radius / OUTER_RADIUS)
+            drawCivilScale(canvas)
+            val projection = geometry?.let(::OrlojProjection)
+            plate.draw(canvas, projection, layers.isDayAndNightEnabled)
+            if (projection != null && layers.isZodiacRingEnabled) {
+                zodiac.draw(canvas, projection)
+            }
+            drawCivilHand(canvas, state.hourAngle)
+        } finally {
+            canvas.restoreToCount(checkpoint)
         }
     }
 
-    private fun drawHand(canvas: Canvas, dial: Dial, length: Float, angleDegrees: Float, strokeWidth: Float) {
-        configureDialPaint(strokeWidth)
-        drawRadiusLine(
-            canvas = canvas,
-            dial = dial,
-            innerRadius = 0f,
-            outerRadius = length,
-            angleDegrees = angleDegrees,
-        )
-    }
-
-    private fun configureDialPaint(strokeWidth: Float) {
-        paint.color = DIAL_COLOR
+    private fun drawCivilScale(canvas: Canvas) {
+        paint.style = Paint.Style.FILL
+        paint.color = DialStyle.RIM
+        canvas.drawCircle(0f, 0f, OUTER_RADIUS, paint)
         paint.style = Paint.Style.STROKE
-        paint.strokeCap = Paint.Cap.ROUND
-        paint.strokeWidth = strokeWidth
+        paint.color = DialStyle.GOLD
+        paint.strokeWidth = RIM_WIDTH
+        canvas.drawCircle(0f, 0f, OUTER_RADIUS, paint)
+        canvas.drawCircle(0f, 0f, SCALE_INNER_RADIUS, paint)
+        paint.color = DialStyle.MUTED_GOLD
+        paint.strokeWidth = FINE_WIDTH
+        canvas.drawCircle(0f, 0f, OUTER_RADIUS - RIM_INSET, paint)
+        drawHours(canvas)
     }
 
-    private fun drawRadiusLine(
-        canvas: Canvas,
-        dial: Dial,
-        innerRadius: Float,
-        outerRadius: Float,
-        angleDegrees: Float,
-    ) {
-        val radians = Math.toRadians(angleDegrees.toDouble())
-        val sinAngle = sin(radians).toFloat()
-        val cosAngle = cos(radians).toFloat()
-        canvas.drawLine(
-            dial.centerX + innerRadius * sinAngle,
-            dial.centerY - innerRadius * cosAngle,
-            dial.centerX + outerRadius * sinAngle,
-            dial.centerY - outerRadius * cosAngle,
-            paint,
-        )
+    private fun drawHours(canvas: Canvas) {
+        val checkpoint = canvas.save()
+        canvas.scale(1 / DialStyle.TEXT_UNITS, 1 / DialStyle.TEXT_UNITS)
+        paint.typeface = Typeface.create("serif", Typeface.NORMAL)
+        paint.textAlign = Paint.Align.CENTER
+        paint.textSize = NUMERAL_SIZE * DialStyle.TEXT_UNITS
+        val textOffset = -(paint.ascent() + paint.descent()) / CENTER_DIVISOR
+        for ((index, numeral) in ROMAN_HOURS.withIndex()) {
+            val angle = Math.toRadians((index + 1) * DEGREES_PER_HOUR + MIDNIGHT_ANGLE)
+            val x = sin(angle).toFloat()
+            val y = -cos(angle).toFloat()
+            paint.color = DialStyle.GOLD
+            paint.style = Paint.Style.FILL
+            canvas.drawText(
+                numeral,
+                x * NUMERAL_RADIUS * DialStyle.TEXT_UNITS,
+                y * NUMERAL_RADIUS * DialStyle.TEXT_UNITS + textOffset,
+                paint,
+            )
+            paint.strokeWidth = HOUR_TICK_WIDTH * DialStyle.TEXT_UNITS
+            canvas.drawLine(
+                x * TICK_INNER_RADIUS * DialStyle.TEXT_UNITS,
+                y * TICK_INNER_RADIUS * DialStyle.TEXT_UNITS,
+                x * TICK_OUTER_RADIUS * DialStyle.TEXT_UNITS,
+                y * TICK_OUTER_RADIUS * DialStyle.TEXT_UNITS,
+                paint,
+            )
+        }
+        canvas.restoreToCount(checkpoint)
     }
 
-    private data class Dial(val centerX: Float, val centerY: Float, val radius: Float)
+    private fun drawCivilHand(canvas: Canvas, angleDegrees: Float) {
+        val checkpoint = canvas.save()
+        canvas.rotate(angleDegrees)
+        paint.color = DialStyle.HAND
+        paint.style = Paint.Style.FILL
+        canvas.drawPath(hand, paint)
+        canvas.restoreToCount(checkpoint)
+        paint.color = DialStyle.GOLD
+        canvas.drawCircle(0f, 0f, HUB_RADIUS, paint)
+        paint.color = DialStyle.RIM
+        canvas.drawCircle(0f, 0f, HUB_INNER_RADIUS, paint)
+    }
 
-    internal companion object {
-        /** Background colour of the wallpaper dial; exposed so the pixel test can assert it. */
-        internal const val BACKGROUND_COLOR: Int = 0xFF111923.toInt()
-
-        /** Dial stroke colour; exposed so the pixel test can pin the palette. */
-        internal const val DIAL_COLOR: Int = 0xFFD8B66A.toInt()
-
-        private const val CENTER_DIVISOR = 2f
-        private const val RADIUS_FRACTION = 0.3f
-        private const val HOUR_HAND_LENGTH = 0.5f
-        private const val MINUTE_HAND_LENGTH = 0.75f
-        private const val SECOND_HAND_LENGTH = 0.85f
-        private const val HOUR_HAND_WIDTH = 5f
-        private const val MINUTE_HAND_WIDTH = 3f
-        private const val SECOND_HAND_WIDTH = 1f
-        private const val TICKS_PER_REVOLUTION = 60
-        private const val TICKS_PER_HOUR = 5
-        private const val DEGREES_PER_TICK = 6f
-        private const val HOUR_TICK_LENGTH = 10f
-        private const val MINUTE_TICK_LENGTH = 5f
-        private const val HOUR_TICK_WIDTH = 3f
-        private const val MINUTE_TICK_WIDTH = 1f
-
-        // Derived from the tick constants on purpose: a dial must clear the longest tick and its
-        // round cap, so retuning the ticks also moves the radius below which the dial is skipped and
-        // only the cleared background is drawn.
-        private const val MIN_DIAL_RADIUS = HOUR_TICK_LENGTH + HOUR_TICK_WIDTH / 2f
+    private companion object {
+        const val CENTER_DIVISOR = 2f
+        const val RADIUS_FRACTION = 0.43f
+        const val MIN_DIAL_RADIUS = 16f
+        const val OUTER_RADIUS = 1.37f
+        const val SCALE_INNER_RADIUS = 1.05f
+        const val RIM_WIDTH = 0.008f
+        const val RIM_INSET = 0.026f
+        const val FINE_WIDTH = 0.003f
+        const val NUMERAL_SIZE = 0.084f
+        const val NUMERAL_RADIUS = 1.205f
+        const val DEGREES_PER_HOUR = 15.0
+        const val MIDNIGHT_ANGLE = 180.0
+        const val HOUR_TICK_WIDTH = 0.005f
+        const val TICK_INNER_RADIUS = 1.065f
+        const val TICK_OUTER_RADIUS = 1.095f
+        const val HAND_LENGTH = 1.055f
+        const val HAND_SHOULDER = 0.95f
+        const val HAND_TIP_WIDTH = 0.034f
+        const val HAND_SHAFT_WIDTH = 0.011f
+        const val HAND_TAIL = 0.13f
+        const val HUB_RADIUS = 0.039f
+        const val HUB_INNER_RADIUS = 0.018f
+        val ROMAN_HOURS =
+            listOf(
+                "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII",
+                "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI", "XXII", "XXIII", "XXIV",
+            )
     }
 }
 
-/**
- * Runs one dial draw, containing argument and state exceptions so these failures preserve the
- * per-second tick. Each contained exception is logged with its stack trace; other exceptions propagate.
- */
+/** Contains argument and canvas-state failures while preserving the scheduled per-second redraw. */
 internal fun containRenderFailure(draw: () -> Unit) {
     try {
         draw()

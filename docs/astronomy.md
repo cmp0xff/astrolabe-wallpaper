@@ -3,14 +3,16 @@
 [Astronomy Calculator](../app/src/main/kotlin/io/github/cmp0xff/astrolabewallpaper/AstronomyCalculator.kt)
 answers one question: *what does the sky look like from a saved observing location at a given
 instant?* It implements part of #4: the Sun, the Moon with its phase, the seven planets visible
-from Earth, a bundled set of bright stars, and the day's sunrise, sunset, and twilights. Ecliptic
-geometry remains outstanding for #4, and integration with the dial belongs to #5.
+from Earth, a bundled set of bright stars, and the day's sunrise, sunset, and twilights. It also
+supplies local apparent sidereal angle and true obliquity for the [Orloj dial foundation](orloj.md).
+The existing `Sky` contract and UTC event window remain unchanged.
 
 | File | Role |
 | --- | --- |
 | `SkyState.kt` | The result types: `Sky`, `Horizontal`, per-body state, `EventKind`, `RiseSetEvent` |
 | `AstronomyCalculator.kt` | The interface, and the time and event-window contract |
 | `AstronomyEngineCalculator.kt` | The implementation, backed by Astronomy Engine |
+| `AstrolabeGeometry.kt` | Sidereal angle, true obliquity of date, and saved observer latitude |
 | `StarCatalog.kt` | The bundled Hipparcos bright stars and their proper-motion arithmetic |
 
 Every one of them is free of `android.*` imports. Combined with `java.time` being available
@@ -37,8 +39,7 @@ the saved site nor its civil clock. With no selected site, only the civil clock 
 shown, using the phone timezone.
 
 Prague Orloj is the visual and projection reference, with geometry adapted to the
-selected observing site. Projection mathematics belong in the Orloj guide introduced
-by [PR #30](https://github.com/cmp0xff/astrolabe-wallpaper/pull/30).
+selected observing site. Projection mathematics belong in the [Orloj guide](orloj.md).
 
 ### Current integration limits
 
@@ -62,9 +63,10 @@ previously phone-tagged records. The offline city chooser is
 | Equatorial B1875 | B1875.0 | Inside the engine: the IAU constellation boundaries are tabulated there |
 | Ecliptic of date | Date and time of the observation | `MoonState.phaseLongitudeDeg`, the Moon's ecliptic longitude less the Sun's |
 
-The ecliptic frame appears exactly once: the phase longitude is an ecliptic quantity by
-definition, since the Moon's phase is its elongation from the Sun along the ecliptic. Every other
-angle in `Sky` is horizontal or equatorial.
+In `Sky`, the ecliptic frame appears in the phase longitude, the Moon's elongation from the Sun
+along the ecliptic. Every other angle in `Sky` is horizontal or equatorial. The separate
+`AstrolabeGeometry` result adds true obliquity from the ecliptic-to-equatorial rotation of date
+for the projected zodiac; the reference grid does not reuse refracted body positions.
 
 Positions of the Sun, Moon, and planets are computed with `Aberration.Corrected` at
 `EquatorEpoch.OfDate`, then converted with `Refraction.Normal`. This is the standard topocentric

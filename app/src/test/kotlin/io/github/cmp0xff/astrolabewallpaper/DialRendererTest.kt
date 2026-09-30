@@ -2,325 +2,226 @@ package io.github.cmp0xff.astrolabewallpaper
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.util.Log
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLog
 import java.time.LocalTime
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-/**
- * Renders the dial to a bitmap and checks that the hands land where they should.
- *
- * Cardinal times anchor the screen orientation; dispersed times isolate each hand. At each
- * dispersed time the three hands are more than 100 degrees apart. Presence probes sit inside
- * the target hand, and overdraw probes sit past its tip. The second-hand probes use minute-tick
- * rays, safely separated from the longer hour ticks. Pixel rounding and antialiasing tolerances
- * are documented alongside the probe distances below.
- */
+/** Native bitmap probes anchor the 24-hour hand, geometric plate, and independent display layers. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DialRendererTest {
     private val renderer = DialRenderer()
-
-    // Also used by palette, tick-spacing, and renderer-reuse checks.
-    private val dispersedTime = LocalTime.of(12, 20, 43)
+    private val prague = AstrolabeGeometry(localSiderealAngleDeg = 0.0, trueObliquityDeg = 23.44, latitudeDeg = 50.08)
 
     @Test
-    fun twelveOClockAllHandsPointUp() {
-        val bitmap = render(LocalTime.of(12, 0, 0))
-        assertBackgroundOutsideDial(bitmap)
-        // Noon is the convention anchor: all three hands must coincide at 12 o'clock.
-        assertDialPixel(bitmap = bitmap, angleDegrees = 0f, distance = HOUR_SAMPLE_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = 0f, distance = MINUTE_SAMPLE_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = 0f, distance = SECOND_SAMPLE_DISTANCE)
-        // Nothing dial-coloured points at 3, 6 or 9 o'clock.
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_SAMPLE_DISTANCE)
+    fun paletteIsPinnedToLiteralArgb() {
+        // The device's screenshot pipeline applies a colour transform, so a capture cannot
+        // adjudicate the exact gold (docs/device-testing.md). Every other pixel assertion in this
+        // class compares DialStyle to itself, so without this pin a palette edit passes the suite.
+        assertEquals(0xFFD8B66A.toInt(), DialStyle.GOLD)
+        assertEquals(0xFF101923.toInt(), DialStyle.BACKGROUND)
     }
 
     @Test
-    fun cardinalHourHandsAreIsolated() {
-        for ((hour, angle) in listOf(3 to 90f, 6 to 180f, 9 to 270f)) {
-            val bitmap = render(LocalTime.of(hour, 0, 0))
-            assertBackgroundOutsideDial(bitmap)
-            assertDialPixel(bitmap = bitmap, angleDegrees = angle, distance = HOUR_SAMPLE_DISTANCE)
-            // Minute and second hands point up; the other two cardinal directions are empty.
-            for (emptyAngle in listOf(90f, 180f, 270f).filter { it != angle }) {
-                assertBackgroundPixel(bitmap = bitmap, angleDegrees = emptyAngle, distance = HOUR_SAMPLE_DISTANCE)
+    fun civilHandMatchesCardinalHours() {
+        val hours = listOf(12 to 0.0, 18 to 90.0, 0 to 180.0, 6 to 270.0)
+        for ((hour, angle) in hours) {
+            val bitmap = render(time = LocalTime.of(hour, 0))
+            for ((_, probeAngle) in hours) {
+                val color = if (probeAngle == angle) DialStyle.HAND else DialStyle.NIGHT
+                assertEquals(color, pixelAt(bitmap, radialPoint(angleDeg = probeAngle, radius = 0.35)))
             }
-            // The hour hand is the shortest, so it must not reach the overdraw probe.
-            assertBackgroundPixel(bitmap = bitmap, angleDegrees = angle, distance = HOUR_OVERDRAW_DISTANCE)
+            assertTrue(pixelAt(bitmap, radialPoint(angleDeg = angle, radius = 1.13)) != DialStyle.HAND)
         }
     }
 
     @Test
-    fun dispersedHandsAreIsolated() {
-        val cases =
-            listOf(
-                dispersedTime to ClockState(hourAngle = 10.3583f, minuteAngle = 124.3f, secondAngle = 258f),
-                LocalTime.of(4, 42, 3) to ClockState(hourAngle = 141.025f, minuteAngle = 252.3f, secondAngle = 18f),
-                LocalTime.of(8, 3, 23) to ClockState(hourAngle = 241.6917f, minuteAngle = 20.3f, secondAngle = 138f),
-            )
-        for ((time, angles) in cases) {
-            val (hourAngle, minuteAngle, secondAngle) = angles
-            val bitmap = render(time)
-            // Each hand has its own presence and overdraw probes; it cannot borrow pixels from
-            // another hand as it can when all three overlap at noon.
-            assertDialPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_ONLY_DISTANCE)
-            assertBackgroundPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_OVERDRAW_DISTANCE)
-            assertDialPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_ONLY_DISTANCE)
-            assertBackgroundPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_OVERDRAW_DISTANCE)
-            assertDialPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_ONLY_DISTANCE)
-            assertBackgroundPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_OVERDRAW_DISTANCE)
-        }
+    fun civilHandIncludesMinutes() {
+        val bitmap = render(time = LocalTime.of(15, 15, 36))
+        // 3h 15m 36s since noon is 48.9 degrees on the 24-hour scale.
+        assertEquals(DialStyle.HAND, pixelAt(bitmap, radialPoint(angleDeg = 48.9, radius = 0.35)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, radialPoint(angleDeg = 45.0, radius = 0.35)))
     }
 
     @Test
-    fun minuteTicksAreSixDegreesApart() {
-        val bitmap = render(dispersedTime)
-        // Minute ticks sit at multiples of 6 degrees; 3 and 9 degrees are gaps. No hand is near
-        // these rays at 12:20:43, and radius 58 is inside the minute-tick band [55, 60].
-        assertDialPixel(bitmap = bitmap, angleDegrees = 6f, distance = TICK_PROBE_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = 12f, distance = TICK_PROBE_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = 354f, distance = TICK_PROBE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 3f, distance = TICK_PROBE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 9f, distance = TICK_PROBE_DISTANCE)
+    fun romanNumeralsKeepGlyphSpacing() {
+        val bitmap = render()
+        // XII and XXIV must occupy several glyph advances, even though the plate uses unit radii.
+        assertTrue(textSpan(bitmap, -1.205) > 24)
+        assertTrue(textSpan(bitmap, 1.205) > 40)
     }
 
     @Test
-    fun dialAndBackgroundColoursPinned() {
-        assertEquals(EXPECTED_BACKGROUND_COLOR, DialRenderer.BACKGROUND_COLOR)
-        assertEquals(EXPECTED_DIAL_COLOR, DialRenderer.DIAL_COLOR)
-        val bitmap = render(dispersedTime)
-        assertTrue(
-            "no exact dial colour near the hour hand at 12:20:43",
-            containsExactColour(
-                bitmap = bitmap,
-                angleDegrees = 10.3583f,
-                distance = HOUR_ONLY_DISTANCE,
-                colour = EXPECTED_DIAL_COLOR,
-            ),
-        )
+    fun missingLocationOmitsGeometry() {
+        val bitmap = render()
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = -0.7, y = 0.2)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = 0.8)))
+        assertFalse(containsColor(bitmap, DialStyle.SKY))
+        assertFalse(containsColor(bitmap, DialStyle.TWILIGHT))
     }
 
     @Test
-    fun oneRendererIsFrameIndependent() {
-        val fresh = DialRenderer()
-        val expectedThree = renderWith(renderer = fresh, time = LocalTime.of(3, 0, 0))
-        val expectedDispersed = renderWith(renderer = fresh, time = dispersedTime)
-
-        // The shared renderer draws a different frame first; output must not depend on draw history.
-        val actualDispersed = render(dispersedTime)
-        val actualThree = render(LocalTime.of(3, 0, 0))
-
-        assertTrue("3:00 frame depends on the renderer's previous draw", expectedThree.sameAs(actualThree))
-        assertTrue("12:20:43 frame depends on the renderer's previous draw", expectedDispersed.sameAs(actualDispersed))
+    fun pragueHasDayTwilightAndNight() {
+        val bitmap = render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
+        // These interior points have geometric altitudes about +52, -6, and -27 degrees.
+        assertEquals(DialStyle.SKY, pixelAt(bitmap, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.TWILIGHT, pixelAt(bitmap, DialPoint(x = -0.7, y = 0.2)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = 0.8)))
     }
 
     @Test
-    fun landscapeDialUsesShorterAxis() {
+    fun dayNightToggleKeepsPlainPlate() {
         val bitmap =
-            renderWith(
-                renderer = renderer,
-                time = LocalTime.of(12, 0, 0),
-                width = LANDSCAPE_WIDTH,
-                height = LANDSCAPE_HEIGHT,
+            render(
+                geometry = prague,
+                layers = DialLayers(isZodiacRingEnabled = false, isDayAndNightEnabled = false),
             )
-        val centerX = LANDSCAPE_WIDTH / CENTER_DIVISOR
-        val centerY = LANDSCAPE_HEIGHT / CENTER_DIVISOR
-        val angles = listOf(0f, 90f, 180f, 270f)
-        for (angleDegrees in angles) {
-            // The dial radius comes from the shorter (height) axis, so hour ticks reach radius 60.
-            assertDialPixel(
-                bitmap = bitmap,
-                angleDegrees = angleDegrees,
-                distance = TICK_BAND_DISTANCE,
-                centerX = centerX,
-                centerY = centerY,
-            )
-            assertBackgroundPixel(
-                bitmap = bitmap,
-                angleDegrees = angleDegrees,
-                distance = OUTSIDE_DIAL_DISTANCE,
-                centerX = centerX,
-                centerY = centerY,
-            )
-        }
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = -0.7, y = 0.2)))
+        assertFalse(containsColor(bitmap, DialStyle.SKY))
+        assertFalse(containsColor(bitmap, DialStyle.TWILIGHT))
     }
 
     @Test
-    fun degenerateAndSmallDials() {
-        // An empty canvas is skipped.
-        renderer.renderDial(Canvas(), clockState(LocalTime.of(12, 0, 0)))
-
-        val belowMinimum = Bitmap.createBitmap(BELOW_MIN_DIAL_SIZE, BELOW_MIN_DIAL_SIZE, Bitmap.Config.ARGB_8888)
-        renderer.renderDial(Canvas(belowMinimum), clockState(LocalTime.of(12, 0, 0)))
-        assertEquals(
-            "a canvas below the minimum dial radius is cleared but not drawn",
-            DialRenderer.BACKGROUND_COLOR,
-            belowMinimum.getPixel(BELOW_MIN_DIAL_SIZE / 2, BELOW_MIN_DIAL_SIZE / 2),
-        )
-
-        val aboveMinimum = Bitmap.createBitmap(ABOVE_MIN_DIAL_SIZE, ABOVE_MIN_DIAL_SIZE, Bitmap.Config.ARGB_8888)
-        renderer.renderDial(Canvas(aboveMinimum), clockState(LocalTime.of(12, 0, 0)))
+    fun zodiacRemainsBelowHorizon() {
+        val projection = OrlojProjection(prague)
+        val point = projection.eclipticPoint(210.0)
+        assertTrue(projection.altitudeDeg(point) < -18.0)
+        val enabled = render(geometry = prague)
+        val disabled = render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
         assertTrue(
-            "a canvas above the minimum dial radius is drawn",
-            aboveMinimum.getPixel(ABOVE_MIN_DIAL_SIZE / 2, ABOVE_MIN_DIAL_SIZE / 2) != DialRenderer.BACKGROUND_COLOR,
+            "The below-horizon sign must be drawn",
+            changedPixelsNear(first = enabled, second = disabled, point = point) > 20,
         )
     }
 
-    private fun render(time: LocalTime): Bitmap = renderWith(renderer = renderer, time = time)
+    @Test
+    fun zodiacRotatesWithSiderealTime() {
+        val later = prague.copy(localSiderealAngleDeg = 90.0)
+        val original = render(geometry = prague)
+        val rotated = render(geometry = later)
+        val sign = OrlojProjection(prague).eclipticPoint(210.0)
+        assertTrue(changedPixelsNear(first = original, second = rotated, point = sign) > 20)
+        // The background plate depends on latitude and obliquity, not sidereal rotation.
+        assertTrue(
+            render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
+                .sameAs(render(geometry = later, layers = DialLayers(isZodiacRingEnabled = false))),
+        )
+    }
 
-    private fun renderWith(
-        renderer: DialRenderer,
-        time: LocalTime,
-        width: Int = BITMAP_SIZE,
-        height: Int = BITMAP_SIZE,
+    @Test
+    fun landscapeUsesShortestSide() {
+        val landscape = Bitmap.createBitmap(1200, SIZE, Bitmap.Config.ARGB_8888)
+        renderer.renderDial(
+            canvas = Canvas(landscape),
+            state = clockState(LocalTime.NOON),
+            geometry = prague,
+            layers = DialLayers(isZodiacRingEnabled = false),
+        )
+        val centered = Bitmap.createBitmap(landscape, 200, 0, SIZE, SIZE)
+        assertEquals(DialStyle.SKY, pixelAt(centered, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.TWILIGHT, pixelAt(centered, DialPoint(x = -0.7, y = 0.2)))
+        assertEquals(DialStyle.NIGHT, pixelAt(centered, DialPoint(x = 0.1, y = 0.8)))
+        assertEquals(DialStyle.RIM, pixelAt(centered, DialPoint(x = 1.32, y = 0.0)))
+        assertEquals(DialStyle.BACKGROUND, pixelAt(centered, DialPoint(x = 1.4, y = 0.0)))
+        assertEquals(DialStyle.BACKGROUND, landscape.getPixel(1, SIZE / 2))
+        assertEquals(DialStyle.BACKGROUND, landscape.getPixel(1198, SIZE / 2))
+    }
+
+    @Test
+    fun degenerateCanvasIsLogged() {
+        ShadowLog.clear()
+        renderer.renderDial(Canvas(), clockState(LocalTime.NOON))
+        val tiny = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888)
+        renderer.renderDial(Canvas(tiny), clockState(LocalTime.NOON))
+        assertEquals(DialStyle.BACKGROUND, tiny.getPixel(10, 10))
+        assertEquals(2, ShadowLog.getLogsForTag("DialRenderer").count { it.type == Log.WARN })
+    }
+
+    @Test
+    fun renderFailuresAreContained() {
+        ShadowLog.clear()
+        containRenderFailure { throw IllegalArgumentException("invalid argument") }
+        containRenderFailure { throw IllegalStateException("invalid state") }
+        assertEquals(2, ShadowLog.getLogsForTag("DialRenderer").count { it.type == Log.ERROR })
+        var hasDrawn = false
+        containRenderFailure { hasDrawn = true }
+        assertTrue(hasDrawn)
+    }
+
+    @Test
+    fun unrelatedFailuresPropagate() {
+        assertThrows(UnsupportedOperationException::class.java) {
+            containRenderFailure { throw UnsupportedOperationException("not contained") }
+        }
+    }
+
+    private fun render(
+        time: LocalTime = LocalTime.NOON,
+        geometry: AstrolabeGeometry? = null,
+        layers: DialLayers = DialLayers(),
     ): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        renderer.renderDial(Canvas(bitmap), clockState(time))
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        renderer.renderDial(canvas = Canvas(bitmap), state = clockState(time), geometry = geometry, layers = layers)
+        assertEquals(DialStyle.BACKGROUND, bitmap.getPixel(1, 1))
         return bitmap
     }
 
-    private fun assertDialPixel(
-        bitmap: Bitmap,
-        angleDegrees: Float,
-        distance: Float,
-        centerX: Float = CENTER,
-        centerY: Float = CENTER,
-    ) {
-        val (x, y) = samplePoint(angleDegrees = angleDegrees, distance = distance, centerX = centerX, centerY = centerY)
-        assertTrue(
-            "no dial pixel near ($x, $y) for angle $angleDegrees at distance $distance",
-            containsDialPixel(bitmap, x, y),
-        )
+    private fun pixelAt(bitmap: Bitmap, point: DialPoint): Int =
+        bitmap.getPixel((CENTER + point.x * SKY_RADIUS).roundToInt(), (CENTER + point.y * SKY_RADIUS).roundToInt())
+
+    private fun radialPoint(angleDeg: Double, radius: Double): DialPoint {
+        val radians = Math.toRadians(angleDeg)
+        return DialPoint(x = sin(radians) * radius, y = -cos(radians) * radius)
     }
 
-    private fun assertBackgroundPixel(
-        bitmap: Bitmap,
-        angleDegrees: Float,
-        distance: Float,
-        centerX: Float = CENTER,
-        centerY: Float = CENTER,
-    ) {
-        val (x, y) = samplePoint(angleDegrees = angleDegrees, distance = distance, centerX = centerX, centerY = centerY)
-        assertEquals(
-            "expected background at ($x, $y) for angle $angleDegrees at distance $distance",
-            DialRenderer.BACKGROUND_COLOR,
-            bitmap.getPixel(x, y),
-        )
+    private fun containsColor(bitmap: Bitmap, color: Int): Boolean {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return color in pixels
     }
 
-    private fun assertBackgroundOutsideDial(bitmap: Bitmap) {
-        val points =
-            listOf(
-                Pair(first = 1, second = 1),
-                Pair(first = bitmap.width - 2, second = 1),
-                Pair(first = 1, second = bitmap.height - 2),
-                Pair(first = bitmap.width - 2, second = bitmap.height - 2),
-                Pair(first = bitmap.width / 2, second = 1),
-                Pair(first = bitmap.width / 2, second = bitmap.height - 2),
-                Pair(first = 1, second = bitmap.height / 2),
-                Pair(first = bitmap.width - 2, second = bitmap.height / 2),
-            )
-        for ((x, y) in points) {
-            assertEquals(
-                "expected background at ($x, $y)",
-                DialRenderer.BACKGROUND_COLOR,
-                bitmap.getPixel(x, y),
-            )
-        }
+    private fun textSpan(bitmap: Bitmap, normalizedY: Double): Int {
+        val baseline = (CENTER + normalizedY * SKY_RADIUS).roundToInt()
+        val columns =
+            (360..440).filter { x ->
+                (baseline - 20..baseline + 20).any { y -> bitmap.getPixel(x, y) == DialStyle.GOLD }
+            }
+        return if (columns.isEmpty()) 0 else columns.last() - columns.first() + 1
     }
 
-    private fun containsDialPixel(bitmap: Bitmap, x: Int, y: Int): Boolean {
-        for (dx in -SEARCH_RADIUS..SEARCH_RADIUS) {
-            for (dy in -SEARCH_RADIUS..SEARCH_RADIUS) {
-                // A dial stroke is the only non-background colour; anti-aliasing blends its edges
-                // toward BACKGROUND_COLOR, so a thin (1 px) hand may have no exact DIAL_COLOR pixel.
-                if (bitmap.getPixel(x + dx, y + dy) != DialRenderer.BACKGROUND_COLOR) {
-                    return true
+    private fun changedPixelsNear(first: Bitmap, second: Bitmap, point: DialPoint): Int {
+        val x = (CENTER + point.x * SKY_RADIUS).roundToInt()
+        val y = (CENTER + point.y * SKY_RADIUS).roundToInt()
+        var changed = 0
+        for (dx in -PROBE_RADIUS..PROBE_RADIUS) {
+            for (dy in -PROBE_RADIUS..PROBE_RADIUS) {
+                if (first.getPixel(x + dx, y + dy) != second.getPixel(x + dx, y + dy)) {
+                    changed++
                 }
             }
         }
-        return false
-    }
-
-    private fun containsExactColour(bitmap: Bitmap, angleDegrees: Float, distance: Float, colour: Int): Boolean {
-        val (x, y) = samplePoint(angleDegrees = angleDegrees, distance = distance)
-        for (dx in -PALETTE_WINDOW..PALETTE_WINDOW) {
-            for (dy in -PALETTE_WINDOW..PALETTE_WINDOW) {
-                if (bitmap.getPixel(x + dx, y + dy) == colour) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    // Project the literal expected angles into screen coordinates: clockwise from up. The cardinal
-    // tests anchor this convention. Out-of-bounds probes fail rather than sampling a clamped edge.
-    private fun samplePoint(
-        angleDegrees: Float,
-        distance: Float,
-        centerX: Float = CENTER,
-        centerY: Float = CENTER,
-    ): Pair<Int, Int> {
-        val radians = Math.toRadians(angleDegrees.toDouble())
-        val x = centerX + distance * sin(radians).toFloat()
-        val y = centerY - distance * cos(radians).toFloat()
-        return Pair(first = x.roundToInt(), second = y.roundToInt())
+        return changed
     }
 
     private companion object {
-        const val BITMAP_SIZE = 200
-        const val CENTER_DIVISOR = 2f
-        const val CENTER = 100f
-
-        // A 200 px bitmap gives a 60 px dial radius. Hand lengths: hour 30 px (cap-extended 32.5),
-        // minute 45 px (46.5), second 51 px (51.5). Hour ticks span radii [50, 60] with a 3 px round
-        // cap reaching inward to 48.5; minute ticks span [55, 60] with a 1 px cap reaching to 54.5.
-        // Presence probes accept any antialiased stroke pixel in a 3x3 window: rounding can move
-        // the expected location by 0.5 px per axis, and a 1 px stroke may have no exact dial colour.
-        // Hour/minute windows remain inside radius 43, well before any tick. Second-hand windows
-        // reach at most radius 52, before the minute tick's 54.5 px inner cap. Their 18/138/258 degree
-        // rays are at least 12 degrees from an hour tick, leaving a gap even after the probe window
-        // and tick width are included. Other hands are over 100 degrees away at every dispersed time.
-        // Overdraw probes use one exact background pixel beyond the cap and its antialiased edge.
-        const val HOUR_SAMPLE_DISTANCE = 15f
-        const val MINUTE_SAMPLE_DISTANCE = 40f
-        const val SECOND_SAMPLE_DISTANCE = 47f
-        const val HOUR_OVERDRAW_DISTANCE = 35f
-
-        const val HOUR_ONLY_DISTANCE = 20f
-        const val MINUTE_ONLY_DISTANCE = 40f
-        const val MINUTE_OVERDRAW_DISTANCE = 49f
-        const val SECOND_ONLY_DISTANCE = 49f
-        const val SECOND_OVERDRAW_DISTANCE = 53f
-
-        const val TICK_PROBE_DISTANCE = 58f
-
-        // A 300x200 canvas must take its 60 px radius from the 200 px height, not the 300 px width.
-        const val LANDSCAPE_WIDTH = 300
-        const val LANDSCAPE_HEIGHT = 200
-        const val TICK_BAND_DISTANCE = 55f
-        const val OUTSIDE_DIAL_DISTANCE = 65f
-
-        // Radius is 0.3 * size, so 30 px (radius 9) is below the 11.5 px minimum and 40 px (radius
-        // 12) is above it.
-        const val BELOW_MIN_DIAL_SIZE = 30
-        const val ABOVE_MIN_DIAL_SIZE = 40
-
-        const val SEARCH_RADIUS = 1
-        const val PALETTE_WINDOW = 2
-        const val EXPECTED_BACKGROUND_COLOR = 0xFF111923.toInt()
-        const val EXPECTED_DIAL_COLOR = 0xFFD8B66A.toInt()
+        const val SIZE = 800
+        const val CENTER = 400.0
+        const val SKY_RADIUS = SIZE * 0.43 / 1.37
+        const val PROBE_RADIUS = 12
     }
 }

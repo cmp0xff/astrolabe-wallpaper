@@ -127,7 +127,7 @@ Robolectric tests use API 26 and API 36 environments. They are JVM simulations a
 physical-device, lit lock-screen, or actual wallpaper surface behavior. API 37 compilation and Android
 Lint additionally check against the selected target. The `ClockEngine` schedules one redraw per whole
 second while visible and cancels the pending tick when hidden or destroyed. Each engine caches
-its saved location, listens for preference changes until destruction, and uses the new snapshot
+its saved location and dial-layer choices, listens for preference changes until destruction, and uses the new snapshot
 on its next visible frame. Each frame resolves civil time from one clock instant in the saved
 zone, falling back to the current phone zone only when no usable location is saved.
 

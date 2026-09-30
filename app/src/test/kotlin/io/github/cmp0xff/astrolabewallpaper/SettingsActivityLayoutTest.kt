@@ -36,7 +36,14 @@ class SettingsActivityLayoutTest {
             scroll.layout(0, 0, VIEWPORT_WIDTH, VIEWPORT_HEIGHT)
             assertTrue("Short settings window must allow scrolling", scroll.canScrollVertically(1))
 
-            listOf(R.id.latitude_input, R.id.longitude_input, R.id.save_location, R.id.open_preview).forEach { id ->
+            listOf(
+                R.id.latitude_input,
+                R.id.longitude_input,
+                R.id.save_location,
+                R.id.zodiac_ring,
+                R.id.day_and_night,
+                R.id.open_preview,
+            ).forEach { id ->
                 val control = activity.findViewById<View>(id)
                 val contentTop = scroll.getChildAt(0).top
                 val controlTop = contentTop + control.top
