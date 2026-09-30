@@ -1,11 +1,11 @@
 # Astrolabe Wallpaper agent guidance
 
-Read [README.md](README.md) for scope and the live issue backlog. This is an
-independent Android project targeting a personal Android device, with a personal APK
-first and possible store distribution (F-Droid, Galaxy Store, Play Store) later. The
-bootstrap contains a static Android
-wallpaper; [docs/development.md](docs/development.md) defines the pinned toolchain,
-strict checking policy, and individually justified exceptions.
+Read [README.md](README.md) for developer entry points and
+[docs/design.md](docs/design.md) for the product contract. GitHub issues and
+milestones track implementation and release planning. This independent Android
+project targets a personal Android device, with a personal APK first and possible
+store distribution later. [docs/development.md](docs/development.md) defines the
+pinned toolchain, strict checking policy, and individually justified exceptions.
 
 ## Working defaults
 
@@ -57,8 +57,16 @@ strict checking policy, and individually justified exceptions.
   and timeout with an offline city chooser or coordinate entry. Persist the
   observing location and provide an explicit refresh from settings; do not add
   continuous background location tracking.
-- The clock follows the phone timezone; astronomy uses the saved location.
-  Runtime calculations and manual setup must work offline.
+- Use Prague Orloj as the visual and projection reference, adapting the geometry
+  to the selected observing site, including southern-hemisphere and polar sites.
+- The selected site supplies astronomy coordinates and the geographic timezone
+  for civil time, including DST. Derive both displays from the same instant.
+  Changing the site updates both; changing the phone timezone changes neither
+  the saved site nor its civil clock. Before selection, use the phone timezone
+  for the civil clock and hide site-dependent astronomy.
+- All location input methods must establish the site's geographic timezone;
+  capturing the phone timezone alone is an implementation limitation, not the
+  contract. Runtime calculations and manual setup must work offline.
 - Support home and lit lock screens, subject to physical-device verification. Always
   On Display and interactive sky exploration are outside the first release.
 - Render only while visible. Verify wake, surface recreation, process recreation,
@@ -117,6 +125,11 @@ Follow [.github/pull_request_template.md](.github/pull_request_template.md):
   stale "none yet" line is itself a review finding. Link evidence without
   copying extensive rationale. This project explicitly requires this per-commit
   index, overriding the global default against one.
+- Link out-of-band evidence the PR depends on — issue-body edits above all — from
+  the index too. When the Summary or Verification rests on edited issue bodies,
+  reference each edited issue so its audited state is traceable from the PR
+  record; verification that relies on such edits but links none of them is
+  itself a review finding.
 - Finish with the same visible `Co-Authored-By` identity used for the source work.
   This attribution does not claim it will survive squash merging.
 - Use native, unquoted GitHub references for issues, PRs, and commits: #5,
