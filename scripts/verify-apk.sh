@@ -5,9 +5,11 @@ set -euo pipefail
 apk=${1:-app/build/outputs/apk/debug/app-debug.apk}
 mkdir -p build/reports
 "$ANDROID_HOME/cmdline-tools/23.0/bin/apkanalyzer" manifest print "$apk" > build/reports/apk-manifest.xml
-python3 - <<'PY'
+python3 - "$apk" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
+from pathlib import Path
+from zipfile import ZipFile
 
 android = '{http://schemas.android.com/apk/res/android}'
 
@@ -47,6 +49,15 @@ check(metadata is not None, 'missing meta-data element')
 check(metadata.get(android + 'name') == 'android.service.wallpaper', 'meta-data name mismatch')
 check(metadata.get(android + 'resource'), 'meta-data must declare a resource')
 print('APK application ID, SDK levels, debug flag, permissions, and wallpaper declaration verified.')
+
+license_asset = 'assets/licenses/astronomy-engine-LICENSE.txt'
+expected_license = Path('app/src/main', license_asset).read_bytes()
+check(expected_license, 'bundled Astronomy Engine license must not be empty')
+with ZipFile(sys.argv[1]) as archive:
+    check(license_asset in archive.namelist(), 'missing Astronomy Engine license')
+    check(archive.read(license_asset) == expected_license,
+          'Astronomy Engine license differs from the complete bundled upstream notice')
+print('APK Astronomy Engine license verified against the bundled upstream notice.')
 PY
 "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk" | tee build/reports/apk-signature.txt
 # The certificate identity distinguishes the disposable Android debug key from a release key.

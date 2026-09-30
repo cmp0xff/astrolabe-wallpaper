@@ -68,6 +68,10 @@ kotlin {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
+    // Astronomy Engine (MIT), pinned to the commit that tag v2.1.19 points at. JitPack
+    // builds it on demand and caches the result per revision; the artifact is compiled
+    // with Kotlin 1.6.10 metadata, which this project's 2.4.10 compiler reads.
+    implementation("com.github.cosinekitty:astronomy:61dc07020aaa6885d2c7f688a4d82beaf6edb9ef")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.17")
     detektPlugins("dev.detekt:detekt-rules-ktlint-wrapper:2.0.0-alpha.6")

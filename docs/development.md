@@ -128,10 +128,15 @@ physical-device, lit lock-screen, or actual wallpaper surface behavior. API 37 c
 Lint additionally check against the selected target. The `ClockEngine` schedules one redraw per whole
 second while visible and cancels the pending tick when hidden or destroyed.
 
+The astronomy tests need no Robolectric environment: `AstronomyCalculator` and everything under it
+are free of Android types, so they run as plain JUnit against published USNO, JPL Horizons, and
+Hipparcos reference data. They need no network and no device. See [astronomy.md](astronomy.md) for
+the frames, tolerances, and what remains unverified.
+
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`, with application ID
 `io.github.cmp0xff.astrolabewallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
 wallpaper declaration, that the only requested permission is `ACCESS_COARSE_LOCATION`, the debug flag
-and signature, then records SHA-256.
+and signature, and the complete bundled Astronomy Engine license, then records SHA-256.
 The stable release ID is `io.github.cmp0xff.astrolabewallpaper`; release signing belongs to #7.
 Debug signing keys are disposable and local/CI APKs may require uninstalling the previous debug app.
 
