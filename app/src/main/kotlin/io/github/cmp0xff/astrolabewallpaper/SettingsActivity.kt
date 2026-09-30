@@ -16,6 +16,7 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.text.ParsePosition
+import java.time.ZoneId
 
 /** Opens Android's preview and manages the observing location. */
 class SettingsActivity : Activity() {
@@ -90,8 +91,15 @@ class SettingsActivity : Activity() {
     }
 
     private fun fetchCurrentLocation(forceFresh: Boolean) {
-        locationProvider.fetch(forceFresh = forceFresh) { location ->
-            if (location != null) {
+        locationProvider.fetch(forceFresh = forceFresh) { fix ->
+            if (fix != null) {
+                val location =
+                    ObservingLocation(
+                        latitude = fix.latitude,
+                        longitude = fix.longitude,
+                        source = ObservingLocation.Source.CURRENT_COARSE,
+                        zoneId = ZoneId.systemDefault(),
+                    )
                 locationStore.save(location)
                 displayLocation(location)
             } else {
@@ -110,8 +118,14 @@ class SettingsActivity : Activity() {
             Toast.makeText(this, R.string.location_invalid, Toast.LENGTH_LONG).show()
             return
         }
-        val location = ObservingLocation(latitude, longitude, ObservingLocation.Source.MANUAL)
         locationProvider.cancel()
+        val location =
+            ObservingLocation(
+                latitude = latitude,
+                longitude = longitude,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            )
         locationStore.save(location)
         displayLocation(location)
         Toast.makeText(this, R.string.location_saved, Toast.LENGTH_SHORT).show()
@@ -150,7 +164,13 @@ class SettingsActivity : Activity() {
                 ObservingLocation.Source.CURRENT_COARSE -> getString(R.string.location_current_source)
                 ObservingLocation.Source.MANUAL -> getString(R.string.location_manual_source)
             }
-        return "${location.latitude}, ${location.longitude} ($source)"
+        return getString(
+            R.string.location_details,
+            location.latitude.toString(),
+            location.longitude.toString(),
+            source,
+            location.zoneId.id,
+        )
     }
 
     private companion object {

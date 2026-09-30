@@ -9,6 +9,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.math.abs
 
@@ -196,6 +197,7 @@ class AstronomyEngineCalculatorTest {
                     latitude = latitude,
                     longitude = 0.0,
                     source = ObservingLocation.Source.MANUAL,
+                    zoneId = ZoneOffset.UTC,
                 )
             for (instant in POLAR_INSTANTS) {
                 val sky = calculator.sky(instant, site)
@@ -210,6 +212,21 @@ class AstronomyEngineCalculatorTest {
                 }
             }
         }
+    }
+
+    @Test
+    fun savedZoneDoesNotChangeSky() {
+        // Quito's twilight straddles UTC midnight. These civil zones put the same instant on
+        // different dates, so an accidental change to local-day event searches also fails here.
+        val instant = Instant.parse("2026-03-20T23:30:00Z")
+        val west = QUITO.location.copy(zoneId = ZoneId.of("Pacific/Honolulu"))
+        val east = QUITO.location.copy(zoneId = ZoneId.of("Pacific/Kiritimati"))
+        assertTrue(instant.atZone(west.zoneId).toLocalDate() != instant.atZone(east.zoneId).toLocalDate())
+        assertEquals(
+            "civil timezone must not change bodies, phases, stars, or UTC solar events",
+            calculator.sky(instant, west),
+            calculator.sky(instant, east),
+        )
     }
 
     @Test

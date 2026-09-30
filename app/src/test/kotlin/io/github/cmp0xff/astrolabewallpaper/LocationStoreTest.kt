@@ -2,100 +2,123 @@ package io.github.cmp0xff.astrolabewallpaper
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Looper
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import org.robolectric.shadows.ShadowLog
+import java.time.ZoneId
 
-/** Checks observing-location persistence through the framework SharedPreferences store. */
+/** Checks complete location records, explicit timezone preservation, and preference notifications. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
 class LocationStoreTest {
     @Test
-    fun loadReturnsNullWhenEmpty() {
-        assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
-    }
-
-    @Test
-    fun loadNullWhenPartiallySet() {
-        preferences().edit().putString(KEY_LATITUDE, "10.0").apply()
-        assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
-    }
-
-    @Test
-    fun loadRejectsNonNumeric() {
-        val store = savedStore()
-        preferences().edit().putString(KEY_LATITUDE, "abc").apply()
-        assertNull(store.load())
-    }
-
-    @Test
-    fun loadRejectsUnknownSource() {
-        val store = savedStore()
-        preferences().edit().putString(KEY_SOURCE, "NOT_A_SOURCE").apply()
-        assertNull(store.load())
-    }
-
-    @Test
-    fun loadRejectsOutOfRange() {
-        val store = savedStore()
-        preferences().edit().putString(KEY_LATITUDE, "91.0").apply()
-        assertNull(store.load())
-    }
-
-    @Test
-    fun loadRejectsWrongFieldTypes() {
-        val store = LocationStore(RuntimeEnvironment.getApplication())
-        val location =
-            ObservingLocation(latitude = 12.5, longitude = -77.0, source = ObservingLocation.Source.MANUAL)
-        for (key in listOf(KEY_LATITUDE, KEY_LONGITUDE, KEY_SOURCE)) {
+    fun explicitZonesRoundTrip() {
+        val store = LocationStore(RuntimeEnvironment.getApplication()) { error("must not read device zone") }
+        for (zoneName in listOf("Europe/Prague", "Australia/Sydney", "+05:45", "UTC")) {
+            val location = observingLocation(ZoneId.of(zoneName))
             store.save(location)
-            preferences().edit().putInt(key, 123_456).apply()
-            assertNull("Wrong type for $key", store.load())
+            assertEquals(location, LocationStore(RuntimeEnvironment.getApplication()).load())
         }
-        assertEquals(
-            List(3) { "discarding malformed observing location" },
-            ShadowLog.getLogsForTag("LocationStore").map { it.msg },
-        )
-        assertTrue(ShadowLog.getLogsForTag("LocationStore").all { it.throwable == null })
     }
 
     @Test
-    fun saveReplacesMalformedTypes() {
+    fun emptyDoesNotCaptureZone() {
+        val store = LocationStore(RuntimeEnvironment.getApplication()) { error("must not read device zone") }
+        assertNull(store.load())
+        assertTrue(preferences().all.isEmpty())
+    }
+
+    @Test
+    fun savesOneVersionedRecord() {
         preferences()
             .edit()
-            .putBoolean(KEY_LATITUDE, true)
-            .putFloat(KEY_LONGITUDE, 10.0f)
-            .putStringSet(KEY_SOURCE, setOf("legacy"))
+            .putString("latitude", "10.0")
+            .putString("longitude", "20.0")
+            .putString("source", "MANUAL")
+            .apply()
+        val location = observingLocation(ZoneId.of("America/New_York"))
+        LocationStore(RuntimeEnvironment.getApplication()).save(location)
+        assertEquals(setOf("location"), preferences().all.keys)
+        val record = JSONObject(requireNotNull(preferences().getString("location", null)))
+        assertEquals(1, record.getInt("version"))
+        assertEquals(location.latitude, record.getDouble("latitude"), 0.0)
+        assertEquals(location.longitude, record.getDouble("longitude"), 0.0)
+        assertEquals(location.source.name, record.getString("source"))
+        assertEquals(location.zoneId.id, record.getString("zoneId"))
+    }
+
+    @Test
+    fun saveReplacesMalformedRecord() {
+        preferences()
+            .edit()
+            .putBoolean("location", true)
+            .putBoolean("unrelated", true)
             .apply()
         val store = LocationStore(RuntimeEnvironment.getApplication())
+        val location = observingLocation(ZoneId.of("Europe/Prague"))
         assertNull(store.load())
-        val location = ObservingLocation(0.0, 0.0, ObservingLocation.Source.MANUAL)
         store.save(location)
-        assertEquals(location, LocationStore(RuntimeEnvironment.getApplication()).load())
+        assertEquals(location, store.load())
+        assertTrue(preferences().getBoolean("unrelated", false))
+    }
+
+    @Test
+    fun listenersSeeCompleteRecords() {
+        val observerStore = LocationStore(RuntimeEnvironment.getApplication())
+        val savingStore = LocationStore(RuntimeEnvironment.getApplication())
+        val observed = mutableListOf<ObservingLocation?>()
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> observed.add(observerStore.load()) }
+        observerStore.registerListener(listener)
+        val first = observingLocation(ZoneId.of("Europe/Prague"))
+        savingStore.save(first)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf(first), observed)
+        observerStore.unregisterListener(listener)
+        savingStore.save(first.copy(zoneId = ZoneId.of("Asia/Tokyo")))
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf(first), observed)
+    }
+
+    @Test
+    fun migrationNotifiesAtomically() {
+        preferences()
+            .edit()
+            .putString("latitude", "10.0")
+            .putString("longitude", "20.0")
+            .putString("source", "MANUAL")
+            .apply()
+        val snapshots = mutableListOf<Map<String, *>>()
+        val store = LocationStore(RuntimeEnvironment.getApplication())
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, _ -> snapshots.add(prefs.all) }
+        store.registerListener(listener)
+        store.save(observingLocation(ZoneId.of("Europe/Prague")))
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(snapshots.isEmpty())
+        assertTrue(snapshots.all { it.keys == setOf("location") })
+        store.unregisterListener(listener)
     }
 
     private fun preferences(): SharedPreferences =
-        RuntimeEnvironment.getApplication().getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        RuntimeEnvironment.getApplication().getSharedPreferences("observing_location", Context.MODE_PRIVATE)
 
-    private fun savedStore(): LocationStore {
-        val store = LocationStore(RuntimeEnvironment.getApplication())
-        val location =
-            ObservingLocation(latitude = 10.0, longitude = 20.0, source = ObservingLocation.Source.MANUAL)
-        store.save(location)
-        assertEquals(location, store.load())
-        return store
-    }
+    private fun observingLocation(zoneId: ZoneId): ObservingLocation = SAVED_SITE.copy(zoneId = zoneId)
 
     private companion object {
-        const val PREFERENCES_NAME = "observing_location"
-        const val KEY_LATITUDE = "latitude"
-        const val KEY_LONGITUDE = "longitude"
-        const val KEY_SOURCE = "source"
+        val SAVED_SITE =
+            ObservingLocation(
+                latitude = 12.5,
+                longitude = -77.0,
+                source = ObservingLocation.Source.CURRENT_COARSE,
+                zoneId = ZoneId.of("UTC"),
+            )
     }
 }

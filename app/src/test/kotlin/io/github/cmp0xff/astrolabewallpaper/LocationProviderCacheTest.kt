@@ -23,7 +23,7 @@ import java.time.Duration
 class LocationProviderCacheTest {
     private val application = RuntimeEnvironment.getApplication()
     private val locationManager = application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-    private val results = mutableListOf<ObservingLocation?>()
+    private val results = mutableListOf<CoordinateFix?>()
 
     @Before
     fun prepareClockAndProvider() {
@@ -99,7 +99,7 @@ class LocationProviderCacheTest {
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(
             listOf(
-                ObservingLocation(latitude = 10.0, longitude = 20.0, source = ObservingLocation.Source.CURRENT_COARSE),
+                CoordinateFix(latitude = 10.0, longitude = 20.0),
             ),
             results,
         )
@@ -118,6 +118,6 @@ class LocationProviderCacheTest {
     private companion object {
         const val MAX_AGE_NANOS = 300_000_000_000L
         val CACHED_LOCATION =
-            ObservingLocation(latitude = 37.42, longitude = -122.08, source = ObservingLocation.Source.CURRENT_COARSE)
+            CoordinateFix(latitude = 37.42, longitude = -122.08)
     }
 }

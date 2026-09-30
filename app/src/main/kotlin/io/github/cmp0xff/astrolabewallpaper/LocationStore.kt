@@ -3,50 +3,132 @@ package io.github.cmp0xff.astrolabewallpaper
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import org.json.JSONException
+import org.json.JSONObject
+import org.json.JSONTokener
+import java.time.DateTimeException
+import java.time.ZoneId
 
-/** Persists the observing location in framework [SharedPreferences]. */
-internal class LocationStore(context: Context) {
+/** Persists a versioned location record, migrating older coordinates without changing their meaning. */
+internal class LocationStore(context: Context, private val deviceZone: () -> ZoneId = ZoneId::systemDefault) {
     private val preferences: SharedPreferences =
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     fun load(): ObservingLocation? {
-        // Read one snapshot without getString's ClassCastException for wrongly typed stored data.
+        // One snapshot also avoids getString's ClassCastException for wrongly typed stored data.
         val stored = preferences.all
-        val latitude = (stored[KEY_LATITUDE] as? String)?.toDoubleOrNull()
-        val longitude = (stored[KEY_LONGITUDE] as? String)?.toDoubleOrNull()
-        val sourceText = stored[KEY_SOURCE] as? String
-        val source = ObservingLocation.Source.entries.firstOrNull { it.name == sourceText }
-        if (latitude == null || longitude == null || source == null) {
-            if (stored.keys.any { it == KEY_LATITUDE || it == KEY_LONGITUDE || it == KEY_SOURCE }) {
-                Log.w(TAG, "discarding malformed observing location")
-            }
-            return null
-        }
-        val location =
-            try {
-                ObservingLocation(latitude, longitude, source)
-            } catch (_: IllegalArgumentException) {
+        return if (KEY_RECORD in stored) loadRecord(stored[KEY_RECORD]) else loadLegacy(stored)
+    }
+
+    private fun loadRecord(raw: Any?): ObservingLocation? {
+        val record = parseRecord(raw)
+        return when {
+            record == null || record.opt(KEY_VERSION) !is Int -> {
+                Log.w(TAG, "ignoring malformed observing location record")
                 null
             }
-        if (location == null) {
-            Log.w(TAG, "discarding out-of-range observing location")
+
+            record.opt(KEY_VERSION) != RECORD_VERSION -> {
+                Log.w(TAG, "ignoring unsupported observing location version")
+                null
+            }
+
+            else -> {
+                readLocation(
+                    rawLatitude = (record.opt(KEY_LATITUDE) as? Number)?.toDouble(),
+                    rawLongitude = (record.opt(KEY_LONGITUDE) as? Number)?.toDouble(),
+                    sourceText = record.opt(KEY_SOURCE) as? String,
+                ) { resolveZone(record) }
+            }
         }
-        return location
+    }
+
+    private fun parseRecord(raw: Any?): JSONObject? {
+        if (raw !is String) return null
+        return try {
+            val parser = JSONTokener(raw)
+            val record = parser.nextValue() as? JSONObject
+            record?.takeIf { parser.nextClean() == '\u0000' }
+        } catch (_: JSONException) {
+            null
+        }
+    }
+
+    private fun resolveZone(record: JSONObject): ZoneId {
+        val storedZone =
+            try {
+                (record.opt(KEY_ZONE_ID) as? String)?.let(ZoneId::of)
+            } catch (_: DateTimeException) {
+                null
+            }
+        return storedZone ?: deviceZone().also { zone ->
+            record.put(KEY_ZONE_ID, zone.id)
+            persistRecord(record)
+            Log.w(TAG, "repaired missing or invalid observing location timezone")
+        }
+    }
+
+    private fun loadLegacy(stored: Map<String, *>): ObservingLocation? {
+        if (LEGACY_KEYS.none(stored::containsKey)) return null
+        return readLocation(
+            rawLatitude = (stored[KEY_LATITUDE] as? String)?.toDoubleOrNull(),
+            rawLongitude = (stored[KEY_LONGITUDE] as? String)?.toDoubleOrNull(),
+            sourceText = stored[KEY_SOURCE] as? String,
+            zone = deviceZone,
+        )?.also(::save)
+    }
+
+    private fun readLocation(
+        rawLatitude: Double?,
+        rawLongitude: Double?,
+        sourceText: String?,
+        zone: () -> ZoneId,
+    ): ObservingLocation? {
+        val latitude = rawLatitude?.takeIf(ObservingLocation::isValidLatitude)
+        val longitude = rawLongitude?.takeIf(ObservingLocation::isValidLongitude)
+        val source = ObservingLocation.Source.entries.firstOrNull { it.name == sourceText }
+        if (latitude == null || longitude == null || source == null) {
+            Log.w(TAG, "ignoring malformed observing location coordinates or source")
+            return null
+        }
+        return ObservingLocation(latitude = latitude, longitude = longitude, source = source, zoneId = zone())
     }
 
     fun save(location: ObservingLocation) {
-        val editor = preferences.edit()
-        editor.putString(KEY_LATITUDE, location.latitude.toString())
-        editor.putString(KEY_LONGITUDE, location.longitude.toString())
-        editor.putString(KEY_SOURCE, location.source.name)
+        val record =
+            JSONObject()
+                .put(KEY_VERSION, RECORD_VERSION)
+                .put(KEY_LATITUDE, location.latitude)
+                .put(KEY_LONGITUDE, location.longitude)
+                .put(KEY_SOURCE, location.source.name)
+                .put(KEY_ZONE_ID, location.zoneId.id)
+        persistRecord(record)
+    }
+
+    private fun persistRecord(record: JSONObject) {
+        val editor = preferences.edit().putString(KEY_RECORD, record.toString())
+        LEGACY_KEYS.forEach(editor::remove)
         editor.apply()
+    }
+
+    fun registerListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+    }
+
+    fun unregisterListener(listener: SharedPreferences.OnSharedPreferenceChangeListener) {
+        preferences.unregisterOnSharedPreferenceChangeListener(listener)
     }
 
     private companion object {
         const val PREFERENCES_NAME = "observing_location"
+        const val KEY_RECORD = "location"
+        const val KEY_VERSION = "version"
         const val KEY_LATITUDE = "latitude"
         const val KEY_LONGITUDE = "longitude"
         const val KEY_SOURCE = "source"
-        private const val TAG = "LocationStore"
+        const val KEY_ZONE_ID = "zoneId"
+        const val RECORD_VERSION = 1
+        val LEGACY_KEYS = listOf(KEY_LATITUDE, KEY_LONGITUDE, KEY_SOURCE)
+        const val TAG = "LocationStore"
     }
 }

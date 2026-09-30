@@ -3,6 +3,7 @@ package io.github.cmp0xff.astrolabewallpaper
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.ZoneId
 
 /** Checks coordinate range boundaries and rejection of non-finite observing locations. */
 class ObservingLocationTest {
@@ -10,7 +11,12 @@ class ObservingLocationTest {
     fun latitudeOutOfRangeRejected() {
         val exception =
             runCatching {
-                ObservingLocation(latitude = 91.0, longitude = 0.0, source = ObservingLocation.Source.MANUAL)
+                ObservingLocation(
+                    latitude = 91.0,
+                    longitude = 0.0,
+                    source = ObservingLocation.Source.MANUAL,
+                    zoneId = ZONE,
+                )
             }.exceptionOrNull()
         assertTrue(exception is IllegalArgumentException)
     }
@@ -19,7 +25,12 @@ class ObservingLocationTest {
     fun longitudeOutOfRangeRejected() {
         val exception =
             runCatching {
-                ObservingLocation(latitude = 0.0, longitude = -181.0, source = ObservingLocation.Source.MANUAL)
+                ObservingLocation(
+                    latitude = 0.0,
+                    longitude = -181.0,
+                    source = ObservingLocation.Source.MANUAL,
+                    zoneId = ZONE,
+                )
             }.exceptionOrNull()
         assertTrue(exception is IllegalArgumentException)
     }
@@ -42,8 +53,17 @@ class ObservingLocationTest {
         assertFalse(ObservingLocation.isValidLongitude(Double.POSITIVE_INFINITY))
         assertTrue(
             runCatching {
-                ObservingLocation(latitude = Double.NaN, longitude = 0.0, source = ObservingLocation.Source.MANUAL)
+                ObservingLocation(
+                    latitude = Double.NaN,
+                    longitude = 0.0,
+                    source = ObservingLocation.Source.MANUAL,
+                    zoneId = ZONE,
+                )
             }.exceptionOrNull() is IllegalArgumentException,
         )
+    }
+
+    private companion object {
+        val ZONE: ZoneId = ZoneId.of("Europe/Prague")
     }
 }

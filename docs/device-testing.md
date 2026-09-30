@@ -189,3 +189,18 @@ build it tested.
 
 Unresolved limitations: the current-location display uses raw double formatting; display precision
 and locale formatting remain cosmetic follow-up work. The offline city chooser remains outstanding under #3.
+
+## Saved-site timezone verification (#24)
+
+Automated coverage uses fixed instants and explicit zones for site time, Prague's spring and
+autumn DST boundaries, preference updates across multiple engines, hidden/destroyed engines,
+and recreation. Settings tests change the phone zone while an acquisition is in flight to
+verify capture at save time. These Robolectric checks do not establish physical-device behavior.
+
+Physical-device checks for #24 have not been performed. Save coordinates, confirm Settings
+displays the captured phone zone, then change the phone zone and confirm the clock retains
+the saved zone's civil time. Check a refresh, hide/show, surface recreation, and process restart.
+The current coordinate path captures the phone zone; establishing the site's geographic
+timezone remains #24, with the offline city chooser in #21. Record the tested APK/source
+revision and Android version when executing this procedure, following the privacy constraints
+above.

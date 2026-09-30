@@ -70,6 +70,7 @@ internal class SiteFixture(val name: String, val latitudeDeg: Double, val longit
                 latitude = latitudeDeg,
                 longitude = longitudeDeg,
                 source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneOffset.UTC,
             )
 }
 

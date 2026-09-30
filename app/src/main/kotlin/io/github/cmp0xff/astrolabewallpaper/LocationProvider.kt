@@ -13,7 +13,7 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * Fetches a single approximate observing location with a bounded timeout.
+ * Fetches a single approximate coordinate fix with a bounded timeout.
  *
  * Call [fetch] and [cancel] on the main thread. Immediate results invoke the callback synchronously
  * from [fetch]; fresh updates and timeouts are dispatched through the main looper.
@@ -29,7 +29,7 @@ internal class LocationProvider(
     private var activeTimeout: Runnable? = null
     private var requestGeneration = 0
 
-    fun fetch(forceFresh: Boolean = false, callback: (ObservingLocation?) -> Unit) {
+    fun fetch(forceFresh: Boolean = false, callback: (CoordinateFix?) -> Unit) {
         cancel()
         if (!hasCoarsePermission()) {
             Log.w(TAG, "location fetch skipped: ACCESS_COARSE_LOCATION not granted")
@@ -63,7 +63,7 @@ internal class LocationProvider(
     private fun hasCoarsePermission(): Boolean =
         context.checkSelfPermission(ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    private fun fetchAvailableLocation(forceFresh: Boolean, callback: (ObservingLocation?) -> Unit) {
+    private fun fetchAvailableLocation(forceFresh: Boolean, callback: (CoordinateFix?) -> Unit) {
         val cached = if (forceFresh) null else lastKnownLocation()
         when {
             cached != null -> {
@@ -83,7 +83,7 @@ internal class LocationProvider(
 
     // Only reached after hasCoarsePermission() passed in fetch().
     @SuppressLint("MissingPermission")
-    private fun lastKnownLocation(): ObservingLocation? {
+    private fun lastKnownLocation(): CoordinateFix? {
         val location =
             try {
                 locationManager.getLastKnownLocation(NETWORK_PROVIDER)
@@ -94,7 +94,7 @@ internal class LocationProvider(
                 Log.w(TAG, "cached network location unavailable", e)
                 null
             }
-        return location?.takeIf { isRecent(it) }?.toObservingLocation()
+        return location?.takeIf { isRecent(it) }?.toCoordinateFix()
     }
 
     private fun isRecent(location: Location): Boolean {
@@ -107,14 +107,14 @@ internal class LocationProvider(
         return isRecent
     }
 
-    private fun requestFreshLocation(callback: (ObservingLocation?) -> Unit) {
+    private fun requestFreshLocation(callback: (CoordinateFix?) -> Unit) {
         val generation = requestGeneration
-        val complete = { result: ObservingLocation? -> completeRequest(generation, result, callback) }
+        val complete = { result: CoordinateFix? -> completeRequest(generation, result, callback) }
         val listener =
             object : LocationListener {
                 override fun onLocationChanged(location: Location) {
                     if (generation == requestGeneration) {
-                        complete(location.toObservingLocation())
+                        complete(location.toCoordinateFix())
                     }
                 }
 
@@ -152,7 +152,7 @@ internal class LocationProvider(
         }
     }
 
-    private fun completeRequest(generation: Int, result: ObservingLocation?, callback: (ObservingLocation?) -> Unit) {
+    private fun completeRequest(generation: Int, result: CoordinateFix?, callback: (CoordinateFix?) -> Unit) {
         if (generation == requestGeneration) {
             cancel()
             callback(result)
@@ -179,14 +179,10 @@ internal class LocationProvider(
     }
 }
 
-internal fun Location.toObservingLocation(): ObservingLocation? {
+internal fun Location.toCoordinateFix(): CoordinateFix? {
     if (!ObservingLocation.isValidLatitude(latitude) || !ObservingLocation.isValidLongitude(longitude)) {
         Log.w("LocationProvider", "network location discarded: invalid coordinates")
         return null
     }
-    return ObservingLocation(
-        latitude = latitude,
-        longitude = longitude,
-        source = ObservingLocation.Source.CURRENT_COARSE,
-    )
+    return CoordinateFix(latitude = latitude, longitude = longitude)
 }

@@ -29,7 +29,7 @@ class LocationProviderFailureTest {
     private val locationManager = application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     private val locationShadow = Shadow.extract<FailingLocationManagerShadow>(locationManager)
     private val provider = LocationProvider(application)
-    private val results = mutableListOf<ObservingLocation?>()
+    private val results = mutableListOf<CoordinateFix?>()
 
     @Before
     fun prepareProvider() {
@@ -82,7 +82,7 @@ class LocationProviderFailureTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
         listener.onLocationChanged(Location(LocationManager.NETWORK_PROVIDER))
         provider.cancel()
-        assertEquals(listOf<ObservingLocation?>(null), results)
+        assertEquals(listOf<CoordinateFix?>(null), results)
         assertEquals(1, locationShadow.removalAttempts)
     }
 
@@ -96,7 +96,7 @@ class LocationProviderFailureTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
         assertEquals(
             listOf(
-                ObservingLocation(latitude = 10.0, longitude = 20.0, source = ObservingLocation.Source.CURRENT_COARSE),
+                CoordinateFix(latitude = 10.0, longitude = 20.0),
             ),
             results,
         )
@@ -106,7 +106,7 @@ class LocationProviderFailureTest {
     private fun assertRequestFailureCleansUp() {
         provider.fetch(forceFresh = true) { results.add(it) }
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
-        assertEquals(listOf<ObservingLocation?>(null), results)
+        assertEquals(listOf<CoordinateFix?>(null), results)
         assertTrue(locationShadow.networkListeners().isEmpty())
         assertEquals(1, locationShadow.removalAttempts)
     }

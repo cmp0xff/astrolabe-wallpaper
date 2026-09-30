@@ -1,33 +1,62 @@
 package io.github.cmp0xff.astrolabewallpaper
 
+import android.content.SharedPreferences
 import android.graphics.Canvas
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
-import java.time.LocalTime
+import java.time.Clock
+import java.time.ZoneId
 
 /** An animated astrolabe-style clock. */
 class AstrolabeWallpaperService : WallpaperService() {
     override fun onCreateEngine(): Engine {
         val dialRenderer = DialRenderer()
-        return createEngine(draw = { canvas -> dialRenderer.renderDial(canvas, clockState(LocalTime.now())) })
+        return createEngine(draw = { canvas, state -> dialRenderer.renderDial(canvas, state) })
     }
 
     /** Creates an engine with a frame draw operation and optional controlled surface holder. */
-    internal fun createEngine(draw: (Canvas) -> Unit, holder: SurfaceHolder? = null): Engine = ClockEngine(draw, holder)
+    internal fun createEngine(
+        draw: (Canvas, ClockState) -> Unit,
+        holder: SurfaceHolder? = null,
+        clock: Clock = Clock.systemUTC(),
+        deviceZone: () -> ZoneId = ZoneId::systemDefault,
+    ): Engine = ClockEngine(draw = draw, frameHolder = holder, clock = clock, deviceZone = deviceZone)
 
     // Engine is a non-static Java inner class and requires the enclosing service instance.
     @Suppress("UnnecessaryInnerClass")
-    private inner class ClockEngine(private val draw: (Canvas) -> Unit, private val frameHolder: SurfaceHolder?) :
-        Engine() {
+    private inner class ClockEngine(
+        private val draw: (Canvas, ClockState) -> Unit,
+        private val frameHolder: SurfaceHolder?,
+        private val clock: Clock,
+        private val deviceZone: () -> ZoneId,
+    ) : Engine() {
         private val handler = Handler(Looper.getMainLooper())
+        private val locationStore = LocationStore(applicationContext, deviceZone)
+        private var observingLocation = locationStore.load()
+        private var isDestroyed = false
+        private val locationListener =
+            SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+                if (!isDestroyed) {
+                    observingLocation = locationStore.load()
+                }
+            }
+
+        init {
+            // Keep a strong listener reference for this engine's lifetime. Updates only replace the
+            // cached snapshot; hidden engines must not acquire a surface or schedule a tick.
+            locationStore.registerListener(locationListener)
+        }
 
         // Mirrors the visibility the framework reports through onVisibilityChanged; kept here so
         // onSurfaceChanged can decide whether to resume ticking without a framework-only getter.
         private var isEngineVisible = false
 
         override fun onVisibilityChanged(visible: Boolean) {
+            if (isDestroyed) {
+                return
+            }
             isEngineVisible = visible
             if (visible) {
                 startTicking()
@@ -52,6 +81,9 @@ class AstrolabeWallpaperService : WallpaperService() {
         }
 
         override fun onDestroy() {
+            isDestroyed = true
+            isEngineVisible = false
+            locationStore.unregisterListener(locationListener)
             stopTicking()
             super.onDestroy()
         }
@@ -82,12 +114,17 @@ class AstrolabeWallpaperService : WallpaperService() {
         }
 
         private fun millisUntilNextWholeSecond(): Long {
-            val millisInSecond = System.currentTimeMillis() % MILLIS_PER_SECOND
+            val millisInSecond = Math.floorMod(clock.millis(), MILLIS_PER_SECOND)
             return MILLIS_PER_SECOND - millisInSecond
         }
 
         private fun drawFrame() {
-            drawWallpaperFrame(frameHolder ?: surfaceHolder, draw)
+            drawWallpaperFrame(frameHolder ?: surfaceHolder) { canvas ->
+                val instant = clock.instant()
+                val location = observingLocation
+                val civilTime = instant.atZone(location?.zoneId ?: deviceZone()).toLocalTime()
+                draw(canvas, clockState(civilTime))
+            }
         }
     }
 
