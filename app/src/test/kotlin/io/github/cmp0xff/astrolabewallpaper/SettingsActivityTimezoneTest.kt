@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
 import java.time.ZoneId
 import java.util.TimeZone
 
-/** Captures the phone timezone when saving, including after an asynchronous coordinate acquisition. */
+/** Captures the phone timezone on a first save and keeps a saved site's zone when refreshing. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
 class SettingsActivityTimezoneTest {
@@ -40,6 +40,8 @@ class SettingsActivityTimezoneTest {
         TimeZone.setDefault(originalTimezone)
     }
 
+    // The first-save case: nothing is stored yet, so there is no zone to preserve and the phone
+    // zone standing when the asynchronous fix arrives is what gets saved.
     @Test
     fun acquisitionCapturesSaveZone() {
         shadowOf(application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -59,6 +61,44 @@ class SettingsActivityTimezoneTest {
             shadowOf(Looper.getMainLooper()).idle()
 
             assertSavedTimezone(activity, "Pacific/Auckland")
+        }
+    }
+
+    // Acquiring on top of an already-saved site updates the coordinates but must not overwrite the
+    // site's zone with the phone's. Every other acquisition test starts from an empty store, where
+    // the capturing and preserving paths agree, so only this case can catch the data loss.
+    @Test
+    fun acquisitionPreservesSavedZone() {
+        shadowOf(application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
+        val manager = application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val locationShadow = shadowOf(manager)
+        locationShadow.enableNetworkProvider()
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = -33.87,
+                longitude = 151.21,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.of("Australia/Sydney"),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            // Both buttons funnel through the same acquisition and differ only in forceFresh; both
+            // must preserve the zone, so one case loops over them instead of duplicating the test.
+            for (buttonId in listOf(R.id.use_current_location, R.id.refresh_location)) {
+                val fix = Location(LocationManager.NETWORK_PROVIDER)
+                fix.latitude = 37.42
+                fix.longitude = -122.08
+                activity.findViewById<Button>(buttonId).performClick()
+                locationShadow.simulateLocation(LocationManager.NETWORK_PROVIDER, fix)
+                shadowOf(Looper.getMainLooper()).idle()
+
+                assertSavedTimezone(activity, "Australia/Sydney")
+                val saved = LocationStore(application).load()
+                assertEquals(37.42, saved?.latitude)
+                assertEquals(-122.08, saved?.longitude)
+                assertEquals(ObservingLocation.Source.CURRENT_COARSE, saved?.source)
+            }
         }
     }
 

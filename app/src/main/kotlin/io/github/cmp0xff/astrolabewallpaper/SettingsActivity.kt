@@ -93,12 +93,15 @@ class SettingsActivity : Activity() {
     private fun fetchCurrentLocation(forceFresh: Boolean) {
         locationProvider.fetch(forceFresh = forceFresh) { fix ->
             if (fix != null) {
+                // A refresh updates the coordinates; an already-saved site keeps its geographic
+                // zone, which no current-location input can resolve. The phone zone is the fallback
+                // for a first acquisition, when there is no site to preserve.
                 val location =
                     ObservingLocation(
                         latitude = fix.latitude,
                         longitude = fix.longitude,
                         source = ObservingLocation.Source.CURRENT_COARSE,
-                        zoneId = ZoneId.systemDefault(),
+                        zoneId = locationStore.load()?.zoneId ?: ZoneId.systemDefault(),
                     )
                 locationStore.save(location)
                 displayLocation(location)
