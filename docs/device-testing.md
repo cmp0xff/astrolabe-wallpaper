@@ -195,7 +195,9 @@ and locale formatting remain cosmetic follow-up work. The offline city chooser r
 Automated coverage uses fixed instants and explicit zones for site time, Prague's spring and
 autumn DST boundaries, preference updates across multiple engines, hidden/destroyed engines,
 and recreation. Settings tests change the phone zone while an acquisition is in flight to
-verify capture at save time. These Robolectric checks do not establish physical-device behavior.
+verify capture at save time, and acquire on top of an already-saved site to verify that a refresh
+retains its zone rather than re-capturing the phone's. These Robolectric checks do not establish
+physical-device behavior.
 
 Test build: local debug `app-debug.apk` from `feat/24-site-timezone` at d21c6a7 (APK SHA-256
 d5e0235d5d772044324b02505e8d19486d13912f55b8c77852b21781d7dd8335).
@@ -216,8 +218,28 @@ Firmware build: withheld (embeds the model identifier)
 
 Applying the wallpaper by hand after a force-stop restores the saved site unchanged, but the system
 does not rebind a force-stopped provider on its own, so a killed process leaves the stock wallpaper
-in place. **Refresh location** re-captures the phone's current zone and overwrites the saved one;
-that row records observed behaviour rather than a passing check.
+in place. The `refresh inversion` row above records that build re-capturing the phone's current zone
+and overwriting the saved one; that is the defect fixed by the build in **Refresh zone retention
+(2026-09-30)** below, and the row stays as the d21c6a7 build's historical record.
 
-The current coordinate path captures the phone zone; establishing each site's geographic timezone
-remains #24, with the offline city chooser in #21.
+A current-location acquisition with no site saved yet still captures the phone zone; establishing
+each site's geographic timezone remains #24, with the offline city chooser in #21.
+
+### Refresh zone retention (2026-09-30)
+
+Test build: local debug `app-debug.apk` from `fix/24-refresh-zone-retention` at 12e4184, the fix
+that keeps a saved site's zone when its coordinates are refreshed (APK SHA-256
+eb78aa7167ead68e737ae11409432f5e9c533e0158fcf3fddcf59555abe61f6f).
+
+Same physical device. Android version: 16 (API 36). Firmware build: withheld (embeds the model
+identifier).
+
+| Date | Check | Observed |
+| --- | --- | --- |
+| 2026-09-30 | save + baseline | Entered the neutral coordinates `35.68, 139.69` and tapped **Save coordinates** while the phone was on `Europe/Prague`; the display read `35.68, 139.69 (manual)` and `Timezone: Europe/Prague`, and the stored record held `"source":"MANUAL"` with `zoneId` `Europe/Prague` |
+| 2026-09-30 | phone-zone change | Turned automatic zone selection off and moved the phone to `Asia/Kolkata` with `cmd alarm set-timezone`; `getprop persist.sys.timezone` read `Asia/Kolkata` and `date` read `Thu Oct 1 02:45:55 IST 2026`, which is 3.5 h from the baseline's +02:00, and this was confirmed before interpreting the refresh |
+| 2026-09-30 | refresh retention | Tapped **Refresh location** with the phone still on `Asia/Kolkata`: the display and the record both flipped to `(current)`, so `source` became `CURRENT_COARSE` and the neutral coordinates were replaced by the live coarse fix, while the display's `Timezone:` line and the stored `zoneId` both stayed `Europe/Prague`. The live coordinates are the device's own position and are deliberately not recorded |
+
+The run-as record read matched the on-screen `Timezone:` line in every row. The phone zone was
+restored to `Europe/Prague` with automatic time-zone selection re-enabled afterwards. The pre-fix
+behaviour this replaces is the `refresh inversion` row above, from the d21c6a7 build.
