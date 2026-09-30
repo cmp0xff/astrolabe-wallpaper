@@ -2,8 +2,9 @@
 
 [Astronomy Calculator](../app/src/main/kotlin/io/github/cmp0xff/astrolabewallpaper/AstronomyCalculator.kt)
 answers one question: *what does the sky look like from a saved observing location at a given
-instant?* Issue #4. It returns the Sun, the Moon with its phase, the seven planets visible from
-Earth, a bundled set of bright stars, and the day's sunrise, sunset, and twilights.
+instant?* It implements part of #4: the Sun, the Moon with its phase, the seven planets visible
+from Earth, a bundled set of bright stars, and the day's sunrise, sunset, and twilights. Ecliptic
+geometry remains outstanding for #4, and integration with the dial belongs to #5.
 
 | File | Role |
 | --- | --- |
@@ -106,9 +107,10 @@ Two consequences are worth recording:
   value. The two therefore diverge as a body descends: 0.32 degrees for the Sun at -44 degrees,
   the lowest fixture, and more below that. The position tests compare **azimuth only** there:
   refraction lifts altitude but does not turn bearing. Above -1 degree everything is compared.
-- The observer's height above the ellipsoid is fixed at zero. The saved observing location is a
-  coarse position, and the horizon dip a few hundred metres of altitude produces is far below the
-  tolerances here.
+- The observer's height above the ellipsoid is fixed at zero, approximating a sea-level observer.
+  The calculator does not model terrain, elevation-dependent horizon dip, or local obstructions.
+  The reference tolerances therefore do not establish accuracy for an elevated observer or the
+  visible horizon at a real site.
 
 The rise/set convention is the standard one: the Sun's *upper limb* crosses the horizon, including
 the conventional 34 arcminutes of near-horizon refraction, which puts the centre about 50
@@ -168,15 +170,13 @@ fixture file records each source and the request used to obtain it, including th
 the star rows were reduced with. Tolerances sit well above what the two implementations actually
 disagree by, so a regression fails while a rounding difference does not.
 
-"Measured spread" is the largest disagreement the committed fixtures actually show, which issue #4
-asks to be recorded against each tolerance. It is not left to prose: each row below is re-measured
-against the same fixtures by `positionSpreadsAreEnforced`, `eventSpreadIsEnforced`, and
-`phaseSpreadIsEnforced` in `AstronomyEngineCalculatorTest` and `starSpreadsAreEnforced` in
-`AstronomyEngineStarTest`, and the proper-motion row by the tolerance of
-`properMotionReproducesEpoch`. Each bound sits one and a half to two and a half times the number
-beside it, so every row is falsifiable upward — a spread that grows fails — while the recorded
-figure has that much room to move before the bound does. A bound that shrinks *below* its row means
-this table is stale and has to move with it.
+"Measured spread" records the largest observed disagreement over the committed fixtures, as
+requested by #4. The spread tests recompute those disagreements and assert upper bounds:
+`positionSpreadsAreEnforced`, `eventSpreadIsEnforced`, and `phaseSpreadIsEnforced` in
+`AstronomyEngineCalculatorTest`, and `starSpreadsAreEnforced` in `AstronomyEngineStarTest`.
+`properMotionReproducesEpoch` checks the proper-motion tolerance. These tests do not assert the
+exact measured figures printed below; a passing run establishes that the bounds hold, and the
+recorded figures need to be remeasured when the implementation or fixtures change.
 
 | Quantity | Tolerance | Measured spread | Reference |
 | --- | --- | --- | --- |
@@ -214,12 +214,13 @@ needs is already built once per call rather than once per star.
 - **Nothing outside 2026** — see the date range above.
 - **The Moon's topocentric parallax at the horizon** is the engine's, not independently checked
   here beyond the polar day and night cases and the four published lunar-phase instants.
-- **Nothing at exactly ±90 degrees latitude against a reference.** `skyIsDefinedAtBothPoles`
-  establishes that the calculator answers rather than throwing there, which is the risk a pole
-  creates inside `Horizontal`. Azimuth is not a meaningful bearing at a pole — every direction is
-  south from the north pole — so there is no reference value to compare, only the requirement that
-  a location `ObservingLocation` accepts does not fail mid-render.
+- **Nothing at exactly ±90 degrees latitude against an independent reference.**
+  `skyIsDefinedAtBothPoles` checks valid output and selected absent solar events. It does not
+  establish positional accuracy at the poles, where azimuth also needs a bearing convention.
 - **Asteroid, comet, and rise/set-for-the-Moon** cases are out of scope for #4.
 
 Run the tests with `./gradlew qualityGate`, or `./gradlew :app:testDebugUnitTest` for the tests
-alone. They need no Android SDK, no network, and no device.
+alone. The astronomy and model tests use plain JUnit; the complete suite also includes
+Robolectric. Both Gradle commands require the configured Android SDK and JDK described in
+[development.md](development.md#local-setup), and initial dependency downloads need network
+access. No device is needed for these JVM tests.

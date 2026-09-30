@@ -27,6 +27,14 @@ The detekt wrapper shades ktlint; the pinned upstream
 records ktlint 1.8.0. Upstream artifacts retain their embedded notices. Review the full resolved graph and packaging
 notices again when adding runtime dependencies or preparing distribution in #7/#8.
 
+The Astronomy Engine artifact does not embed its MIT notice. The full
+[upstream license at the pinned revision](https://github.com/cosinekitty/astronomy/blob/61dc07020aaa6885d2c7f688a4d82beaf6edb9ef/LICENSE)
+is retained unchanged in
+[`app/src/main/assets/licenses/astronomy-engine-LICENSE.txt`](../app/src/main/assets/licenses/astronomy-engine-LICENSE.txt),
+including Don Cross's copyright notice. Android packages it as
+`assets/licenses/astronomy-engine-LICENSE.txt`; `scripts/verify-apk.sh` requires the APK copy
+to match the source asset byte for byte.
+
 ## Astronomy Engine maintenance assessment
 
 Checked 2026-09-09 against the GitHub API for
