@@ -28,9 +28,29 @@ JUnit with no Robolectric environment.
 | Distance | astronomical units, internal to Astronomy Engine; not exposed |
 | Time | `java.time.Instant`, UTC, millisecond resolution |
 
-`Instant` carries no zone, and nothing under `AstronomyCalculator` reads a `ZoneId`. Converting
-an instant to the civil time a user reads is the caller's job, so one `Sky` serves any display
-timezone. The clock follows the phone's timezone; the astronomy follows the saved location.
+`Instant` carries no zone, and nothing under `AstronomyCalculator` reads a `ZoneId`.
+Converting an instant to civil time is the caller's job. The
+[product contract](design.md) requires the selected site's coordinates for astronomy
+and its geographic timezone, including DST, for civil time. Both displays use the
+same instant. A site change updates both; a phone-timezone change changes neither
+the saved site nor its civil clock. With no selected site, only the civil clock is
+shown, using the phone timezone.
+
+Prague Orloj is the visual and projection reference, with geometry adapted to the
+selected observing site. Projection mathematics belong in the Orloj guide introduced
+by [PR #30](https://github.com/cmp0xff/astrolabe-wallpaper/pull/30).
+
+### Current integration limits
+
+The wallpaper on `main` still reads the phone's civil time and does not render these
+astronomy results. [PR #29](https://github.com/cmp0xff/astrolabe-wallpaper/pull/29)
+adds saved-timezone infrastructure, but current-location and raw-coordinate saves
+capture the phone zone; migration also tags legacy coordinates with the phone zone.
+That does not establish the site's geographic timezone.
+[Issue #24](https://github.com/cmp0xff/astrolabe-wallpaper/issues/24) owns the remaining
+gap across current location, raw coordinates, city selection, and correction of
+previously phone-tagged records. The offline city chooser is
+[issue #21](https://github.com/cmp0xff/astrolabe-wallpaper/issues/21).
 
 ## Coordinate frames
 
