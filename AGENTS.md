@@ -125,6 +125,11 @@ Follow [.github/pull_request_template.md](.github/pull_request_template.md):
   stale "none yet" line is itself a review finding. Link evidence without
   copying extensive rationale. This project explicitly requires this per-commit
   index, overriding the global default against one.
+- Link out-of-band evidence the PR depends on — issue-body edits above all — from
+  the index too. When the Summary or Verification rests on edited issue bodies,
+  reference each edited issue so its audited state is traceable from the PR
+  record; verification that relies on such edits but links none of them is
+  itself a review finding.
 - Finish with the same visible `Co-Authored-By` identity used for the source work.
   This attribution does not claim it will survive squash merging.
 - Use native, unquoted GitHub references for issues, PRs, and commits: #5,
