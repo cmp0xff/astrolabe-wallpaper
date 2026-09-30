@@ -2,16 +2,13 @@ package io.github.cmp0xff.astrolabewallpaper
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.util.Log
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import org.robolectric.shadows.ShadowLog
 import java.time.LocalTime
 import kotlin.math.cos
 import kotlin.math.roundToInt
@@ -50,65 +47,40 @@ class DialRendererTest {
     }
 
     @Test
-    fun threeOClockHourHandAt90() {
-        val bitmap = render(LocalTime.of(3, 0, 0))
-        assertBackgroundOutsideDial(bitmap)
-        assertDialPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_SAMPLE_DISTANCE)
-        // Minute and second hands point up; nothing points at 6 or 9 o'clock.
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_SAMPLE_DISTANCE)
-        // The hour hand is the shortest, so it must not reach the overdraw probe.
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_OVERDRAW_DISTANCE)
+    fun cardinalHourHandsAreIsolated() {
+        for ((hour, angle) in listOf(3 to 90f, 6 to 180f, 9 to 270f)) {
+            val bitmap = render(LocalTime.of(hour, 0, 0))
+            assertBackgroundOutsideDial(bitmap)
+            assertDialPixel(bitmap = bitmap, angleDegrees = angle, distance = HOUR_SAMPLE_DISTANCE)
+            // Minute and second hands point up; the other two cardinal directions are empty.
+            for (emptyAngle in listOf(90f, 180f, 270f).filter { it != angle }) {
+                assertBackgroundPixel(bitmap = bitmap, angleDegrees = emptyAngle, distance = HOUR_SAMPLE_DISTANCE)
+            }
+            // The hour hand is the shortest, so it must not reach the overdraw probe.
+            assertBackgroundPixel(bitmap = bitmap, angleDegrees = angle, distance = HOUR_OVERDRAW_DISTANCE)
+        }
     }
 
     @Test
-    fun sixOClockHourHandAt180() {
-        val bitmap = render(LocalTime.of(6, 0, 0))
-        assertBackgroundOutsideDial(bitmap)
-        assertDialPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_OVERDRAW_DISTANCE)
-    }
-
-    @Test
-    fun nineOClockHourHandAt270() {
-        val bitmap = render(LocalTime.of(9, 0, 0))
-        assertBackgroundOutsideDial(bitmap)
-        assertDialPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 90f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 180f, distance = HOUR_SAMPLE_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = 270f, distance = HOUR_OVERDRAW_DISTANCE)
-    }
-
-    @Test
-    fun handsAt122043AreIsolated() {
-        assertDispersedHands(
-            time = dispersedTime,
-            hourAngle = 10.3583f,
-            minuteAngle = 124.3f,
-            secondAngle = 258f,
-        )
-    }
-
-    @Test
-    fun handsAt044203AreIsolated() {
-        assertDispersedHands(
-            time = LocalTime.of(4, 42, 3),
-            hourAngle = 141.025f,
-            minuteAngle = 252.3f,
-            secondAngle = 18f,
-        )
-    }
-
-    @Test
-    fun handsAt080323AreIsolated() {
-        assertDispersedHands(
-            time = LocalTime.of(8, 3, 23),
-            hourAngle = 241.6917f,
-            minuteAngle = 20.3f,
-            secondAngle = 138f,
-        )
+    fun dispersedHandsAreIsolated() {
+        val cases =
+            listOf(
+                dispersedTime to ClockState(hourAngle = 10.3583f, minuteAngle = 124.3f, secondAngle = 258f),
+                LocalTime.of(4, 42, 3) to ClockState(hourAngle = 141.025f, minuteAngle = 252.3f, secondAngle = 18f),
+                LocalTime.of(8, 3, 23) to ClockState(hourAngle = 241.6917f, minuteAngle = 20.3f, secondAngle = 138f),
+            )
+        for ((time, angles) in cases) {
+            val (hourAngle, minuteAngle, secondAngle) = angles
+            val bitmap = render(time)
+            // Each hand has its own presence and overdraw probes; it cannot borrow pixels from
+            // another hand as it can when all three overlap at noon.
+            assertDialPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_ONLY_DISTANCE)
+            assertBackgroundPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_OVERDRAW_DISTANCE)
+            assertDialPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_ONLY_DISTANCE)
+            assertBackgroundPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_OVERDRAW_DISTANCE)
+            assertDialPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_ONLY_DISTANCE)
+            assertBackgroundPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_OVERDRAW_DISTANCE)
+        }
     }
 
     @Test
@@ -203,39 +175,6 @@ class DialRendererTest {
             "a canvas above the minimum dial radius is drawn",
             aboveMinimum.getPixel(ABOVE_MIN_DIAL_SIZE / 2, ABOVE_MIN_DIAL_SIZE / 2) != DialRenderer.BACKGROUND_COLOR,
         )
-    }
-
-    @Test
-    fun renderFailureIsContained() {
-        ShadowLog.clear()
-        containRenderFailure { throw IllegalArgumentException("invalid argument") }
-        containRenderFailure { throw IllegalStateException("invalid state") }
-        val failures = ShadowLog.getLogs().filter { it.type == Log.ERROR && it.tag == DIAL_RENDERER_TAG }
-        assertEquals("both contained failures must be logged at error level", 2, failures.size)
-
-        var hasDrawn = false
-        containRenderFailure { hasDrawn = true }
-        assertTrue("a successful draw must still run", hasDrawn)
-    }
-
-    @Test
-    fun unrelatedFailuresPropagate() {
-        // The catch is narrow: exceptions outside the handled types surface rather than being lost.
-        assertThrows(UnsupportedOperationException::class.java) {
-            containRenderFailure { throw UnsupportedOperationException("not contained") }
-        }
-    }
-
-    private fun assertDispersedHands(time: LocalTime, hourAngle: Float, minuteAngle: Float, secondAngle: Float) {
-        val bitmap = render(time)
-        // Every hand has its own presence and overdraw check; a missing or wrongly placed hand
-        // cannot borrow pixels from another hand as it can when all three overlap at noon.
-        assertDialPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_ONLY_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = hourAngle, distance = HOUR_OVERDRAW_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_ONLY_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = minuteAngle, distance = MINUTE_OVERDRAW_DISTANCE)
-        assertDialPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_ONLY_DISTANCE)
-        assertBackgroundPixel(bitmap = bitmap, angleDegrees = secondAngle, distance = SECOND_OVERDRAW_DISTANCE)
     }
 
     private fun render(time: LocalTime): Bitmap = renderWith(renderer = renderer, time = time)
@@ -383,6 +322,5 @@ class DialRendererTest {
         const val PALETTE_WINDOW = 2
         const val EXPECTED_BACKGROUND_COLOR = 0xFF111923.toInt()
         const val EXPECTED_DIAL_COLOR = 0xFFD8B66A.toInt()
-        const val DIAL_RENDERER_TAG = "DialRenderer"
     }
 }

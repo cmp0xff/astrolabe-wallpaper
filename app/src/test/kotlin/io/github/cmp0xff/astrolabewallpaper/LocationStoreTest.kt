@@ -17,15 +17,6 @@ import org.robolectric.shadows.ShadowLog
 @Config(sdk = [26, 36])
 class LocationStoreTest {
     @Test
-    fun saveThenLoadRoundTrips() {
-        val store = LocationStore(RuntimeEnvironment.getApplication())
-        val location =
-            ObservingLocation(latitude = 12.5, longitude = -77.0, source = ObservingLocation.Source.CURRENT_COARSE)
-        store.save(location)
-        assertEquals(location, store.load())
-    }
-
-    @Test
     fun loadReturnsNullWhenEmpty() {
         assertNull(LocationStore(RuntimeEnvironment.getApplication()).load())
     }

@@ -171,24 +171,25 @@ the star rows were reduced with. Tolerances sit well above what the two implemen
 disagree by, so a regression fails while a rounding difference does not.
 
 "Measured spread" records the largest observed disagreement over the committed fixtures, as
-requested by #4. The spread tests recompute those disagreements and assert upper bounds:
-`positionSpreadsAreEnforced`, `eventSpreadIsEnforced`, and `phaseSpreadIsEnforced` in
-`AstronomyEngineCalculatorTest`, and `starSpreadsAreEnforced` in `AstronomyEngineStarTest`.
-`properMotionReproducesEpoch` checks the proper-motion tolerance. These tests do not assert the
-exact measured figures printed below; a passing run establishes that the bounds hold, and the
-recorded figures need to be remeasured when the implementation or fixtures change.
+requested by #4. The ordinary reference assertions enforce the tighter regression bounds below
+in the same pass that checks each position, magnitude, event, or phase. Star constellation
+assertions share the horizontal-position comparisons in
+`starReferencesMatch`; `properMotionReproducesEpoch` retains the
+independent catalogue-epoch check. A passing run establishes these bounds, not the exact measured
+figures: those observations need to be remeasured when the implementation or fixtures change.
+Acceptance tolerances remain distinct from both the enforced bounds and the measured spreads.
 
-| Quantity | Tolerance | Measured spread | Reference |
-| --- | --- | --- | --- |
-| Sun azimuth and altitude | 0.05° | 0.0008° | JPL Horizons, apparent and refracted |
-| Planet azimuth and altitude | 0.05° | 0.0041° (Neptune) | JPL Horizons |
-| Moon azimuth and altitude | 0.1° | 0.0014° | JPL Horizons |
-| Star azimuth and altitude | 0.1° | 0.020° (Spica) | Hipparcos catalogue reduced with IAU SOFA |
-| Planet and Moon magnitudes | 0.25 mag | 0.13 mag (Neptune) | JPL Horizons apparent magnitude |
-| Sunrise, sunset, and twilight | 60 s | 3 s | JPL Horizons crossings, cross-checked against USNO |
-| Lunar phase at a published phase instant | 0.05° of ecliptic longitude | 0.0052° | USNO lunar phases |
-| Proper motion over the 8.75-year catalogue step | 3e-6° | 1.25e-6° (0.0045 arcsec, Rigil Kentaurus) | Hipparcos J1991.25 place |
-| Sun constellation | exact match | — | IAU boundaries; three of the four instants are USNO season instants |
+| Quantity | Acceptance tolerance | Enforced bound | Measured spread | Reference |
+| --- | --- | --- | --- | --- |
+| Sun azimuth and altitude | 0.05° | 0.002° | 0.0008° | JPL Horizons, apparent and refracted |
+| Planet azimuth and altitude | 0.05° | 0.008° | 0.0041° (Neptune) | JPL Horizons |
+| Moon azimuth and altitude | 0.1° | 0.003° | 0.0014° | JPL Horizons |
+| Star azimuth and altitude | 0.1° | 0.04° | 0.020° (Spica) | Hipparcos catalogue reduced with IAU SOFA |
+| Planet and Moon magnitudes | 0.25 mag | 0.2 mag | 0.13 mag (Neptune) | JPL Horizons apparent magnitude |
+| Sunrise, sunset, and twilight | 60 s | JPL 5 s; USNO 60 s | 3 s against JPL | JPL Horizons crossings, cross-checked against USNO |
+| Lunar phase at a published phase instant | 0.05° of ecliptic longitude | 0.01° | 0.0052° | USNO lunar phases |
+| Proper motion over the 8.75-year catalogue step | — | 3e-6° | 1.25e-6° (0.0045 arcsec, Rigil Kentaurus) | Hipparcos J1991.25 place |
+| Sun constellation | exact match | exact match | — | IAU boundaries; three of the four instants are USNO season instants |
 
 The altitude comparison is skipped for reference positions below -1 degree, for the refraction
 reason above. The 60-second event tolerance sits at the tight end of the 1–2 minutes the

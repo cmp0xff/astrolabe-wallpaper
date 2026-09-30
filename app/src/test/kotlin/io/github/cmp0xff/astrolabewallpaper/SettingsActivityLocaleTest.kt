@@ -18,117 +18,95 @@ import java.util.Locale
 class SettingsActivityLocaleTest {
     @Test
     fun germanCoordinatesArePersisted() {
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            val activity = controller.setup().get()
-            enterCoordinates(activity, latitude = "45,5", longitude = "-120,25")
-            activity.findViewById<Button>(R.id.save_location).performClick()
-
-            assertEquals(
-                ObservingLocation(latitude = 45.5, longitude = -120.25, source = ObservingLocation.Source.MANUAL),
-                LocationStore(activity).load(),
-            )
-        }
+        assertPersisted(latitude = "45,5", longitude = "-120,25", expectedLatitude = 45.5, expectedLongitude = -120.25)
     }
 
     @Test
     @Config(qualifiers = "ar-rEG")
     fun arabicDigitsArePersisted() {
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            val activity = controller.setup().get()
-            enterCoordinates(
-                activity = activity,
-                latitude = "٤٥٫٥",
-                longitude = "١٢٠٫٢٥",
-                expectedLocale = Locale.forLanguageTag("ar-EG"),
-            )
-            activity.findViewById<Button>(R.id.save_location).performClick()
-
-            assertEquals(
-                ObservingLocation(latitude = 45.5, longitude = 120.25, source = ObservingLocation.Source.MANUAL),
-                LocationStore(activity).load(),
-            )
-        }
+        assertPersisted(
+            latitude = "٤٥٫٥",
+            longitude = "١٢٠٫٢٥",
+            expectedLatitude = 45.5,
+            expectedLongitude = 120.25,
+            expectedLocale = Locale.forLanguageTag("ar-EG"),
+        )
     }
 
     @Test
     fun positiveSignIsAccepted() {
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            val activity = controller.setup().get()
-            enterCoordinates(activity, latitude = "+45,5", longitude = "-120,25")
-            activity.findViewById<Button>(R.id.save_location).performClick()
-
-            assertEquals(
-                ObservingLocation(latitude = 45.5, longitude = -120.25, source = ObservingLocation.Source.MANUAL),
-                LocationStore(activity).load(),
-            )
-        }
+        assertPersisted(latitude = "+45,5", longitude = "-120,25", expectedLatitude = 45.5, expectedLongitude = -120.25)
     }
 
     @Test
     fun repeatedDecimalIsRejected() {
-        assertRejectedLatitude("45,5,1")
+        assertRejected(latitude = "45,5,1", longitude = "-120,25", bypassKeyboard = true)
     }
 
     @Test
     fun trailingTextIsRejected() {
-        assertRejectedLatitude("45,5north")
+        assertRejected(latitude = "45,5north", longitude = "-120,25", bypassKeyboard = true)
     }
 
     @Test
     fun dotCoordinatesArePersisted() {
         // '.' is the canonical coordinate separator and an alias for the German comma.
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            val activity = controller.setup().get()
-            enterCoordinates(activity, latitude = "8.5", longitude = "-120.25")
-            activity.findViewById<Button>(R.id.save_location).performClick()
-
-            assertEquals(
-                ObservingLocation(latitude = 8.5, longitude = -120.25, source = ObservingLocation.Source.MANUAL),
-                LocationStore(activity).load(),
-            )
-        }
+        assertPersisted(latitude = "8.5", longitude = "-120.25", expectedLatitude = 8.5, expectedLongitude = -120.25)
     }
 
     @Test
     @Config(qualifiers = "ar-rEG")
     fun arabicDotCoordinatesPersist() {
+        assertPersisted(
+            latitude = "45.5",
+            longitude = "120.5",
+            expectedLatitude = 45.5,
+            expectedLongitude = 120.5,
+            expectedLocale = Locale.forLanguageTag("ar-EG"),
+        )
+    }
+
+    @Test
+    fun invalidLongitudeIsRejected() {
+        assertRejected(latitude = "45,5", longitude = "181,0")
+    }
+
+    private fun assertPersisted(
+        latitude: String,
+        longitude: String,
+        expectedLatitude: Double,
+        expectedLongitude: Double,
+        expectedLocale: Locale = Locale.GERMANY,
+    ) {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
             val activity = controller.setup().get()
             enterCoordinates(
                 activity = activity,
-                latitude = "45.5",
-                longitude = "120.5",
-                expectedLocale = Locale.forLanguageTag("ar-EG"),
+                latitude = latitude,
+                longitude = longitude,
+                expectedLocale = expectedLocale,
             )
             activity.findViewById<Button>(R.id.save_location).performClick()
-
             assertEquals(
-                ObservingLocation(latitude = 45.5, longitude = 120.5, source = ObservingLocation.Source.MANUAL),
+                ObservingLocation(
+                    latitude = expectedLatitude,
+                    longitude = expectedLongitude,
+                    source = ObservingLocation.Source.MANUAL,
+                ),
                 LocationStore(activity).load(),
             )
         }
     }
 
-    @Test
-    fun invalidLongitudeIsRejected() {
+    private fun assertRejected(latitude: String, longitude: String, bypassKeyboard: Boolean = false) {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
             val activity = controller.setup().get()
-            enterCoordinates(activity, latitude = "45,5", longitude = "181,0")
+            if (bypassKeyboard) {
+                // Inject malformed restored/input text without the keyboard removing invalid characters first.
+                activity.findViewById<EditText>(R.id.latitude_input).keyListener = null
+            }
+            enterCoordinates(activity, latitude, longitude)
             activity.findViewById<Button>(R.id.save_location).performClick()
-
-            assertNull(LocationStore(activity).load())
-            assertEquals(activity.getString(R.string.location_invalid), ShadowToast.getTextOfLatestToast())
-        }
-    }
-
-    private fun assertRejectedLatitude(latitude: String) {
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            val activity = controller.setup().get()
-            // Inject malformed restored/input text without the keyboard removing the invalid characters first.
-            activity.findViewById<EditText>(R.id.latitude_input).keyListener = null
-            enterCoordinates(activity, latitude = latitude, longitude = "-120,25")
-            activity.findViewById<Button>(R.id.save_location).performClick()
-
             assertNull(LocationStore(activity).load())
             assertEquals(activity.getString(R.string.location_invalid), ShadowToast.getTextOfLatestToast())
         }

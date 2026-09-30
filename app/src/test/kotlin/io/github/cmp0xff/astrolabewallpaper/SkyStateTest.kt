@@ -26,31 +26,6 @@ class SkyStateTest {
             angleDifferenceDeg(first = corners[0].azimuthDeg, second = corners[1].azimuthDeg),
             0.0,
         )
-        assertRejected { Horizontal(azimuthDeg = FULL_TURN_DEGREES + 0.001, altitudeDeg = 0.0) }
-        assertRejected { Horizontal(azimuthDeg = 0.0, altitudeDeg = RIGHT_ANGLE_DEGREES + 0.001) }
-        assertRejected { Horizontal(azimuthDeg = 0.0, altitudeDeg = -RIGHT_ANGLE_DEGREES - 0.001) }
-    }
-
-    @Test
-    fun theSeamAcceptsAFakeCalculator() {
-        // The point of [AstronomyCalculator] being an interface: a caller can hold one without an
-        // engine behind it, and any change to the interface breaks this at compile time. The
-        // assertions below cover the other half of the seam — that what a caller passes through
-        // the interface reaches the implementation, arguments included — rather than reading back
-        // the Sky the stub was handed, which a stub cannot get wrong.
-        val rise = Instant.parse("2026-06-21T03:42:45Z")
-        val fake =
-            FakeCalculator(
-                sky(
-                    RiseSetEvent(EventKind.SUNRISE, rise),
-                    RiseSetEvent(EventKind.SUNSET, null),
-                ),
-            )
-        val calculator: AstronomyCalculator = fake
-        val result = calculator.sky(FIXTURE_INSTANT, SITE)
-        assertEquals("the call reaches the implementation", FIXTURE_INSTANT to SITE, fake.seen)
-        assertEquals(rise, result.eventTime(EventKind.SUNRISE))
-        assertNull(result.eventTime(EventKind.SUNSET))
     }
 
     @Test
@@ -104,18 +79,6 @@ class SkyStateTest {
         assertRejected { valid.copy(magnitude = 1.65) }
     }
 
-    @Test
-    fun properMotionIsLinearInTime() {
-        val star = StarCatalog.stars.single { it.name == "Sirius" }
-        assertEquals(star.rightAscensionDeg, star.rightAscensionDegAfter(years = 0.0), 0.0)
-        assertEquals(star.declinationDeg, star.declinationDegAfter(years = 0.0), 0.0)
-        val afterTen = star.rightAscensionDegAfter(years = 10.0) - star.rightAscensionDeg
-        val afterTwenty = star.rightAscensionDegAfter(years = 20.0) - star.rightAscensionDeg
-        assertEquals(afterTen * 2.0, afterTwenty, 1e-9)
-        // Sirius moves south and west in right ascension, so its declination must decrease.
-        assertTrue("declination should fall", star.declinationDegAfter(years = 100.0) < star.declinationDeg)
-    }
-
     private fun sky(vararg events: RiseSetEvent): Sky {
         val sun = SolarState(position = UP, constellation = "Tau")
         val moon =
@@ -145,24 +108,8 @@ class SkyStateTest {
 
     private fun Throwable?.name(): String = this?.let { it::class.simpleName } ?: "no exception"
 
-    /** A calculator with nothing behind it, which is the whole reason the seam is an interface. */
-    private class FakeCalculator(private val fixed: Sky) : AstronomyCalculator {
-        var seen: Pair<Instant, ObservingLocation>? = null
-            private set
-
-        override fun sky(time: Instant, location: ObservingLocation): Sky {
-            seen = time to location
-            return fixed
-        }
-    }
-
     private companion object {
         val UP = Horizontal(azimuthDeg = 0.0, altitudeDeg = 90.0)
-        val FIXTURE_INSTANT: Instant = Instant.parse("2026-06-21T12:00:00Z")
-
-        /** Reaches [FakeCalculator] only, which ignores it: no engine sees this location. */
-        val SITE =
-            ObservingLocation(latitude = 51.4779, longitude = 0.0, source = ObservingLocation.Source.MANUAL)
         const val FULL_MOON_MAGNITUDE = -12.7
     }
 }

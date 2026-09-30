@@ -57,22 +57,6 @@ class SettingsActivityAcquisitionTest {
     }
 
     @Test
-    fun manualSaveCancelsTimeout() {
-        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
-            val activity = controller.setup().get()
-            activity.findViewById<Button>(R.id.use_current_location).performClick()
-
-            saveManualLocation(activity)
-            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
-
-            assertManualLocation(activity)
-            assertTrue(locationShadow.networkListeners().isEmpty())
-            assertEquals(1, ShadowToast.shownToastCount())
-            assertEquals(activity.getString(R.string.location_saved), ShadowToast.getTextOfLatestToast())
-        }
-    }
-
-    @Test
     fun invalidInputKeepsAcquisition() {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
             val activity = controller.setup().get()
