@@ -19,9 +19,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
+import java.time.ZoneId
 
 /** Exercises launcher and preview behavior, permission results, and manual/current location persistence. */
 @RunWith(RobolectricTestRunner::class)
@@ -53,7 +55,7 @@ class SettingsActivityTest {
             activity.findViewById<EditText>(R.id.latitude_input).setText("45.5")
             activity.findViewById<EditText>(R.id.longitude_input).setText("-120.25")
             activity.findViewById<Button>(R.id.save_location).performClick()
-            val expected = "45.5, -120.25 (manual)"
+            val expected = "45.5000, -120.2500 (manual)\nTimezone: ${ZoneId.systemDefault().id}"
             assertEquals(expected, activity.findViewById<TextView>(R.id.location_current).text.toString())
             controller.recreate()
             assertEquals(
@@ -75,7 +77,7 @@ class SettingsActivityTest {
             activity.findViewById<EditText>(R.id.latitude_input).setText("10.0")
             activity.findViewById<EditText>(R.id.longitude_input).setText("20.0")
             activity.findViewById<Button>(R.id.save_location).performClick()
-            val expected = "10.0, 20.0 (manual)"
+            val expected = "10.0000, 20.0000 (manual)\nTimezone: ${ZoneId.systemDefault().id}"
 
             shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
             val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
@@ -84,7 +86,12 @@ class SettingsActivityTest {
 
             assertEquals(expected, activity.findViewById<TextView>(R.id.location_current).text.toString())
             assertEquals(
-                ObservingLocation(latitude = 10.0, longitude = 20.0, source = ObservingLocation.Source.MANUAL),
+                ObservingLocation(
+                    latitude = 10.0,
+                    longitude = 20.0,
+                    source = ObservingLocation.Source.MANUAL,
+                    zoneId = ZoneId.systemDefault(),
+                ),
                 LocationStore(activity).load(),
             )
         }
@@ -104,7 +111,7 @@ class SettingsActivityTest {
             )
             shadowOf(Looper.getMainLooper()).idle()
             assertEquals(
-                "37.42, -122.08 (current)",
+                "37.4200, -122.0800 (current)\nTimezone: ${ZoneId.systemDefault().id}",
                 activity.findViewById<TextView>(R.id.location_current).text.toString(),
             )
             assertEquals(
@@ -112,8 +119,31 @@ class SettingsActivityTest {
                     latitude = 37.42,
                     longitude = -122.08,
                     source = ObservingLocation.Source.CURRENT_COARSE,
+                    zoneId = ZoneId.systemDefault(),
                 ),
                 LocationStore(activity).load(),
+            )
+        }
+    }
+
+    @Test
+    fun coordinateDisplaySignOfZero() {
+        val application = RuntimeEnvironment.getApplication()
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = -0.00004,
+                longitude = 0.00004,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            // The negative value rounds to zero; formatting it without rounding first would keep
+            // the sign and render "-0.0000".
+            assertEquals(
+                "0.0000, 0.0000 (manual)\nTimezone: ${ZoneId.systemDefault().id}",
+                activity.findViewById<TextView>(R.id.location_current).text.toString(),
             )
         }
     }

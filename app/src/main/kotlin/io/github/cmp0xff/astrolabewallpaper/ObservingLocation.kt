@@ -1,7 +1,14 @@
 package io.github.cmp0xff.astrolabewallpaper
 
-/** A validated observing location: coordinates plus how they were chosen. */
-internal data class ObservingLocation(val latitude: Double, val longitude: Double, val source: Source) {
+import java.time.ZoneId
+
+/** A validated observing location, its saved civil timezone, and how its coordinates were chosen. */
+internal data class ObservingLocation(
+    val latitude: Double,
+    val longitude: Double,
+    val source: Source,
+    val zoneId: ZoneId,
+) {
     /** Names are persisted by [LocationStore]; renaming a value requires a storage migration. */
     enum class Source { CURRENT_COARSE, MANUAL }
 

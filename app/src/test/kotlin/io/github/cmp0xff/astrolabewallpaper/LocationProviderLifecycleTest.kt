@@ -25,7 +25,7 @@ class LocationProviderLifecycleTest {
     private val application = RuntimeEnvironment.getApplication()
     private val locationManager = application.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     private val provider = LocationProvider(application)
-    private val results = mutableListOf<ObservingLocation?>()
+    private val results = mutableListOf<CoordinateFix?>()
 
     @Before
     fun prepareProvider() {
@@ -76,7 +76,7 @@ class LocationProviderLifecycleTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1))
         listener.onLocationChanged(location())
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
-        assertEquals(listOf<ObservingLocation?>(null), results)
+        assertEquals(listOf<CoordinateFix?>(null), results)
         assertTrue(shadowOf(locationManager).networkListeners().isEmpty())
     }
 
@@ -86,7 +86,7 @@ class LocationProviderLifecycleTest {
         listener.onProviderDisabled(LocationManager.NETWORK_PROVIDER)
         listener.onLocationChanged(location())
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
-        assertEquals(listOf<ObservingLocation?>(null), results)
+        assertEquals(listOf<CoordinateFix?>(null), results)
         assertTrue(shadowOf(locationManager).networkListeners().isEmpty())
     }
 
@@ -99,7 +99,7 @@ class LocationProviderLifecycleTest {
         listener.onLocationChanged(invalid)
         listener.onLocationChanged(location())
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
-        assertEquals(listOf<ObservingLocation?>(null), results)
+        assertEquals(listOf<CoordinateFix?>(null), results)
         assertTrue(shadowOf(locationManager).networkListeners().isEmpty())
     }
 
@@ -133,6 +133,6 @@ class LocationProviderLifecycleTest {
 
     private companion object {
         val EXPECTED_LOCATION =
-            ObservingLocation(latitude = 37.42, longitude = -122.08, source = ObservingLocation.Source.CURRENT_COARSE)
+            CoordinateFix(latitude = 37.42, longitude = -122.08)
     }
 }

@@ -44,9 +44,9 @@ class LocationProviderTest {
     }
 
     private fun assertImmediateFailure() {
-        val results = mutableListOf<ObservingLocation?>()
+        val results = mutableListOf<CoordinateFix?>()
         LocationProvider(application).fetch { results.add(it) }
-        assertEquals(listOf<ObservingLocation?>(null), results)
+        assertEquals(listOf<CoordinateFix?>(null), results)
         assertTrue(shadowOf(locationManager).networkListeners().isEmpty())
     }
 }

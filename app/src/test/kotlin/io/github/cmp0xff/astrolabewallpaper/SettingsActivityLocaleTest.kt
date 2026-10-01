@@ -10,6 +10,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
+import java.time.ZoneId
 import java.util.Locale
 
 /** Parses the keyboard's decimal format without accepting grouping or partially valid input. */
@@ -92,6 +93,7 @@ class SettingsActivityLocaleTest {
                     latitude = expectedLatitude,
                     longitude = expectedLongitude,
                     source = ObservingLocation.Source.MANUAL,
+                    zoneId = ZoneId.systemDefault(),
                 ),
                 LocationStore(activity).load(),
             )
