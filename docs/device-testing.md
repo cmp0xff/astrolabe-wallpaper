@@ -187,8 +187,10 @@ overridden to `en-US`, because `adb` synthetic input could not produce the comma
 would; that override is no longer needed for manual entry, and the row stays as evidence for the
 build it tested.
 
-Unresolved limitations: the current-location display uses raw double formatting; display precision
-and locale formatting remain cosmetic follow-up work. The offline city chooser remains outstanding under #3.
+Unresolved limitations: the display now rounds coordinates to four decimals, as recorded under
+"Coordinate display precision (2026-10-01)" below, and the entry fields are not seeded from the
+saved site, so retyping a displayed coordinate loses the precision below the fourth decimal; that
+residual is tracked in #38. The offline city chooser remains outstanding under #3.
 
 ## Saved-site timezone verification (#24)
 
@@ -243,3 +245,32 @@ identifier).
 The run-as record read matched the on-screen `Timezone:` line in every row. The phone zone was
 restored to `Europe/Prague` with automatic time-zone selection re-enabled afterwards. The pre-fix
 behaviour this replaces is the `refresh inversion` row above, from the d21c6a7 build.
+
+### Coordinate display precision (2026-10-01)
+
+Test build: local debug `app-debug.apk` from `fix/24-refresh-zone-retention` with the coordinate
+display fix on top of 12e4184 (APK SHA-256
+6f2a54f349ce63de7fc87a3c413a1cca6264944013bc467cc6c2b9bbf457a409).
+
+Same physical device. Android version: 16 (API 36). Firmware build: withheld (embeds the model
+identifier).
+
+| Date | Check | Observed |
+| --- | --- | --- |
+| 2026-10-01 | install + display | After reinstalling the APK, the record left by the run above — a `(current)` coarse fix — also rendered with four decimals on each side, with its `Timezone: Europe/Prague` line intact. The live coordinates are the device's own position and are deliberately not recorded |
+| 2026-10-01 | high-precision entry | Entered `-33.86785` / `151.20732`, which are not the device's location, and tapped **Save coordinates**: the display read `-33.8678, 151.2073 (manual)`, while the stored record held `"latitude":-33.86785,"longitude":151.20732` unchanged, so only the display rounds. The value is rounded before it is formatted, which is why the fifth decimal does not carry |
+| 2026-10-01 | neutral entry | Entered the neutral `35.68` / `139.69` and tapped **Save coordinates**: the display read `35.6800, 139.6900 (manual)` with `Timezone: Europe/Prague`, and the stored record held `"source":"MANUAL"` with `zoneId` `Europe/Prague` |
+
+The run-as record read matched the on-screen `Timezone:` line in every row. The device ends on the
+neutral record with the phone zone: **Refresh location** was tried twice at the end of the session
+to restore the device's own site, and both attempts timed out after 10 s with the fetch-failure
+toast, logging `network location update timed out after 10000ms` and leaving the display and the
+record unchanged.
+
+The display interpolates four decimals — about 11 m — and `.` in every locale, which matches the
+coordinate entry convention recorded above. `formatCoordinate` rounds to four decimals and then
+formats with `Locale.ROOT`, so the readout has a uniform width and does not change with the phone's
+locale; the `Double.toString()` it replaces printed seventeen significant digits. `LocationStore`
+is untouched: `save()` still writes the full `Double`, so a stored coordinate keeps the precision it
+was entered with. Reading the rounded readout and retyping it is what now loses precision, because
+the entry fields are not seeded from the saved site; that residual is tracked in #38.

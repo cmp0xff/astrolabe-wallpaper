@@ -117,7 +117,7 @@ class SettingsActivityAcquisitionTest {
             LocationStore(activity).load(),
         )
         assertEquals(
-            "45.5, -120.25 (manual)\nTimezone: ${ZoneId.systemDefault().id}",
+            "45.5000, -120.2500 (manual)\nTimezone: ${ZoneId.systemDefault().id}",
             activity.findViewById<TextView>(R.id.location_current).text.toString(),
         )
     }
