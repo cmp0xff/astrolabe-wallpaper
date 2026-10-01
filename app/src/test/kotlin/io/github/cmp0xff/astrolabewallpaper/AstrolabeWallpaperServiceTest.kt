@@ -105,6 +105,18 @@ class AstrolabeWallpaperServiceTest {
         assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
     }
 
+    // onDestroy sets isDestroyed so a late visibility callback cannot restart the tick loop on a
+    // handler the service no longer owns.
+    @Test
+    fun postDestroyVisibilityIgnored() {
+        val engine = controller.get().onCreateEngine()
+        val looper = shadowOf(Looper.getMainLooper())
+
+        engine.onDestroy()
+        engine.onVisibilityChanged(true)
+        assertEquals(Duration.ZERO, looper.nextScheduledTaskTime)
+    }
+
     private companion object {
         const val SURFACE_FORMAT = 1
         const val SURFACE_WIDTH = 200

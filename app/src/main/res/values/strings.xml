@@ -6,7 +6,7 @@
   <string name="preview_unavailable">Wallpaper preview is unavailable on this device.</string>
   <string name="location_unset">No observing location set.</string>
   <string name="location_details">%1$s, %2$s (%3$s)\nTimezone: %4$s</string>
-  <string name="location_timezone_help">Saving the current location or coordinates captures the phone’s timezone. Coordinates do not determine the timezone.</string>
+  <string name="location_timezone_help">A saved site keeps its timezone. Refreshing the location updates the coordinates only; saving coordinates anew captures the phone’s timezone. Coordinates do not determine the timezone.</string>
   <string name="use_current_location">Use current location</string>
   <string name="refresh_location">Refresh location</string>
   <string name="save_location">Save coordinates</string>

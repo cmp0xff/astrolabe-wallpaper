@@ -135,8 +135,11 @@ The location preference now holds one version-1 JSON record containing latitude,
 source, and zone ID. Valid legacy flat records migrate once using the phone zone at migration;
 a missing or invalid zone in a supported record is repaired without losing coordinates. Malformed
 records and unsupported versions are logged and left untouched until the user explicitly saves
-a replacement. Current-location and coordinate saves capture the phone zone immediately before
-saving. Establishing each site's geographic timezone remains #24; the offline city chooser is #21.
+a replacement. A current-location acquisition on an already-saved site updates only its
+coordinates and keeps the saved zone, because no current-location input can resolve a geographic
+zone; it captures the phone zone only when nothing is saved yet. Manual coordinate entry, the
+explicit "set up my site" action, still captures the phone zone immediately before saving.
+Establishing each site's geographic timezone remains #24; the offline city chooser is #21.
 
 The astronomy tests need no Robolectric environment: `AstronomyCalculator` and everything under it
 are free of Android types, so they run as plain JUnit against published USNO, JPL Horizons, and

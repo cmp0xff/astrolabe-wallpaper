@@ -17,6 +17,8 @@ import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
 import java.text.ParsePosition
 import java.time.ZoneId
+import java.util.Locale
+import kotlin.math.roundToLong
 
 /** Opens Android's preview and manages the observing location. */
 class SettingsActivity : Activity() {
@@ -93,12 +95,15 @@ class SettingsActivity : Activity() {
     private fun fetchCurrentLocation(forceFresh: Boolean) {
         locationProvider.fetch(forceFresh = forceFresh) { fix ->
             if (fix != null) {
+                // A refresh updates the coordinates; an already-saved site keeps its geographic
+                // zone, which no current-location input can resolve. The phone zone is the fallback
+                // for a first acquisition, when there is no site to preserve.
                 val location =
                     ObservingLocation(
                         latitude = fix.latitude,
                         longitude = fix.longitude,
                         source = ObservingLocation.Source.CURRENT_COARSE,
-                        zoneId = ZoneId.systemDefault(),
+                        zoneId = locationStore.load()?.zoneId ?: ZoneId.systemDefault(),
                     )
                 locationStore.save(location)
                 displayLocation(location)
@@ -166,8 +171,8 @@ class SettingsActivity : Activity() {
             }
         return getString(
             R.string.location_details,
-            location.latitude.toString(),
-            location.longitude.toString(),
+            formatCoordinate(location.latitude),
+            formatCoordinate(location.longitude),
             source,
             location.zoneId.id,
         )
@@ -176,5 +181,14 @@ class SettingsActivity : Activity() {
     private companion object {
         const val REQUEST_LOCATION_PERMISSION = 1
         const val STATE_FORCE_FRESH_PENDING = "force_fresh_pending"
+        const val COORDINATE_SCALE = 10_000.0
+
+        // Four decimals is about 11 m, and '.' is used in every locale because a coordinate is
+        // not a locale-formatted quantity. Rounding before formatting keeps a value that rounds
+        // to zero from rendering as "-0.0000".
+        fun formatCoordinate(value: Double): String {
+            val rounded = (value * COORDINATE_SCALE).roundToLong() / COORDINATE_SCALE
+            return String.format(Locale.ROOT, "%.4f", if (rounded == 0.0) 0.0 else rounded)
+        }
     }
 }
