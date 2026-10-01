@@ -258,19 +258,19 @@ identifier).
 | Date | Check | Observed |
 | --- | --- | --- |
 | 2026-10-01 | install + display | After reinstalling the APK, the record left by the run above — a `(current)` coarse fix — also rendered with four decimals on each side, with its `Timezone: Europe/Prague` line intact. The live coordinates are the device's own position and are deliberately not recorded |
-| 2026-10-01 | high-precision entry | Entered `-33.86785` / `151.20732`, which are not the device's location, and tapped **Save coordinates**: the display read `-33.8678, 151.2073 (manual)`, while the stored record held `"latitude":-33.86785,"longitude":151.20732` unchanged, so only the display rounds. The value is rounded before it is formatted, which is why the fifth decimal does not carry |
+| 2026-10-01 | high-precision entry | Entered `-33.86785` / `151.20732`, which are not the device's location, and tapped **Save coordinates**: the display read `-33.8678, 151.2073 (manual)`, while the stored record held `"latitude":-33.86785,"longitude":151.20732` unchanged, so only the display rounds. The fourth decimal is 8 rather than 9 because the stored `Double` is a hair below -33.86785 |
 | 2026-10-01 | neutral entry | Entered the neutral `35.68` / `139.69` and tapped **Save coordinates**: the display read `35.6800, 139.6900 (manual)` with `Timezone: Europe/Prague`, and the stored record held `"source":"MANUAL"` with `zoneId` `Europe/Prague` |
 
 The run-as record read matched the on-screen `Timezone:` line in every row. The device ends on the
 neutral record with the phone zone: **Refresh location** was tried twice at the end of the session
-to restore the device's own site, and both attempts timed out after 10 s with the fetch-failure
-toast, logging `network location update timed out after 10000ms` and leaving the display and the
-record unchanged.
+to restore the device's own site, and both attempts timed out after 10 s —
+`LocationProvider: network location update timed out after 10000ms`, followed by the toast logged
+from `fetchCurrentLocation`'s failure branch — leaving the display and the record unchanged.
 
 The display interpolates four decimals — about 11 m — and `.` in every locale, which matches the
 coordinate entry convention recorded above. `formatCoordinate` rounds to four decimals and then
 formats with `Locale.ROOT`, so the readout has a uniform width and does not change with the phone's
-locale; the `Double.toString()` it replaces printed seventeen significant digits. `LocationStore`
+locale; the `Double.toString()` it replaces printed every digit the `Double` carries. `LocationStore`
 is untouched: `save()` still writes the full `Double`, so a stored coordinate keeps the precision it
 was entered with. Reading the rounded readout and retyping it is what now loses precision, because
 the entry fields are not seeded from the saved site; that residual is tracked in #38.
