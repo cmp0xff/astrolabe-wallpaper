@@ -53,8 +53,9 @@ internal class DialRenderer {
             if (projection != null && layers.isZodiacRingEnabled) {
                 zodiac.draw(canvas, projection)
             }
-            if (projection != null && layers.isSunEnabled) {
-                sun.draw(canvas, projection)
+            val sunPoint = projection?.sunPoint
+            if (sunPoint != null && layers.isSunEnabled) {
+                sun.draw(canvas, sunPoint)
             }
             drawCivilHand(canvas, state.hourAngle)
         } finally {

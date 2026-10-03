@@ -11,9 +11,9 @@ internal class SunRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val sunPath = buildSunPath()
 
-    fun draw(canvas: Canvas, projection: OrlojProjection) {
+    /** Draws the marker at an already projected [point]; the caller owns suppression. */
+    fun draw(canvas: Canvas, point: DialPoint) {
         val checkpoint = canvas.save()
-        val point = projection.sunPoint
         canvas.translate(point.x.toFloat(), point.y.toFloat())
         paint.color = DialStyle.GOLD
         paint.style = Paint.Style.FILL

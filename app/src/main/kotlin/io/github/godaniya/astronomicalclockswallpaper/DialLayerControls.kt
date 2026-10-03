@@ -4,7 +4,7 @@ import android.app.Activity
 import android.widget.CheckBox
 
 /** Initializes the layer controls from saved preferences and persists each explicit change. */
-internal fun Activity.bindDialLayers(hasLocation: Boolean = true) {
+internal fun Activity.bindDialLayers(hasLocation: Boolean) {
     val store = DialSettingsStore(applicationContext)
     val zodiac = findViewById<CheckBox>(R.id.zodiac_ring)
     val sun = findViewById<CheckBox>(R.id.sun_layer)
