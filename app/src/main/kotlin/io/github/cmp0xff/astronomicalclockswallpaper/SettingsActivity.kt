@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import java.math.BigDecimal
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.text.NumberFormat
@@ -42,7 +43,7 @@ class SettingsActivity : Activity() {
         ).setOnClickListener { requestCurrentLocation(forceFresh = false) }
         findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation(forceFresh = true) }
         findViewById<Button>(R.id.save_location).setOnClickListener { saveManualLocation() }
-        displayLocation(locationStore.load())
+        displayLocation(locationStore.load(), seedInputs = savedInstanceState == null)
         bindDialLayers()
     }
 
@@ -107,7 +108,7 @@ class SettingsActivity : Activity() {
                         zoneId = locationStore.load()?.zoneId ?: ZoneId.systemDefault(),
                     )
                 locationStore.save(location)
-                displayLocation(location)
+                displayLocation(location, seedInputs = true)
             } else {
                 // Preserve the previous selection; prompt for manual entry.
                 Toast.makeText(this, R.string.location_fetch_failed, Toast.LENGTH_LONG).show()
@@ -155,13 +156,17 @@ class SettingsActivity : Activity() {
         return if (position.index == normalized.length) number?.toDouble() else null
     }
 
-    private fun displayLocation(location: ObservingLocation?) {
+    private fun displayLocation(location: ObservingLocation?, seedInputs: Boolean = false) {
         locationCurrent.text =
             if (location == null) {
                 getString(R.string.location_unset)
             } else {
                 formatLocation(location)
             }
+        if (seedInputs && location != null) {
+            latitudeInput.setText(formatSeedCoordinate(location.latitude))
+            longitudeInput.setText(formatSeedCoordinate(location.longitude))
+        }
     }
 
     private fun formatLocation(location: ObservingLocation): String {
@@ -191,5 +196,7 @@ class SettingsActivity : Activity() {
             val rounded = (value * COORDINATE_SCALE).roundToLong() / COORDINATE_SCALE
             return String.format(Locale.ROOT, "%.4f", if (rounded == 0.0) 0.0 else rounded)
         }
+
+        fun formatSeedCoordinate(value: Double): String = BigDecimal.valueOf(value).toPlainString()
     }
 }
