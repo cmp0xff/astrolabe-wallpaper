@@ -12,7 +12,6 @@ import android.view.SurfaceView
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -106,12 +105,18 @@ class WallpaperFrameTest {
 
     @Test
     fun drawArgumentFailureRecovers() {
-        assertDrawFailure(IllegalArgumentException("draw argument"), "skipping frame: invalid render argument")
+        assertDrawFailure(
+            IllegalArgumentException("draw argument"),
+            "skipping frame: invalid render argument: draw argument",
+        )
     }
 
     @Test
     fun drawStateFailureRecovers() {
-        assertDrawFailure(IllegalStateException("draw state"), "skipping frame: canvas in an invalid state")
+        assertDrawFailure(
+            IllegalStateException("draw state"),
+            "skipping frame: canvas in an invalid state: draw state",
+        )
     }
 
     @Test
@@ -133,15 +138,36 @@ class WallpaperFrameTest {
     }
 
     @Test
-    fun unrelatedDrawFailurePropagates() {
+    fun unrelatedDrawFailureRecovers() {
         val failure = UnsupportedOperationException("unhandled draw")
         drawFailure = failure
-        assertSame(
-            failure,
-            assertThrows(UnsupportedOperationException::class.java) { engine.onVisibilityChanged(true) },
-        )
+        engine.onVisibilityChanged(true)
+        assertEquals(listOf(holder.canvas), drawnCanvases)
         assertEquals(listOf(holder.canvas), holder.postedCanvases)
-        assertTrue(ShadowLog.getLogsForTag(RENDER_TAG).isEmpty())
+        assertLog(
+            level = Log.ERROR,
+            tag = SERVICE_TAG,
+            message = "unexpected error in drawFrame; keeping tick loop alive",
+            failure = failure,
+        )
+        drawFailure = null
+        assertNextFrameSucceeds()
+    }
+
+    @Test
+    fun repeatedDrawFailureLogsOnce() {
+        drawFailure = UnsupportedOperationException("persistent draw")
+        engine.onVisibilityChanged(true)
+        val looper = shadowOf(Looper.getMainLooper())
+        repeat(5) {
+            val delay = looper.nextScheduledTaskTime.toMillis() - SystemClock.uptimeMillis()
+            looper.idleFor(Duration.ofMillis(delay))
+        }
+        // Six failed ticks in total; only the first carries a stack trace.
+        assertEquals(6, drawnCanvases.size)
+        val errors = ShadowLog.getLogsForTag(SERVICE_TAG).filter { it.type == Log.ERROR }
+        assertEquals(1, errors.size)
+        assertEquals("unexpected error in drawFrame; keeping tick loop alive", errors.single().msg)
     }
 
     @Test

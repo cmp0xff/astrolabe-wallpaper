@@ -31,8 +31,33 @@ class DialRendererTest {
         // The device's screenshot pipeline applies a colour transform, so a capture cannot
         // adjudicate the exact gold (docs/device-testing.md). Every other pixel assertion in this
         // class compares DialStyle to itself, so without this pin a palette edit passes the suite.
-        assertEquals(0xFFD8B66A.toInt(), DialStyle.GOLD)
         assertEquals(0xFF101923.toInt(), DialStyle.BACKGROUND)
+        assertEquals(0xFFD8B66A.toInt(), DialStyle.GOLD)
+        assertEquals(0xFF887347.toInt(), DialStyle.MUTED_GOLD)
+        assertEquals(0xFF1C2C39.toInt(), DialStyle.RIM)
+        assertEquals(0xFF286078.toInt(), DialStyle.SKY)
+        assertEquals(0xFF9C6438.toInt(), DialStyle.TWILIGHT)
+        assertEquals(0xFF152433.toInt(), DialStyle.NIGHT)
+        assertEquals(0xFFF4E5B8.toInt(), DialStyle.HAND)
+    }
+
+    @Test
+    fun southernZodiacRenders() {
+        val sydney = DialGeometry(localSiderealAngleDeg = 0.0, trueObliquityDeg = 23.44, latitudeDeg = -33.87)
+        val sydneyProjection = OrlojProjection(sydney)
+        val point = sydneyProjection.eclipticPoint(30.0)
+        val enabled = render(geometry = sydney)
+        val disabled = render(geometry = sydney, layers = DialLayers(isZodiacRingEnabled = false))
+        assertTrue(
+            "The zodiac ring must be drawn for a southern site",
+            changedPixelsNear(first = enabled, second = disabled, point = point) > 20,
+        )
+        val rotatedSydney = sydney.copy(localSiderealAngleDeg = 90.0)
+        val rotated = render(geometry = rotatedSydney)
+        assertTrue(
+            "The southern zodiac ring must rotate with sidereal time",
+            changedPixelsNear(first = enabled, second = rotated, point = point) > 20,
+        )
     }
 
     @Test
@@ -103,6 +128,19 @@ class DialRendererTest {
     }
 
     @Test
+    fun sunOffFramesLeaveNoStalePlate() {
+        // The Sun-off path builds no plate at all, so the first Sun-on frame has to construct one.
+        // Renders that never enabled the Sun must not leave the cache in a state that half-draws.
+        val plain = DialLayers(isZodiacRingEnabled = false, isSunEnabled = false)
+        val lit = DialLayers(isZodiacRingEnabled = false)
+        val reused = DialRenderer()
+        val firstOff = drawWith(reused, prague, plain)
+        val secondOff = drawWith(reused, prague, plain)
+        assertTrue(firstOff.sameAs(secondOff))
+        assertTrue(drawWith(reused, prague, lit).sameAs(drawWith(DialRenderer(), prague, lit)))
+    }
+
+    @Test
     fun zodiacRemainsBelowHorizon() {
         val projection = OrlojProjection(prague)
         val point = projection.eclipticPoint(210.0)
@@ -163,7 +201,10 @@ class DialRendererTest {
         ShadowLog.clear()
         containRenderFailure { throw IllegalArgumentException("invalid argument") }
         containRenderFailure { throw IllegalStateException("invalid state") }
-        assertEquals(2, ShadowLog.getLogsForTag("DialRenderer").count { it.type == Log.ERROR })
+        val logs = ShadowLog.getLogsForTag("DialRenderer").filter { it.type == Log.ERROR }
+        assertEquals(2, logs.size)
+        assertTrue(logs[0].msg.contains("invalid argument"))
+        assertTrue(logs[1].msg.contains("invalid state"))
         var hasDrawn = false
         containRenderFailure { hasDrawn = true }
         assertTrue(hasDrawn)
@@ -179,10 +220,12 @@ class DialRendererTest {
     @Test
     fun rendererReuseIsIndependent() {
         // A live engine keeps one DialRenderer for its lifetime while the saved site changes, and
-        // OrlojPlateRenderer keeps one mutable Path, so a frame must not depend on the previous draw.
+        // OrlojPlateRenderer caches static plate geometry, so frames must be independent and reusable.
         val sydney = prague.copy(latitudeDeg = -33.87)
         val reused = DialRenderer()
         val firstPrague = drawInto(reused, prague)
+        val secondPrague = drawInto(reused, prague)
+        assertTrue(firstPrague.sameAs(secondPrague))
         val sydneyPass = drawInto(reused, sydney)
         assertTrue(firstPrague.sameAs(drawInto(DialRenderer(), prague)))
         assertTrue(sydneyPass.sameAs(drawInto(DialRenderer(), sydney)))
@@ -203,6 +246,18 @@ class DialRendererTest {
         val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
         renderer.renderDial(canvas = Canvas(bitmap), state = clockState(time), geometry = geometry, layers = layers)
         assertEquals(DialStyle.BACKGROUND, bitmap.getPixel(1, 1))
+        return bitmap
+    }
+
+    private fun drawWith(target: DialRenderer, geometry: DialGeometry, layers: DialLayers): Bitmap {
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        target
+            .renderDial(
+                canvas = Canvas(bitmap),
+                state = clockState(LocalTime.NOON),
+                geometry = geometry,
+                layers = layers,
+            )
         return bitmap
     }
 

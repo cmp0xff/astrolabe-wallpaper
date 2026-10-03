@@ -5,8 +5,10 @@ import android.graphics.Canvas
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
+import android.util.Log
 import android.view.SurfaceHolder
 import java.time.Clock
+import java.time.Instant
 import java.time.ZoneId
 
 /** An animated astronomical clock wallpaper. */
@@ -64,6 +66,20 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
         // onSurfaceChanged can decide whether to resume ticking without a framework-only getter.
         private var isEngineVisible = false
 
+        // Both of these faults recur once a second while they last, so they log the first occurrence
+        // and a periodic summary rather than a stack trace per tick.
+        private val renderFailureLog =
+            RepeatedFailureLog(
+                tag = TAG,
+                message = "unexpected error in drawFrame; keeping tick loop alive",
+            )
+        private val geometryFailureLog =
+            RepeatedFailureLog(
+                tag = TAG,
+                message = "geometry calculation failed; falling back to civil dial",
+                level = Log.WARN,
+            )
+
         init {
             // Keep a strong listener reference for this engine's lifetime. Updates only replace the
             // cached snapshot; hidden engines must not acquire a surface or schedule a tick.
@@ -80,7 +96,7 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             }
             isEngineVisible = visible
             if (visible) {
-                startTicking()
+                runTick()
             } else {
                 stopTicking()
             }
@@ -92,7 +108,7 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             // recreate the surface without a visibility change, and onSurfaceDestroyed cancels the
             // loop, so this is the only place that can resume it in that case.
             if (isEngineVisible) {
-                startTicking()
+                runTick()
             }
         }
 
@@ -110,11 +126,20 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             super.onDestroy()
         }
 
-        // Draw one frame and post the next tick. Safe to call repeatedly: scheduleNextTick clears any
-        // pending callback first, so the loop is never double-scheduled.
-        private fun startTicking() {
-            drawFrame()
-            scheduleNextTick()
+        // Draws a frame and posts the next tick. Safe to call repeatedly: scheduleNextTick clears any
+        // pending callback first, so the loop is never double-scheduled. Handled argument/state
+        // failures return from drawFrame normally; unexpected exceptions are contained to preserve the
+        // tick loop, while severe VM errors still propagate.
+        @Suppress("TooGenericExceptionCaught")
+        private fun runTick() {
+            try {
+                drawFrame()
+                renderFailureLog.recordSuccess()
+            } catch (e: Exception) {
+                renderFailureLog.recordFailure(e)
+            } finally {
+                scheduleNextTick()
+            }
         }
 
         // The handler is dedicated to ticks, so cancelling all messages stops the loop.
@@ -122,22 +147,40 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             handler.removeCallbacksAndMessages(null)
         }
 
-        // Handled argument/state failures return from drawFrame normally so the next tick is posted.
-        // Other failures propagate rather than being hidden by the scheduling loop.
         private fun scheduleNextTick() {
             handler.removeCallbacksAndMessages(null)
-            handler.postDelayed(
-                Runnable {
-                    drawFrame()
-                    scheduleNextTick()
-                },
-                millisUntilNextWholeSecond(),
-            )
+            val isScheduled =
+                handler.postDelayed(
+                    Runnable { runTick() },
+                    millisUntilNextWholeSecond(),
+                )
+            if (!isScheduled) {
+                Log.w(
+                    TAG,
+                    "scheduleNextTick: postDelayed returned false; looper exiting or message queue shutting down",
+                )
+            }
         }
 
         private fun millisUntilNextWholeSecond(): Long {
             val millisInSecond = Math.floorMod(clock.millis(), MILLIS_PER_SECOND)
             return MILLIS_PER_SECOND - millisInSecond
+        }
+
+        // Geometry failures degrade to the civil dial instead of blanking the frame. A fault that
+        // lasts is logged on its first tick and summarised, not repeated on every tick.
+        @Suppress("TooGenericExceptionCaught")
+        private fun dialGeometryOrNull(instant: Instant, location: ObservingLocation?): DialGeometry? {
+            if (location == null) {
+                geometryFailureLog.recordSuccess()
+                return null
+            }
+            return try {
+                calculator.dialGeometry(instant, location).also { geometryFailureLog.recordSuccess() }
+            } catch (e: RuntimeException) {
+                geometryFailureLog.recordFailure(e)
+                null
+            }
         }
 
         private fun drawFrame() {
@@ -146,7 +189,7 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
                 val snapshot = settings
                 val location = snapshot.location
                 val civilTime = instant.atZone(location?.zoneId ?: deviceZone()).toLocalTime()
-                val geometry = location?.let { calculator.dialGeometry(instant, it) }
+                val geometry = dialGeometryOrNull(instant, location)
                 draw(canvas, clockState(civilTime), geometry, snapshot.layers)
             }
         }
@@ -154,5 +197,6 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
 
     private companion object {
         const val MILLIS_PER_SECOND = 1000L
+        const val TAG = "AstronomicalClocksWallpaperService"
     }
 }

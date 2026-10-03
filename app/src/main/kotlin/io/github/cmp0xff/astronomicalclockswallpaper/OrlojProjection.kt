@@ -15,6 +15,13 @@ internal data class DialPoint(val x: Double, val y: Double)
 internal data class DialCircle(val center: DialPoint, val radius: Double)
 
 /**
+ * The time-invariant inputs the static plate geometry depends on. Latitude is fixed for a site, but
+ * true obliquity drifts with the instant, so the plate cache compares keys with a tolerance instead
+ * of by exact equality; see [OrlojPlateRenderer].
+ */
+internal data class PlateKey(val latitudeDeg: Double, val trueObliquityDeg: Double)
+
+/**
  * Stereographic projection of the sky onto the dial plane, taken from the celestial pole above the
  * horizon: the north pole for a northern site, the south pole for a southern one. Angles use the
  * true equator/ecliptic of date; the reference plate is geometric and unrefracted.
@@ -34,6 +41,12 @@ internal data class DialCircle(val center: DialPoint, val radius: Double)
  * See https://astro.cas.cz/bh2010/files/praha.pdf, printed pages 4–5, for the north-pole plate.
  */
 internal class OrlojProjection(private val geometry: DialGeometry) {
+    /** Identifies the static plate geometry this projection would produce. */
+    val plateKey: PlateKey =
+        PlateKey(
+            latitudeDeg = geometry.latitudeDeg,
+            trueObliquityDeg = geometry.trueObliquityDeg,
+        )
     private val obliquityRad = Math.toRadians(geometry.trueObliquityDeg)
     private val siderealRad = Math.toRadians(geometry.localSiderealAngleDeg)
     private val isSouthern = geometry.latitudeDeg < 0

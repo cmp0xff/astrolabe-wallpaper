@@ -126,7 +126,12 @@ tests cover equinoxes/solstices, circle tangencies, rotation direction, northern
 the equator, poles, day/night classification, the southern mirror of the altitude field, and the
 point-reflected southern zodiac. Robolectric tests cover layer persistence,
 missing-location behavior, same-instant frame calculation, and hidden/destroyed engines.
-Canvas tests inspect representative renders and export PNGs under `app/build/reports/orloj`.
+Canvas tests inspect representative renders analytically and through targeted pixel probes. Screenshot
+golden baselines are deferred because Android displays and screenshot pipelines apply device- and
+firmware-dependent colour transforms and font-shaping antialiasing, so literal byte-for-byte image
+comparisons produce false positives across environments (see [device-testing.md](device-testing.md)).
+Representative PNGs for visual inspection are explicitly exported under `app/build/reports/orloj` with
+`./gradlew exportRepresentativeImages`.
 
 Run `./gradlew qualityGate :app:assembleDebug` and `scripts/verify-apk.sh`. These tests do not
 establish physical-device home or lit-lock-screen correctness, frame cost, or battery behavior.

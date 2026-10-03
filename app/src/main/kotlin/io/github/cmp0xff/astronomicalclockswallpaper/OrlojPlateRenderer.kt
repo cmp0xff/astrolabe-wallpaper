@@ -3,25 +3,37 @@ package io.github.cmp0xff.astronomicalclockswallpaper
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
+import kotlin.math.abs
 
 /**
  * Paints the geometric plate inside the sky boundary. The Sun layer adds the day/twilight/night
  * fills and draws their horizon and night contour strokes; the tropics, equator, and rim stay.
+ *
+ * Caches the static plate geometry keyed by observer latitude and true obliquity, so steady-state
+ * ticks redraw pre-built Path objects instead of re-sampling contours or allocating new paths.
+ * Each frame still builds an OrlojProjection for the rotating zodiac ring.
+ *
+ * Every cached path belongs to the Sun layer, so it is built and drawn only while that layer is
+ * enabled; disabling the Sun therefore samples no contours, as it did before the paths were cached.
  */
 internal class OrlojPlateRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val path = Path()
+    private var cachedPlate: CachedPlate? = null
 
     fun draw(canvas: Canvas, projection: OrlojProjection?, isSunEnabled: Boolean) {
         paint.style = Paint.Style.FILL
         paint.color = DialStyle.NIGHT
         canvas.drawCircle(0f, 0f, SKY_RADIUS, paint)
         if (projection != null) {
-            if (isSunEnabled) {
-                fillRegion(canvas, projection.altitudeRegion(NIGHT_ALTITUDE), DialStyle.TWILIGHT)
-                fillRegion(canvas, projection.altitudeRegion(HORIZON_ALTITUDE), DialStyle.SKY)
+            val plate = if (isSunEnabled) getOrCreatePlate(projection) else null
+            if (plate != null) {
+                paint.style = Paint.Style.FILL
+                paint.color = DialStyle.TWILIGHT
+                canvas.drawPath(plate.paths.twilightFill, paint)
+                paint.color = DialStyle.SKY
+                canvas.drawPath(plate.paths.dayFill, paint)
             }
-            drawGrid(canvas, projection, isSunEnabled)
+            drawGrid(canvas, projection, plate)
         }
         paint.color = DialStyle.GOLD
         paint.style = Paint.Style.STROKE
@@ -29,46 +41,97 @@ internal class OrlojPlateRenderer {
         canvas.drawCircle(0f, 0f, SKY_RADIUS, paint)
     }
 
-    private fun fillRegion(canvas: Canvas, contours: List<List<DialPoint>>, color: Int) {
-        path.reset()
-        path.fillType = Path.FillType.EVEN_ODD
-        for (contour in contours) {
-            traceContour(contour)
-            path.close()
+    private fun getOrCreatePlate(projection: OrlojProjection): CachedPlate {
+        val key = projection.plateKey
+        val current = cachedPlate
+        if (current != null && current.matches(key)) {
+            return current
         }
-        paint.style = Paint.Style.FILL
-        paint.color = color
-        canvas.drawPath(path, paint)
+        val newPlate = buildPlate(projection, key)
+        cachedPlate = newPlate
+        return newPlate
     }
 
-    private fun drawGrid(canvas: Canvas, projection: OrlojProjection, isSunEnabled: Boolean) {
+    private fun buildPlate(projection: OrlojProjection, key: PlateKey): CachedPlate {
+        val twilightPath = Path().apply { fillType = Path.FillType.EVEN_ODD }
+        for (contour in projection.altitudeRegion(NIGHT_ALTITUDE)) {
+            traceContour(twilightPath, contour)
+            twilightPath.close()
+        }
+
+        val dayPath = Path().apply { fillType = Path.FillType.EVEN_ODD }
+        for (contour in projection.altitudeRegion(HORIZON_ALTITUDE)) {
+            traceContour(dayPath, contour)
+            dayPath.close()
+        }
+
+        val nightBoundaryPath = Path()
+        for (contour in projection.altitudeBoundary(NIGHT_ALTITUDE)) {
+            traceContour(nightBoundaryPath, contour)
+        }
+
+        val horizonBoundaryPath = Path()
+        for (contour in projection.altitudeBoundary(HORIZON_ALTITUDE)) {
+            traceContour(horizonBoundaryPath, contour)
+        }
+
+        return CachedPlate(
+            key = key,
+            paths =
+                PlatePaths(
+                    twilightFill = twilightPath,
+                    dayFill = dayPath,
+                    nightBoundary = nightBoundaryPath,
+                    horizonBoundary = horizonBoundaryPath,
+                ),
+        )
+    }
+
+    // The two radii come straight off the projection and cost nothing, so they are not cached; only
+    // the boundaries need the plate, and they are drawn only when the Sun layer built it.
+    private fun drawGrid(canvas: Canvas, projection: OrlojProjection, plate: CachedPlate?) {
         paint.style = Paint.Style.STROKE
         paint.color = DialStyle.MUTED_GOLD
         paint.strokeWidth = GRID_WIDTH
         canvas.drawCircle(0f, 0f, projection.capricornRadius.toFloat(), paint)
         paint.color = DialStyle.GOLD
         canvas.drawCircle(0f, 0f, projection.equatorRadius.toFloat(), paint)
-        if (isSunEnabled) {
-            drawBoundary(canvas, projection.altitudeBoundary(NIGHT_ALTITUDE), DialStyle.MUTED_GOLD)
-            drawBoundary(canvas, projection.altitudeBoundary(HORIZON_ALTITUDE), DialStyle.GOLD)
+        if (plate != null) {
+            paint.color = DialStyle.MUTED_GOLD
+            paint.strokeWidth = BOUNDARY_WIDTH
+            canvas.drawPath(plate.paths.nightBoundary, paint)
+            paint.color = DialStyle.GOLD
+            canvas.drawPath(plate.paths.horizonBoundary, paint)
         }
     }
 
-    private fun drawBoundary(canvas: Canvas, contours: List<List<DialPoint>>, color: Int) {
-        path.reset()
-        for (contour in contours) {
-            traceContour(contour)
-        }
-        paint.color = color
-        paint.strokeWidth = BOUNDARY_WIDTH
-        canvas.drawPath(path, paint)
-    }
-
-    private fun traceContour(contour: List<DialPoint>) {
-        val first = contour.firstOrNull() ?: return
+    private fun traceContour(path: Path, contour: List<DialPoint>) {
+        if (contour.isEmpty()) return
+        val first = contour[0]
         path.moveTo(first.x.toFloat(), first.y.toFloat())
-        for (point in contour.drop(1)) {
+        for (i in 1 until contour.size) {
+            val point = contour[i]
             path.lineTo(point.x.toFloat(), point.y.toFloat())
+        }
+    }
+
+    private data class PlatePaths(
+        val twilightFill: Path,
+        val dayFill: Path,
+        val nightBoundary: Path,
+        val horizonBoundary: Path,
+    )
+
+    private class CachedPlate(val key: PlateKey, val paths: PlatePaths) {
+        fun matches(other: PlateKey): Boolean {
+            val isLatitudeSame = abs(key.latitudeDeg - other.latitudeDeg) < EPSILON_LATITUDE
+            val isObliquitySame = abs(key.trueObliquityDeg - other.trueObliquityDeg) < EPSILON_OBLIQUITY
+            return isLatitudeSame && isObliquitySame
+        }
+
+        private companion object {
+            const val EPSILON_LATITUDE = 1e-7
+            const val EPSILON_OBLIQUITY = 1e-4
         }
     }
 
