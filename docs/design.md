@@ -1,8 +1,8 @@
 # Product design
 
 This is the intended product contract. Implementation progress and release
-planning live in the [issues](https://github.com/cmp0xff/astrolabe-wallpaper/issues)
-and [milestones](https://github.com/cmp0xff/astrolabe-wallpaper/milestones).
+planning live in the [issues](https://github.com/cmp0xff/astronomical-clocks-wallpaper/issues)
+and [milestones](https://github.com/cmp0xff/astronomical-clocks-wallpaper/milestones).
 
 ## One observing site and one instant
 
@@ -13,10 +13,14 @@ Changing the site updates both; changing the phone timezone does not change the
 saved site or its civil clock. Before a site is selected, the civil clock uses
 the phone timezone and site-dependent astronomy is hidden.
 
+[Issue #41](https://github.com/cmp0xff/astronomical-clocks-wallpaper/issues/41)
+generalizes this single-dial contract into a pluggable family of astronomical
+clocks; this section describes the Prague dial until that seam lands.
+
 Adapt the Orloj geometry to the selected site's latitude and longitude, including
 southern-hemisphere and polar sites. Draw original artwork. Detailed projection
 mathematics belong in the Orloj guide introduced by
-[PR #30](https://github.com/cmp0xff/astrolabe-wallpaper/pull/30).
+[PR #30](https://github.com/cmp0xff/astronomical-clocks-wallpaper/pull/30).
 
 ## Location selection and offline operation
 

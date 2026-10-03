@@ -21,7 +21,7 @@ def check(condition, message):
 
 
 manifest = ET.parse('build/reports/apk-manifest.xml').getroot()
-check(manifest.get('package') == 'io.github.cmp0xff.astrolabewallpaper.debug',
+check(manifest.get('package') == 'io.github.cmp0xff.astronomicalclockswallpaper.debug',
       'unexpected application ID')
 sdk = manifest.find('uses-sdk')
 check(sdk is not None, 'missing uses-sdk element')
@@ -35,7 +35,7 @@ check(application is not None, 'missing application element')
 check(application.get(android + 'debuggable') == 'true', 'application must be debuggable')
 service = application.find('service')
 check(service is not None, 'missing service element')
-check(service.get(android + 'name') == 'io.github.cmp0xff.astrolabewallpaper.AstrolabeWallpaperService',
+check(service.get(android + 'name') == 'io.github.cmp0xff.astronomicalclockswallpaper.AstronomicalClocksWallpaperService',
       'service name mismatch')
 check(service.get(android + 'exported') == 'true', 'service must be exported')
 check(service.get(android + 'permission') == 'android.permission.BIND_WALLPAPER',

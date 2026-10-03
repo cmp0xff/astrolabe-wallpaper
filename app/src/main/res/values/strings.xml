@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <string name="app_name">Astrolabe Wallpaper</string>
-  <string name="wallpaper_description">An Orloj-inspired astronomical clock.</string>
+  <string name="app_name">Astro Clocks</string>
+  <string name="wallpaper_description">Astronomical clock wallpapers — Prague Orloj first.</string>
   <string name="open_preview">Open wallpaper preview</string>
   <string name="preview_unavailable">Wallpaper preview is unavailable on this device.</string>
   <string name="location_unset">No observing location set.</string>

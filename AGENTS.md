@@ -1,4 +1,4 @@
-# Astrolabe Wallpaper agent guidance
+# Astronomical Clock Wallpaper agent guidance
 
 Read [README.md](README.md) for developer entry points and
 [docs/design.md](docs/design.md) for the product contract. GitHub issues and
@@ -13,7 +13,7 @@ pinned toolchain, strict checking policy, and individually justified exceptions.
   instructions and repository configuration and CI requirements.
 - After the initial bootstrap on `main`, develop on issue-linked branches in
   native-filesystem sibling worktrees named
-  `astrolabe-wallpaper-<issue-number>-<short-description>`. Use branch names such
+  `astronomical-clocks-wallpaper-<issue-number>-<short-description>`. Use branch names such
   as `feat/1-android-bootstrap`; keep the main checkout on `main`.
 - Use GitHub issues to record scope, dependencies, and acceptance criteria. Open a
   pull request for subsequent development and link its issue. Do not claim
@@ -48,7 +48,7 @@ pinned toolchain, strict checking policy, and individually justified exceptions.
 
 - Use Kotlin, Canvas, and `WallpaperService` with a small settings app. Keep
   astronomy calculations separable from Android lifecycle and drawing code.
-- Use `io.github.cmp0xff.astrolabewallpaper` as the stable release application ID.
+- Use `io.github.cmp0xff.astronomicalclockswallpaper` as the stable release application ID.
 - Use Astronomy Engine, pin its version or source revision, and retain its
   notices. Record provenance and licenses for all dependencies and bundled data
   or artwork. Draw original artwork; avoid proprietary SDKs.

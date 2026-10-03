@@ -1,11 +1,12 @@
-# Astrolabe Wallpaper
+# Astronomical Clock Wallpaper
 
-An independent, offline Android astronomical live wallpaper inspired by Prague
-Orloj, built with Kotlin, Canvas, and `WallpaperService`.
+An independent, offline Android live wallpaper of astronomical clocks, with the
+Prague Orloj dial first, built with Kotlin, Canvas, and `WallpaperService`.
 
 The intended design uses one selected observing site for both the sky and its
-civil clock. Prague Orloj supplies the visual and projection reference, with
-geometry adapted to that site. See the [product contract](docs/design.md).
+civil clock. Prague Orloj supplies the visual and projection reference for the
+first dial, with geometry adapted to that site. See the
+[product contract](docs/design.md).
 
 The first release targets home and **lit** lock screens. Always On Display and
 interactive sky exploration are outside its scope.
@@ -32,8 +33,8 @@ explicitly format Kotlin source, tests, and Gradle scripts. CI never reformats f
 - [Physical-device procedures and evidence](docs/device-testing.md)
 - [Bootstrap verification](docs/bootstrap-verification.md)
 
-The [GitHub issues](https://github.com/cmp0xff/astrolabe-wallpaper/issues) and
-[milestones](https://github.com/cmp0xff/astrolabe-wallpaper/milestones) track
+The [GitHub issues](https://github.com/cmp0xff/astronomical-clocks-wallpaper/issues) and
+[milestones](https://github.com/cmp0xff/astronomical-clocks-wallpaper/milestones) track
 unfinished work and release planning.
 
 ## Contributing

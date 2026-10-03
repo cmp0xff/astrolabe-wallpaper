@@ -8,12 +8,12 @@ plugins {
 }
 
 android {
-    namespace = "io.github.cmp0xff.astrolabewallpaper"
+    namespace = "io.github.cmp0xff.astronomicalclockswallpaper"
     compileSdk = 37
     buildToolsVersion = "36.0.0"
 
     defaultConfig {
-        applicationId = "io.github.cmp0xff.astrolabewallpaper"
+        applicationId = "io.github.cmp0xff.astronomicalclockswallpaper"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
