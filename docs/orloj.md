@@ -47,6 +47,13 @@ true obliquity into equatorial coordinates before projection; equal longitude in
 equal intervals around the offset circle. The twelve labels denote tropical zodiac signs, rather
 than the unequal IAU constellations.
 
+Each of the twelve sign boundaries carries a gold divider that runs from the dial centre outward
+through its boundary point and is clipped to the ring's night band. Because the ring centre is
+offset from the dial centre, the divider crosses the ring obliquely: it departs from the ring's own
+radius by up to the true obliquity at the ARI/LIB equinox boundaries and coincides with it at the
+CAN/CAP solstice boundaries. The `kshetline/prague-clock` simulator draws its sign boundaries the
+same way, as paths from the dial origin to the ring's outer edge, masked to the band.
+
 Because a southern plate is the point reflection of a northern one, the dial centre is always the
 celestial pole below the horizon — the south pole at altitude −latitude on a northern plate, the
 north pole at altitude −|latitude| on a southern one. The night disc therefore nests inside the
