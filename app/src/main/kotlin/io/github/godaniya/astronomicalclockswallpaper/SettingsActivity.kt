@@ -43,7 +43,7 @@ class SettingsActivity : Activity() {
         ).setOnClickListener { requestCurrentLocation(forceFresh = false) }
         findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation(forceFresh = true) }
         findViewById<Button>(R.id.save_location).setOnClickListener { saveManualLocation() }
-        displayLocation(locationStore.load(repair = false), seedInputs = savedInstanceState == null)
+        displayLocation(locationStore.load(), seedInputs = savedInstanceState == null)
         bindDialLayers()
     }
 
@@ -129,8 +129,8 @@ class SettingsActivity : Activity() {
         val stored = locationStore.load(repair = false)
         val isUnchanged =
             stored != null &&
-                latitudeInput.text.toString().trim() == formatSeedCoordinate(stored.latitude) &&
-                longitudeInput.text.toString().trim() == formatSeedCoordinate(stored.longitude)
+                latitude == stored.latitude &&
+                longitude == stored.longitude
         if (isUnchanged) {
             Toast.makeText(this, R.string.location_unchanged, Toast.LENGTH_SHORT).show()
             return

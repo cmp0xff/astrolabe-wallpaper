@@ -465,8 +465,8 @@ Host verification covers these paths across API 26 and 36 via Robolectric:
   to `MANUAL` and capture the device timezone.
 - `SettingsActivityAcquisitionTest`: verifies refresh-then-save preserves `CURRENT_COARSE` and cancels
   in-flight location acquisition.
-- `SettingsActivityTest`: verifies that an unchanged Save produces zero SharedPreferences writes even
-  when an invalid timezone is present, shows the distinct "Coordinates unchanged; nothing to save."
+- `SettingsActivityTest`: verifies that an unchanged Save produces zero SharedPreferences writes after
+  startup repairs an invalid timezone, shows the distinct "Coordinates unchanged; nothing to save."
   feedback, and verifies that a stored `-0.0` coordinate does not take the edited branch.
 - `LocationStoreTest`: verifies that `load(repair = false)` does not persist repairs.
 

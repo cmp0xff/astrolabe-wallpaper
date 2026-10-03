@@ -14,6 +14,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import org.json.JSONObject
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -32,6 +33,13 @@ import java.util.TimeZone
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
 class SettingsActivityTest {
+    private val originalTimezone = TimeZone.getDefault()
+
+    @After
+    fun restoreTimezone() {
+        TimeZone.setDefault(originalTimezone)
+    }
+
     @Test
     fun previewTargetsWallpaper() {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
@@ -258,7 +266,7 @@ class SettingsActivityTest {
     }
 
     @Test
-    fun unchangedSaveSkipsZoneRepair() {
+    fun unchangedSaveSkipsRepeatRepair() {
         val application = RuntimeEnvironment.getApplication()
         val prefs = application.getSharedPreferences("observing_location", Context.MODE_PRIVATE)
         val record =
@@ -283,7 +291,7 @@ class SettingsActivityTest {
             store.unregisterListener(listener)
             val raw = prefs.getString("location", null)
             val json = JSONObject(requireNotNull(raw))
-            assertEquals("Invalid/Zone_Name", json.getString("zoneId"))
+            assertEquals(ZoneId.systemDefault().id, json.getString("zoneId"))
             assertEquals("CURRENT_COARSE", json.getString("source"))
         }
     }
