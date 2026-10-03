@@ -106,8 +106,10 @@ before committing to prevent duplicate trailers. Never invent model versions,
 tests, decisions, or review evidence.
 
 The "exactly one" rule governs the commits an agent authors. GitHub's squash
-merge appends a further `Co-authored-by:` line for the pull request author, so
-the commit that lands on `main` carries two. That is expected and is not a
+merge consolidates `Co-authored-by:` trailers across squashed commits and appends
+a further line for the pull request author, so the commit that lands on `main`
+may carry multiple trailers (e.g. two for a single-model PR, or more when
+multiple models or contributors participated). That is expected and is not a
 duplicate-trailer defect to fix.
 
 Preserve Git signing. Do not disable signing to work around unavailable agent
@@ -125,18 +127,22 @@ GitHub's **squash merge** is the default for this repository, and the owner
 merges through the GitHub UI. Do not use a merge commit or a rebase merge, and
 do not argue for one, unless the owner explicitly asks.
 
-- The squash merge lands one commit on `main`: the pull request title as the
-  subject, followed by the original commit bodies. The repository sets
-  `squash_merge_commit_message: COMMIT_MESSAGES`, so those bodies are preserved
-  verbatim — write every commit body to stand alone, since it outlives its
-  commit.
+- The squash merge lands one commit on `main`: with
+  `squash_merge_commit_title: COMMIT_OR_PR_TITLE`, the subject defaults to the
+  pull request title (with PR number) for multi-commit PRs, or to the single
+  commit's title for single-commit PRs. Under
+  `squash_merge_commit_message: COMMIT_MESSAGES`, original commit messages
+  (subject lines and bodies) are preserved — write every commit message to
+  stand alone, since it outlives its individual commit.
 - The squash commit is signed by GitHub's web-flow key (committer
   `GitHub <noreply@github.com>`), not by the agent's SSH key. GitHub also appends
-  a `Co-authored-by:` line for the PR author, so the merged commit carries one
-  more than the PR authored. Both are expected.
-- The PR head commits remain reachable at `refs/pull/<number>/head`; they do not
-  enter `main`'s ancestry. Cite them by SHA as usual.
-- The remote branch is deleted after the merge.
+  a `Co-authored-by:` line for the PR author, so the merged commit can carry
+  additional trailers. Both are expected.
+- The PR head commits remain reachable on GitHub at `refs/pull/<number>/head`;
+  they do not enter `main`'s ancestry. Cite them by SHA as usual. (To inspect
+  them in a local clone: `git fetch origin pull/<number>/head`).
+- The remote branch is not automatically deleted on merge
+  (`delete_branch_on_merge: false`); pruning is done manually by the owner.
 
 ## Pull requests and Accountability Index
 
