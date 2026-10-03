@@ -15,6 +15,7 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowLog
 import java.time.LocalTime
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
@@ -88,13 +89,14 @@ class DialRendererTest {
             val time = if (index in 5..7) LocalTime.NOON else LocalTime.MIDNIGHT
             val bitmap = render(time = time, geometry = prague)
             val boundary = projection.eclipticPoint(index * 30.0)
-            // Samples run along the divider's radius at up to 7 px from the ring centreline. The
-            // band is 9.4 px deep and its gold rim starts there, so the ends stay inside the band
-            // and the samples can only find a divider. The star at index 0 spans 5 px, so it
-            // cannot stand in for that divider.
+            // Each divider runs along the ray from the dial centre through its boundary point, so it
+            // crosses the offset ring obliquely rather than square to it. Samples run along that ray
+            // at up to 7 px from the boundary point. The band half-span is 9.4-10.3 px there, so the
+            // ends stay inside the night band and the samples can only find a divider. The star at
+            // index 0 spans 5 px from its centre, so it cannot stand in for that divider.
             assertTrue(
                 "Divider $index must paint GOLD across the night band at its boundary",
-                dividerGoldSamples(bitmap, projection, boundary) >= DIVIDER_GOLD_SAMPLES,
+                dividerGoldSamples(bitmap, boundary) >= DIVIDER_GOLD_SAMPLES,
             )
             val inside = projection.eclipticPoint(index * 30.0 + 5.0)
             assertTrue(
@@ -414,10 +416,10 @@ class DialRendererTest {
         return count
     }
 
-    private fun dividerGoldSamples(bitmap: Bitmap, projection: OrlojProjection, boundary: DialPoint): Int {
-        val circle = projection.zodiacCircle
-        val ux = (boundary.x - circle.center.x) / circle.radius
-        val uy = (boundary.y - circle.center.y) / circle.radius
+    private fun dividerGoldSamples(bitmap: Bitmap, boundary: DialPoint): Int {
+        val distance = hypot(x = boundary.x, y = boundary.y)
+        val ux = boundary.x / distance
+        val uy = boundary.y / distance
         return DIVIDER_SAMPLE_OFFSETS.count { offset ->
             val sample =
                 DialPoint(

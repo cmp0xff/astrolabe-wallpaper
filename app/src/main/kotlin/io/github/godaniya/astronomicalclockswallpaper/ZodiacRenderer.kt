@@ -6,6 +6,7 @@ import android.graphics.Path
 import android.graphics.Typeface
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /** Complete ecliptic ring, including the part below the horizon, with tropical longitude labels. */
 internal class ZodiacRenderer {
@@ -49,19 +50,40 @@ internal class ZodiacRenderer {
         paint.style = Paint.Style.STROKE
         paint.color = DialStyle.GOLD
         paint.strokeWidth = DIVIDER_WIDTH
-        val halfInner = RING_INNER_WIDTH / 2
+        val halfBand = RING_INNER_WIDTH / 2
         for (index in SIGNS.indices) {
             val point = projection.eclipticPoint(index * DEGREES_PER_SIGN)
-            val ux = (point.x - circle.center.x) / circle.radius
-            val uy = (point.y - circle.center.y) / circle.radius
+            val distance = sqrt(point.x * point.x + point.y * point.y)
+            val ux = point.x / distance
+            val uy = point.y / distance
+            val start =
+                rayCircleDistance(
+                    directionX = ux,
+                    directionY = uy,
+                    center = circle.center,
+                    radius = circle.radius - halfBand,
+                )
+            val end =
+                rayCircleDistance(
+                    directionX = ux,
+                    directionY = uy,
+                    center = circle.center,
+                    radius = circle.radius + halfBand,
+                )
             canvas.drawLine(
-                (point.x - ux * halfInner).toFloat(),
-                (point.y - uy * halfInner).toFloat(),
-                (point.x + ux * halfInner).toFloat(),
-                (point.y + uy * halfInner).toFloat(),
+                (ux * start).toFloat(),
+                (uy * start).toFloat(),
+                (ux * end).toFloat(),
+                (uy * end).toFloat(),
                 paint,
             )
         }
+    }
+
+    private fun rayCircleDistance(directionX: Double, directionY: Double, center: DialPoint, radius: Double): Double {
+        val centerSquared = center.x * center.x + center.y * center.y
+        val projectionAlong = directionX * center.x + directionY * center.y
+        return projectionAlong + sqrt(projectionAlong * projectionAlong - centerSquared + radius * radius)
     }
 
     private fun drawEquinoxStar(canvas: Canvas, projection: OrlojProjection) {
