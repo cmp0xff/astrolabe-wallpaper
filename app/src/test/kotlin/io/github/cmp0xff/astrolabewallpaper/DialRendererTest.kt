@@ -170,6 +170,25 @@ class DialRendererTest {
         }
     }
 
+    @Test
+    fun rendererReuseIsIndependent() {
+        // A live engine keeps one DialRenderer for its lifetime while the saved site changes, and
+        // OrlojPlateRenderer keeps one mutable Path, so a frame must not depend on the previous draw.
+        val sydney = prague.copy(latitudeDeg = -33.87)
+        val reused = DialRenderer()
+        val firstPrague = drawInto(reused, prague)
+        val sydneyPass = drawInto(reused, sydney)
+        assertTrue(firstPrague.sameAs(drawInto(DialRenderer(), prague)))
+        assertTrue(sydneyPass.sameAs(drawInto(DialRenderer(), sydney)))
+        assertTrue(firstPrague.sameAs(drawInto(reused, prague)))
+    }
+
+    private fun drawInto(target: DialRenderer, geometry: AstrolabeGeometry): Bitmap {
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        target.renderDial(canvas = Canvas(bitmap), state = clockState(LocalTime.NOON), geometry = geometry)
+        return bitmap
+    }
+
     private fun render(
         time: LocalTime = LocalTime.NOON,
         geometry: AstrolabeGeometry? = null,

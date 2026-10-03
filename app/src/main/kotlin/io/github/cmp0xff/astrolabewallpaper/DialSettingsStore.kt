@@ -19,7 +19,7 @@ internal class DialSettingsStore(context: Context) {
     private fun enabled(snapshot: Map<String, *>, key: String): Boolean {
         val value = snapshot[key]
         if (value != null && value !is Boolean) {
-            Log.w("DialSettingsStore", "ignoring malformed dial setting: $key")
+            Log.w("DialSettingsStore", "ignoring malformed dial setting $key; using enabled")
         }
         return value != false
     }

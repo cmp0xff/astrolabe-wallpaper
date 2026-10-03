@@ -120,7 +120,17 @@ class OrlojAltitudeTest {
             (-12..12).flatMap { x ->
                 (-12..12).map { y -> DialPoint(x = x / 13.0, y = y / 13.0) }.filter { hypot(x = it.x, y = it.y) < 0.99 }
             }
-        val LATITUDES = listOf(50.0755, -33.8688, 0.0, 90.0, -90.0, 1e-8, -1e-8, -18.0, -18.0 - 1e-8, -18.0 + 1e-8)
+
+        // visibleArcStart() leaves its acos branch exactly where the altitude circle becomes tangent
+        // to the Tropic of Capricorn, at latitude 90 - obliquity + altitude: 66.56 for the horizon
+        // and 48.56 for the -18 degree night contour. Pin both sides of each knife edge.
+        val TANGENT_LATITUDES =
+            listOf(66.56, 48.56).flatMap { latitude ->
+                listOf(latitude - 1e-8, latitude, latitude + 1e-8, -latitude)
+            }
+        val LATITUDES =
+            listOf(50.0755, -33.8688, 0.0, 90.0, -90.0, 1e-8, -1e-8, -18.0, -18.0 - 1e-8, -18.0 + 1e-8) +
+                TANGENT_LATITUDES
         const val ANGLE_TOLERANCE = 1e-6
         const val COORDINATE_TOLERANCE = 1e-12
     }
