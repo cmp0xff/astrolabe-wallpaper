@@ -23,13 +23,17 @@
 <summary>Accountability Index</summary>
 
 <!-- Update after each push and review round. Use actual native commit references,
-     e.g. owner/repo@sha, without backticks. Keep full rationale in commits/threads. -->
+     e.g. owner/repo@sha, without backticks. Keep full rationale in commits/threads.
+     After the default squash merge these SHAs live on the PR head ref rather than
+     in main's ancestry, so this table is not expected to match main commit for
+     commit; citing them is still correct. See AGENTS.md, "Merge method". -->
 
 | Commit | What | Why |
 | --- | --- | --- |
 | <!-- actual commit reference --> | <!-- brief outcome --> | <!-- brief motivation --> |
 
-Review decisions: <!-- Link specific discussion comments; say none if none exist. -->
+Review decisions: <!-- Link specific discussion comments; say none if none exist.
+     These links target PR discussion and survive the squash merge. -->
 
 Caveats: <!-- Unrun checks, unresolved questions, or limitations; say none if none. -->
 
