@@ -1,5 +1,6 @@
 package io.github.cmp0xff.astronomicalclockswallpaper
 
+import android.annotation.SuppressLint
 import android.widget.Button
 import android.widget.EditText
 import org.junit.Assert.assertEquals
@@ -8,6 +9,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
 import java.time.ZoneId
@@ -70,6 +72,51 @@ class SettingsActivityLocaleTest {
     @Test
     fun invalidLongitudeIsRejected() {
         assertRejected(latitude = "45,5", longitude = "181,0")
+    }
+
+    @Test
+    fun germanSeededRoundTrip() {
+        assertSeededRoundTrip(
+            initialLatitude = 50.1081234567,
+            initialLongitude = 0.0001234,
+        )
+    }
+
+    @Test
+    @Config(qualifiers = "ar-rEG")
+    fun arabicSeededRoundTrip() {
+        assertSeededRoundTrip(
+            initialLatitude = 30.0444123456,
+            initialLongitude = 0.0001234,
+        )
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun assertSeededRoundTrip(initialLatitude: Double, initialLongitude: Double) {
+        val application = RuntimeEnvironment.getApplication()
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = initialLatitude,
+                longitude = initialLongitude,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            // Click save without changing fields - round trip must preserve exact Double values
+            activity.findViewById<Button>(R.id.save_location).performClick()
+            val loaded = LocationStore(activity).load()
+            assertEquals(initialLatitude, loaded?.latitude ?: 0.0, 0.0)
+            assertEquals(initialLongitude, loaded?.longitude ?: 0.0, 0.0)
+
+            // Edit latitude, leave seeded longitude (< 1e-3) untouched, save again
+            activity.findViewById<EditText>(R.id.latitude_input).setText("45.0")
+            activity.findViewById<Button>(R.id.save_location).performClick()
+            val edited = LocationStore(activity).load()
+            assertEquals(45.0, edited?.latitude ?: 0.0, 0.0)
+            assertEquals(initialLongitude, edited?.longitude ?: 0.0, 0.0)
+        }
     }
 
     private fun assertPersisted(

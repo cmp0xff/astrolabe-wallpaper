@@ -175,6 +175,156 @@ class SettingsActivityTest {
         }
     }
 
+    @Test
+    fun openSettingsSeedsStoredCoords() {
+        val application = RuntimeEnvironment.getApplication()
+        val highPrecisionLat = 50.0874981234
+        val highPrecisionLng = 14.4206019876
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = highPrecisionLat,
+                longitude = highPrecisionLng,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            assertEquals(
+                "50.0874981234",
+                activity.findViewById<EditText>(R.id.latitude_input).text.toString(),
+            )
+            assertEquals(
+                "14.4206019876",
+                activity.findViewById<EditText>(R.id.longitude_input).text.toString(),
+            )
+            assertEquals(
+                "50.0875, 14.4206 (manual)\nTimezone: ${ZoneId.systemDefault().id}",
+                activity.findViewById<TextView>(R.id.location_current).text.toString(),
+            )
+        }
+    }
+
+    @Test
+    fun seededNegativeZeroNormalizes() {
+        val application = RuntimeEnvironment.getApplication()
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = -0.0,
+                longitude = 14.4206,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            assertEquals("0.0", activity.findViewById<EditText>(R.id.latitude_input).text.toString())
+
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            val saved = requireNotNull(LocationStore(activity).load())
+            assertEquals(0.0, saved.latitude, 0.0)
+            assertEquals(14.4206, saved.longitude, 0.0)
+        }
+    }
+
+    @Test
+    @SuppressLint("SetTextI18n")
+    fun editingOnePreservesUntouched() {
+        val application = RuntimeEnvironment.getApplication()
+        val originalLat = 50.0874981234
+        val originalLng = 14.4206019876
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = originalLat,
+                longitude = originalLng,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            activity.findViewById<EditText>(R.id.latitude_input).setText("51.5074")
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            val updated = LocationStore(activity).load()
+            assertEquals(51.5074, updated?.latitude ?: 0.0, 0.0)
+            assertEquals(originalLng, updated?.longitude ?: 0.0, 0.0)
+        }
+    }
+
+    @Test
+    fun locationFixSeedsInputs() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            shadowOf(activity.application).grantPermissions(Manifest.permission.ACCESS_COARSE_LOCATION)
+            val locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            shadowOf(locationManager).enableNetworkProvider()
+            val fixLat = 37.4220012345
+            val fixLng = -122.0840054321
+            activity.findViewById<Button>(R.id.use_current_location).performClick()
+            shadowOf(locationManager).simulateLocation(
+                LocationManager.NETWORK_PROVIDER,
+                location(latitude = fixLat, longitude = fixLng),
+            )
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertEquals(
+                "37.4220012345",
+                activity.findViewById<EditText>(R.id.latitude_input).text.toString(),
+            )
+            assertEquals(
+                "-122.0840054321",
+                activity.findViewById<EditText>(R.id.longitude_input).text.toString(),
+            )
+            val stored = LocationStore(activity).load()
+            assertEquals(fixLat, stored?.latitude ?: 0.0, 0.0)
+            assertEquals(fixLng, stored?.longitude ?: 0.0, 0.0)
+        }
+    }
+
+    @Test
+    fun emptyStoreLeavesFieldsEmpty() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            assertTrue(activity.findViewById<EditText>(R.id.latitude_input).text.isEmpty())
+            assertTrue(activity.findViewById<EditText>(R.id.longitude_input).text.isEmpty())
+            assertEquals(
+                activity.getString(R.string.location_unset),
+                activity.findViewById<TextView>(R.id.location_current).text.toString(),
+            )
+        }
+    }
+
+    @Test
+    @SuppressLint("SetTextI18n")
+    fun recreateKeepsUnsavedEdits() {
+        val application = RuntimeEnvironment.getApplication()
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = 10.0,
+                longitude = 20.0,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            assertEquals("10.0", activity.findViewById<EditText>(R.id.latitude_input).text.toString())
+            assertEquals("20.0", activity.findViewById<EditText>(R.id.longitude_input).text.toString())
+            activity.findViewById<EditText>(R.id.latitude_input).setText("99.9")
+            controller.recreate()
+            assertEquals(
+                "99.9",
+                controller
+                    .get()
+                    .findViewById<EditText>(R.id.latitude_input)
+                    .text
+                    .toString(),
+            )
+        }
+    }
+
     private fun location(latitude: Double, longitude: Double): Location {
         val location = Location(LocationManager.NETWORK_PROVIDER)
         location.setLatitude(latitude)
