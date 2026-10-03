@@ -79,6 +79,28 @@ class DialGeometryTest {
         for (latitude in listOf(-90.1, 90.1, Double.NaN, Double.POSITIVE_INFINITY)) {
             assertRejected { valid.copy(latitudeDeg = latitude) }
         }
+        for (angle in listOf(-0.1, 360.0, Double.NaN, Double.POSITIVE_INFINITY)) {
+            assertRejected { valid.copy(sunLongitudeDeg = angle) }
+        }
+    }
+
+    @Test
+    fun sunMatchesSeasons() {
+        // Vernal equinox: 2026-03-20T14:46:00Z (USNO season instant)
+        val vernal = calculator.dialGeometry(Instant.parse("2026-03-20T14:46:00Z"), location())
+        assertTrue(
+            "vernal equinox sun longitude near 0°: ${vernal.sunLongitudeDeg}",
+            vernal.sunLongitudeDeg < 0.05 || vernal.sunLongitudeDeg > 359.95,
+        )
+
+        // Winter solstice: 2026-12-21T20:50:00Z (USNO season instant)
+        val winter = calculator.dialGeometry(Instant.parse("2026-12-21T20:50:00Z"), location())
+        assertEquals(270.0, winter.sunLongitudeDeg, 0.05)
+
+        for (fixture in geometryFixtures) {
+            val geom = calculator.dialGeometry(fixture.instant, location())
+            assertTrue(geom.sunLongitudeDeg >= 0.0 && geom.sunLongitudeDeg < FULL_TURN_DEGREES)
+        }
     }
 
     private fun assertRejected(create: () -> DialGeometry) {

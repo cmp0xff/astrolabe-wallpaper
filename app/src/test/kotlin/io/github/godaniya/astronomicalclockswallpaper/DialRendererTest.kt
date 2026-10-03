@@ -164,6 +164,62 @@ class DialRendererTest {
     }
 
     @Test
+    fun sunMarkerRendersAtPosition() {
+        val geom = prague.copy(sunLongitudeDeg = 90.0)
+        val projection = OrlojProjection(geom)
+        val enabled = render(geometry = geom, layers = DialLayers(isSunEnabled = true))
+        val disabled = render(geometry = geom, layers = DialLayers(isSunEnabled = false))
+        assertTrue(
+            "Sun marker should be present near projection.sunPoint",
+            containsColorNear(enabled, projection.sunPoint, DialStyle.GOLD),
+        )
+        assertTrue(
+            "Disabling Sun layer must remove Sun marker at projection.sunPoint",
+            changedPixelsNear(first = enabled, second = disabled, point = projection.sunPoint) > 20,
+        )
+    }
+
+    @Test
+    fun sunMarkerMovesWithSunLongitude() {
+        val sun0 = prague.copy(sunLongitudeDeg = 0.0)
+        val sun90 = prague.copy(sunLongitudeDeg = 90.0)
+        val proj0 = OrlojProjection(sun0)
+        val proj90 = OrlojProjection(sun90)
+        val bmp0 = render(geometry = sun0)
+        val bmp90 = render(geometry = sun90)
+        assertTrue(
+            "Sun marker should move away from 0° position when longitude is 90°",
+            changedPixelsNear(first = bmp0, second = bmp90, point = proj0.sunPoint) > 20,
+        )
+        assertTrue(
+            "Sun marker should appear at 90° position",
+            changedPixelsNear(first = bmp0, second = bmp90, point = proj90.sunPoint) > 20,
+        )
+    }
+
+    @Test
+    fun sunRendersOnSouthernPlate() {
+        val sydney =
+            DialGeometry(
+                localSiderealAngleDeg = 0.0,
+                trueObliquityDeg = 23.44,
+                latitudeDeg = -33.87,
+                sunLongitudeDeg = 45.0,
+            )
+        val projection = OrlojProjection(sydney)
+        val enabled = render(geometry = sydney, layers = DialLayers(isSunEnabled = true))
+        val disabled = render(geometry = sydney, layers = DialLayers(isSunEnabled = false))
+        assertTrue(
+            "Sun marker should render on southern plate",
+            containsColorNear(enabled, projection.sunPoint, DialStyle.GOLD),
+        )
+        assertTrue(
+            "Disabling Sun layer removes Sun marker on southern plate",
+            changedPixelsNear(first = enabled, second = disabled, point = projection.sunPoint) > 20,
+        )
+    }
+
+    @Test
     fun civilHandMatchesCardinalHours() {
         val hours = listOf(12 to 0.0, 18 to 90.0, 0 to 180.0, 6 to 270.0)
         for ((hour, angle) in hours) {
@@ -264,10 +320,11 @@ class DialRendererTest {
         val sign = OrlojProjection(prague).eclipticPoint(210.0)
         assertTrue(changedPixelsNear(first = original, second = rotated, point = sign) > 20)
         // The background plate depends on latitude and obliquity, not sidereal rotation.
-        assertTrue(
-            render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
-                .sameAs(render(geometry = later, layers = DialLayers(isZodiacRingEnabled = false))),
-        )
+        val plateFirst = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        val plateSecond = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        OrlojPlateRenderer().draw(Canvas(plateFirst), OrlojProjection(prague), isSunEnabled = true)
+        OrlojPlateRenderer().draw(Canvas(plateSecond), OrlojProjection(later), isSunEnabled = true)
+        assertTrue(plateFirst.sameAs(plateSecond))
     }
 
     @Test

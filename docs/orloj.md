@@ -88,13 +88,14 @@ on the right. One hand follows saved-site civil time including DST. Its angle is
 the zodiac's sidereal rotation; it is not a solar position marker.
 
 **Zodiac ring** and **Sun** default to enabled and persist across recreation. The first controls the
-rotating zodiac and its labels; the second controls the day/twilight/night shading together with the
-horizon and astronomical-night boundaries it draws — with it off the plate degrades to a clean
-instrument grid, keeping the tropics, the equator, and the outer rim. The solar marker itself
-arrives with #27, when this layer gains it. The toggle was renamed from "Day and night" to "Sun"
-before release; a stored value under the old `day_and_night` key is ignored rather than migrated, so
-the layer returns to its enabled default. Without a saved site, only the civil clock is shown, using
-the phone timezone. Settings explains that an observing location is required for sky geometry.
+rotating zodiac and its labels; the second controls the radiant golden Sun marker on the ecliptic ring
+together with the day/twilight/night shading and its horizon and astronomical-night boundaries — with it
+off the plate degrades to a clean instrument grid, keeping the tropics, the equator, and the outer rim.
+The Sun marker's bearing indicates apparent solar time on the Roman scale, distinct from the civil hand.
+The toggle was renamed from "Day and night" to "Sun" before release; a stored value under the old
+`day_and_night` key is ignored rather than migrated, so the layer returns to its enabled default. Without
+a saved site, layer checkboxes in Settings are disabled and only the civil clock is shown, using the
+phone timezone. Settings explains that an observing location is required for sky geometry.
 
 Each engine listens for location and layer changes, maintains one immutable settings snapshot,
 and draws each frame from one instant. Updates take effect on the next visible tick. Hidden

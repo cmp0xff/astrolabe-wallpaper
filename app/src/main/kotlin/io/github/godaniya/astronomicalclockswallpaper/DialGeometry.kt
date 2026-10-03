@@ -7,12 +7,14 @@ package io.github.godaniya.astronomicalclockswallpaper
  * added to Greenwich apparent sidereal time, normalized to `[0, 360)`. It measures the local
  * meridian against the true equinox of date. [trueObliquityDeg] is the angle between the true
  * equator and ecliptic of date, including nutation. [latitudeDeg] is the observer's geographic
- * latitude, positive north. These reference angles include no atmospheric refraction.
+ * latitude, positive north. [sunLongitudeDeg] is the Sun's apparent ecliptic longitude of date
+ * in degrees, normalized to `[0, 360)`. These reference angles include no atmospheric refraction.
  */
 internal data class DialGeometry(
     val localSiderealAngleDeg: Double,
     val trueObliquityDeg: Double,
     val latitudeDeg: Double,
+    val sunLongitudeDeg: Double = 0.0,
 ) {
     init {
         require(localSiderealAngleDeg >= 0.0 && localSiderealAngleDeg < FULL_TURN_DEGREES) {
@@ -22,5 +24,8 @@ internal data class DialGeometry(
             "true obliquity must be in (0, 90)"
         }
         require(ObservingLocation.isValidLatitude(latitudeDeg)) { "latitude must be in [-90, 90]" }
+        require(sunLongitudeDeg >= 0.0 && sunLongitudeDeg < FULL_TURN_DEGREES) {
+            "sun longitude must be in [0, 360)"
+        }
     }
 }
