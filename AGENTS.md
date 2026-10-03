@@ -97,19 +97,37 @@ Every AI-authored commit must include a body recording:
   considered, say so briefly; never manufacture alternatives to fill a section.
 - Verification actually performed, with unrun checks and limitations stated.
 
-End each AI-authored commit with **exactly one** `Co-Authored-By` trailer naming
-the actual disclosed model and its provider's no-reply address, for example
+End each AI-authored commit with **one `Co-Authored-By` trailer per distinct
+contributor, never duplicated**. For model contributors, a trailer names the
+actual disclosed model and its provider's no-reply address, for example
 `Co-Authored-By: deepseek-v4-flash-vision-exp <noreply@deepseek.com>`. Name the
 model itself, not the client, harness, or tool that drove it; the client identity
 is acceptable only when the model is unavailable. Inspect the complete message
 before committing to prevent duplicate trailers. Never invent model versions,
 tests, decisions, or review evidence.
 
-The "exactly one" rule governs the commits an agent authors. GitHub's squash
-merge consolidates `Co-authored-by:` trailers across squashed commits and appends
-a further line for the pull request author, so the commit that lands on `main`
-may carry multiple trailers (e.g. two for a single-model PR, or more when
-multiple models or contributors participated). That is expected and is not a
+Two cases legitimately add a further trailer:
+
+- **A commit that addresses a review comment from another person or agent**
+  credits that reviewer. Resolve the address at the time from the reviewer's
+  platform account as `<numeric-id>+<login>@users.noreply.github.com` rather than
+  hardcoding a fixed identity. For the account that posts Copilot's reviews the
+  GitHub API reports the id `175728472` for
+  `copilot-pull-request-reviewer[bot]`, giving
+  `Co-authored-by: Copilot <175728472+copilot-pull-request-reviewer[bot]@users.noreply.github.com>`.
+  One trailer per addressed reviewer. A reviewer credited on one commit is not
+  re-credited on unrelated commits in the same pull request.
+- **A commit that more than one model materially authored** — a rebase that
+  resolves real conflicts, for example — names each of them, one trailer per
+  model, never two lines for the same model.
+
+Record the first case whenever the commit's change exists because of the review,
+and say in the commit body what the review found, so the trailer is checkable
+against the thread rather than decorative.
+
+GitHub's squash merge consolidates `Co-authored-by:` trailers across squashed
+commits and appends a further line for the pull request author, so the commit
+that lands on `main` may carry more trailers still. That is expected and is not a
 duplicate-trailer defect to fix.
 
 Preserve Git signing. Do not disable signing to work around unavailable agent
