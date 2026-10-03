@@ -58,4 +58,11 @@ import java.time.Instant
 internal interface AstronomyCalculator {
     /** The sky at [time] over [location], with the UTC day's solar events. */
     fun sky(time: Instant, location: ObservingLocation): Sky
+
+    /**
+     * Unrefracted reference geometry at [time], using the saved coordinates and ignoring its zone.
+     * Apparent sidereal time and true obliquity both refer to the true equinox/equator of date.
+     * The engine approximates UT1 with UTC and derives TT from its built-in Delta-T model.
+     */
+    fun astrolabeGeometry(time: Instant, location: ObservingLocation): AstrolabeGeometry
 }

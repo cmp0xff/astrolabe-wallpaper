@@ -60,17 +60,23 @@ Test build: local debug `app-debug.apk` from `feat/2-device-feasibility` (SHA-25
 rendering unchanged).
 
 Rendering was later extracted into `DialRenderer` on `feat/19-rendered-clock` with no intended
-visual change. The reviewed renderer preserves the original `#D8B66A` dial colour. Host verification
-on 2026-09-29 uses `DialRendererTest` on SDK 26 and 36: four cardinal-time checks anchor orientation,
-and all three hands are independently checked at 12:20:43, 04:42:03, and 08:03:23. Literal expected
-angles, isolated 3x3 presence windows, and single-pixel overdraw probes account for pixel rounding
-and antialiasing; the test documents the distances from other hands and ticks. It also checks the
-tick bands, non-square canvas, palette, and renderer reuse on a 200x200 bitmap.
+visual change. The reviewed renderer preserved the original `#D8B66A` dial colour. That build's host
+verification on 2026-09-29 ran `DialRendererTest` on SDK 26 and 36: four cardinal-time checks
+anchored orientation, and all three hands were independently checked at 12:20:43, 04:42:03, and
+08:03:23. Literal expected angles, isolated 3x3 presence windows, and single-pixel overdraw probes
+accounted for pixel rounding and antialiasing; the test documented the distances from other hands
+and ticks. It also checked the tick bands, non-square canvas, palette, and renderer reuse on a
+200x200 bitmap.
 
-Regression checks first confirmed that the original-colour assertion rejects `#D8B26A`. Temporarily
+Regression checks first confirmed that the original-colour assertion rejected `#D8B26A`. Temporarily
 setting each hand's length to zero, rotating it by 90 degrees, or doubling its length (one change at
 a time) failed all three dispersed-time checks on both SDKs for every hand. All nine mutations were
 restored before final verification.
+
+That three-hand, 60-tick renderer was superseded by the Orloj foundation, which draws a single
+24-hour hand on a 24-numeral scale; `DialRendererTest` now covers that renderer, and the checks above
+stand only as the record for the `feat/19-rendered-clock` build. See the Orloj foundation section
+below.
 
 `AstrolabeWallpaperServiceTest` covers resuming ticks after surface recreation. `WallpaperFrameTest`
 injects null/throwing acquisition, drawing failures, and posting failures through the engine's real
@@ -274,3 +280,92 @@ locale; the `Double.toString()` it replaces printed every digit the `Double` car
 is untouched: `save()` still writes the full `Double`, so a stored coordinate keeps the precision it
 was entered with. Reading the rounded readout and retyping it is what now loses precision, because
 the entry fields are not seeded from the saved site; that residual is tracked in #38.
+
+## Orloj foundation verification (#4, #5)
+
+Test build: local debug `app-debug.apk` from `feat/4-orloj-foundation` at 905ff8e (APK SHA-256
+85191f20c2249d7430613b86bc5acde4547621cf48d82ad12d5add0eae4b2c08), the artifact installed on the
+device below.
+
+Same physical device. Android version: 16 (API 36). Device locale `de-DE`, with no app-locale
+override. Firmware build: withheld (embeds the model identifier).
+
+The single civil hand moves 0.004 degrees per second, so a stalled loop looks identical to a running
+one and neither the eye nor a frame diff can tell them apart. Two instrumented checks replace
+inspection. The hand angle is measured from `adb exec-out screencap` frames as the principal axis of
+the `DialStyle.HAND` pixels (`#F4E5B8` reads back as about `#F1E5BD` through the screenshot
+pipeline), and compared with the civil time the device's own clock implies. Repaint cadence is
+measured with `atrace -a <pid> gfx view`, counting the wallpaper producer's
+`lock`/`unlock`/`dequeueBuffer`/`queueBuffer` events; `dumpsys SurfaceFlinger --latency` is
+unpopulated on this API level, so it could not be used.
+
+| Date | Check | Observed |
+| --- | --- | --- |
+| 2026-10-03 | 24-hour scale, preview | XII top, XXIV bottom, VI left, XVIII right, with one hand; day and night shading and the zodiac ring drawn |
+| 2026-10-03 | 24-hour scale, home | Same scale and hand; measured hand angle within 0.02 degrees of the civil time the device clock implies |
+| 2026-10-03 | 24-hour scale, lit lock screen | Same scale and hand as home at the same instant; both lock-screen clocks agreed with the hand |
+| 2026-10-03 | repaint cadence, preview | 6 producer buffer acquisitions in 6 s, deltas 0.999-1.000 s, so 1.000 Hz |
+| 2026-10-03 | repaint cadence, home | 6 in 6 s, deltas 0.998-1.001 s, so 1.000 Hz |
+| 2026-10-03 | repaint cadence, lit lock screen | 6 in 6 s, deltas 0.998-1.001 s, so 1.000 Hz |
+| 2026-10-03 | lock screen stays live | Over 92 s the measured hand advanced 0.39 degrees against 0.38 implied by wall time, so the lock surface redraws rather than holding a snapshot |
+| 2026-10-03 | Zodiac ring toggle | Turning it off removed the twelve hand-coloured sign glyphs on the next visible frame and turning it on restored them; the stored preference followed each change |
+| 2026-10-03 | Day and night toggle | Turning it off left the sky and twilight pixel counts at zero over a plain night plate; turning it on restored both |
+| 2026-10-03 | hide/show | A non-default choice (zodiac ring off) survived leaving to another app and returning |
+| 2026-10-03 | surface recreation | `wm size 1080x2000` and then `wm size reset`: the dial re-centred, the choice still applied, cadence 6 in 6 s, and no renderer warnings |
+| 2026-10-03 | reboot | New process, same wallpaper binding, the stored non-default choice still applied, hand within 0.02 degrees, cadence 6 in 6 s |
+| 2026-10-03 | saved-site timezone | With the site saved while the phone was on `Europe/Prague`, moving the phone to `Asia/Kolkata` left the hand tracking Prague civil time within 0.01 degrees and 52.49 degrees away from Kolkata |
+| 2026-10-03 | representative sites | Prague, Sydney, the equator, and both poles entered manually; the horizon adapted as described below |
+| 2026-10-03 | no saved site | After clearing app data, Settings read "No observing location set." and the wallpaper drew only the 24-hour scale and hand, following the phone's zone |
+
+The representative sites were entered by hand, never from the device's own position. With the zodiac
+ring off, the horizon took the shape the geometric altitude equation predicts, and the measured day,
+twilight, and night regions matched `OrlojProjection.altitudeDeg` at every site. At this revision the
+plate was always the Prague north-pole projection, whose dial centre is the south celestial pole at
+altitude -latitude: Prague (50.08) put the centre below the horizon with the night region inside an
+outer day crescent, and Sydney (-33.87) inverted that picture, the centre in daylight with night as
+the outer crescent. The equator put the horizon on a straight line through the hub, and the poles put
+it on concentric circles, with night inside day at the north pole and day inside night at the south
+pole. The southern inversion is the construction replaced in the next section.
+
+Clearing app data also drops the wallpaper binding, so the wallpaper had to be reapplied by hand
+afterwards; the device was left with the Orloj wallpaper applied and a current-location site
+restored. `am force-stop` was not used as the process-restart check, because it clears the binding
+by platform design instead of restarting the service, and `am kill` does not select this process, so
+the reboot row is the process-restart evidence.
+
+The review fixes committed after this pass change documentation, one log string outside the render
+path, and tests, so the rendering output observed above is unchanged and the observations stand for
+the pushed revision.
+
+No failure was observed, and no unresolved limitation remains from this pass. The cadence check
+shows only that a frame is produced once per second; battery and frame-cost qualification remain #6.
+
+## Southern plate and Sun layer (#4, #5)
+
+Test build: local debug `app-debug.apk` from `feat/4-orloj-foundation` at 96f972a (APK SHA-256
+a13cd926bab76cc72347dc5b09bfb6c489b5b4395ccdf02fbf8ffdac0a388eec), the artifact installed on the
+device below.
+
+Same physical device. Android version: 16 (API 36). Device locale `de-DE`, with no app-locale
+override. Firmware build: withheld (embeds the model identifier).
+
+The sites were entered by hand through Settings. Sydney, the south pole, and the equator were read
+from the home screen; the Sun-layer checks used the system live-wallpaper preview, which shows the
+dial unobstructed. The screenshot pipeline applies a colour transform (the hand reads back about
+`#F1E5BD`, not `#F4E5B8`), so these checks are structural rather than exact-colour, except the hand
+angle, which is a principal-axis measurement of the hand pixels.
+
+| Date | Check | Observed |
+| --- | --- | --- |
+| 2026-10-03 | southern nesting | Sydney (-33.87, 151.21) put night at the dial centre, a twilight annulus around it, and day outside; the zodiac ring stayed tangent to both tropics |
+| 2026-10-03 | south pole | (0, -90) gave concentric night, twilight, and day annuli, night innermost |
+| 2026-10-03 | equator | (0, 0) put the horizon on a straight line through the hub, day above and twilight then night below |
+| 2026-10-03 | Sun layer off | With the zodiac ring off, turning **Sun** off removed the sky and twilight fills and the horizon and night contour strokes, leaving only the tropics, the equator, and the outer rim |
+| 2026-10-03 | Sun layer on | Restoring it redrew the fills and both contour strokes on the next visible frame |
+| 2026-10-03 | repaint cadence, preview | 8 producer frames in 7.0 s, deltas 0.983-1.016 s, so 1.001 Hz |
+| 2026-10-03 | hand angle, preview | Measured hand angle 32.022 degrees against 32.029 degrees implied by the device clock, 0.007 degrees apart |
+
+The equator plate was observed both on the home screen and in the preview; the southern plates on the
+home screen. After the pass the saved site was restored to the device's current location
+(50.1081, 14.4695) and the wallpaper was left applied. No failure was observed. The cadence check
+shows only that a frame is produced once per second; battery and frame-cost qualification remain #6.

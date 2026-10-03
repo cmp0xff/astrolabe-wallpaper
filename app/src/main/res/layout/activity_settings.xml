@@ -61,6 +61,22 @@
       android:layout_height="wrap_content"
       android:minHeight="48dp"
       android:text="@string/save_location" />
+    <CheckBox
+      android:id="@+id/zodiac_ring"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:text="@string/zodiac_ring" />
+    <CheckBox
+      android:id="@+id/sun_layer"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:text="@string/sun_layer" />
+    <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/dial_location_help" />
     <Button
       android:id="@+id/open_preview"
       android:layout_width="wrap_content"

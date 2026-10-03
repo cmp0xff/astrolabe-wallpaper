@@ -43,6 +43,7 @@ class SettingsActivity : Activity() {
         findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation(forceFresh = true) }
         findViewById<Button>(R.id.save_location).setOnClickListener { saveManualLocation() }
         displayLocation(locationStore.load())
+        bindDialLayers()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

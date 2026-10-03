@@ -1,12 +1,8 @@
 package io.github.cmp0xff.astrolabewallpaper
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.SurfaceTexture
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
-import android.view.Surface
-import android.view.SurfaceHolder
 import android.view.SurfaceView
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -203,7 +199,7 @@ class WallpaperTimezoneTest {
             }
         val engine =
             controller.get().createEngine(
-                draw = { _, state -> frames.add(state) },
+                draw = { _, state, _, _ -> frames.add(state) },
                 holder = holder,
                 clock = timeSource,
                 deviceZone = { deviceZone },
@@ -217,23 +213,6 @@ class WallpaperTimezoneTest {
     }
 
     private fun location(zone: String): ObservingLocation = SAVED_SITE.copy(zoneId = ZoneId.of(zone))
-
-    private class ReadyFrameHolder(delegate: SurfaceHolder) : SurfaceHolder by delegate {
-        private val texture = SurfaceTexture(0)
-        private val readySurface = Surface(texture)
-        private val canvas = Canvas()
-
-        override fun getSurface(): Surface = readySurface
-
-        override fun lockCanvas(): Canvas = canvas
-
-        override fun unlockCanvasAndPost(canvas: Canvas) = Unit
-
-        fun release() {
-            readySurface.release()
-            texture.release()
-        }
-    }
 
     private companion object {
         val SAVED_SITE =

@@ -14,11 +14,14 @@ import io.github.cosinekitty.astronomy.equator
 import io.github.cosinekitty.astronomy.horizon
 import io.github.cosinekitty.astronomy.illumination
 import io.github.cosinekitty.astronomy.moonPhase
+import io.github.cosinekitty.astronomy.rotationEctEqd
 import io.github.cosinekitty.astronomy.rotationEqjHor
 import io.github.cosinekitty.astronomy.searchAltitude
 import io.github.cosinekitty.astronomy.searchRiseSet
+import io.github.cosinekitty.astronomy.siderealTime
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -45,6 +48,20 @@ import kotlin.math.sin
  *   position, so the difference a few metres of altitude makes is far below the tolerances here.
  */
 internal class AstronomyEngineCalculator : AstronomyCalculator {
+    override fun astrolabeGeometry(time: Instant, location: ObservingLocation): AstrolabeGeometry {
+        val engineTime = Time.fromMillisecondsSince1970(time.toEpochMilli())
+        // Longitude 90 degrees on the true ecliptic becomes (0, cos(epsilon), sin(epsilon))
+        // in the true equatorial frame. Use the public rotation API to recover true obliquity.
+        val eclipticAxis = Vector(x = 0.0, y = 1.0, z = 0.0, t = engineTime)
+        val equatorialAxis = rotationEctEqd(engineTime).rotate(eclipticAxis)
+        return AstrolabeGeometry(
+            localSiderealAngleDeg =
+                (siderealTime(engineTime) * DEGREES_PER_HOUR + location.longitude).mod(FULL_TURN_DEGREES),
+            trueObliquityDeg = Math.toDegrees(atan2(y = equatorialAxis.z, x = equatorialAxis.y)),
+            latitudeDeg = location.latitude,
+        )
+    }
+
     override fun sky(time: Instant, location: ObservingLocation): Sky {
         val engineTime = Time.fromMillisecondsSince1970(time.toEpochMilli())
         val observer = Observer(latitude = location.latitude, longitude = location.longitude, height = 0.0)

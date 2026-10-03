@@ -41,7 +41,7 @@ class WallpaperFrameTest {
         assertTrue("fault tests must reach canvas acquisition", holder.surface.isValid)
         engine =
             controller.get().createEngine(
-                draw = { canvas, _ ->
+                draw = { canvas, _, _, _ ->
                     drawnCanvases.add(canvas)
                     drawFailure?.let { throw it }
                 },
