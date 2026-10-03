@@ -9,18 +9,6 @@ import org.json.JSONTokener
 import java.time.DateTimeException
 import java.time.ZoneId
 
-private const val NEGATIVE_ZERO = "-0.0"
-private const val NEGATIVE_ZERO_BITS = Long.MIN_VALUE
-
-internal fun readStoredCoordinate(value: Any?): Double? {
-    val number = value as? Number
-    if (number != null) return number.toDouble()
-    return if (value == NEGATIVE_ZERO) Double.fromBits(NEGATIVE_ZERO_BITS) else null
-}
-
-internal fun writeStoredCoordinate(value: Double): Any =
-    if (value.toRawBits() == NEGATIVE_ZERO_BITS) NEGATIVE_ZERO else value
-
 /** Persists a versioned location record, migrating older coordinates without changing their meaning. */
 internal class LocationStore(context: Context, private val deviceZone: () -> ZoneId = ZoneId::systemDefault) {
     private val preferences: SharedPreferences =
@@ -47,8 +35,8 @@ internal class LocationStore(context: Context, private val deviceZone: () -> Zon
 
             else -> {
                 readLocation(
-                    rawLatitude = readStoredCoordinate(record.opt(KEY_LATITUDE)),
-                    rawLongitude = readStoredCoordinate(record.opt(KEY_LONGITUDE)),
+                    rawLatitude = (record.opt(KEY_LATITUDE) as? Number)?.toDouble(),
+                    rawLongitude = (record.opt(KEY_LONGITUDE) as? Number)?.toDouble(),
                     sourceText = record.opt(KEY_SOURCE) as? String,
                 ) { resolveZone(record) }
             }
@@ -110,8 +98,8 @@ internal class LocationStore(context: Context, private val deviceZone: () -> Zon
         val record =
             JSONObject()
                 .put(KEY_VERSION, RECORD_VERSION)
-                .put(KEY_LATITUDE, writeStoredCoordinate(location.latitude))
-                .put(KEY_LONGITUDE, writeStoredCoordinate(location.longitude))
+                .put(KEY_LATITUDE, location.latitude)
+                .put(KEY_LONGITUDE, location.longitude)
                 .put(KEY_SOURCE, location.source.name)
                 .put(KEY_ZONE_ID, location.zoneId.id)
         persistRecord(record)

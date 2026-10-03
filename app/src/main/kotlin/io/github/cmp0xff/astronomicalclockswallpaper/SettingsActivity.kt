@@ -197,11 +197,8 @@ class SettingsActivity : Activity() {
             return String.format(Locale.ROOT, "%.4f", if (rounded == 0.0) 0.0 else rounded)
         }
 
-        fun formatSeedCoordinate(value: Double): String {
-            if (value == 0.0 && value.toRawBits() < 0) {
-                return "-0.0"
-            }
-            return BigDecimal.valueOf(value).toPlainString()
-        }
+        // Lossless plain decimal, never scientific notation. Negative zero seeds as "0.0":
+        // -0.0 and 0.0 name the same place, and BigDecimal drops the sign.
+        fun formatSeedCoordinate(value: Double): String = BigDecimal.valueOf(value).toPlainString()
     }
 }

@@ -206,7 +206,7 @@ class SettingsActivityTest {
     }
 
     @Test
-    fun seededNegativeZeroRoundTrips() {
+    fun seededNegativeZeroNormalizes() {
         val application = RuntimeEnvironment.getApplication()
         LocationStore(application).save(
             ObservingLocation(
@@ -216,16 +216,15 @@ class SettingsActivityTest {
                 zoneId = ZoneId.systemDefault(),
             ),
         )
-        assertEquals((-0.0).toRawBits(), requireNotNull(LocationStore(application).load()).latitude.toRawBits())
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
             val activity = controller.setup().get()
-            val latitudeInput = activity.findViewById<EditText>(R.id.latitude_input)
-            assertEquals("-0.0", latitudeInput.text.toString())
+            assertEquals("0.0", activity.findViewById<EditText>(R.id.latitude_input).text.toString())
 
             activity.findViewById<Button>(R.id.save_location).performClick()
 
-            val savedLatitude = requireNotNull(LocationStore(activity).load()).latitude
-            assertEquals((-0.0).toRawBits(), savedLatitude.toRawBits())
+            val saved = requireNotNull(LocationStore(activity).load())
+            assertEquals(0.0, saved.latitude, 0.0)
+            assertEquals(14.4206, saved.longitude, 0.0)
         }
     }
 
