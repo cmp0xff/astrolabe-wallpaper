@@ -194,9 +194,10 @@ would; that override is no longer needed for manual entry, and the row stays as 
 build it tested.
 
 Unresolved limitations: the display now rounds coordinates to four decimals, as recorded under
-"Coordinate display precision (2026-10-01)" below, and the entry fields are not seeded from the
-saved site, so retyping a displayed coordinate loses the precision below the fourth decimal; that
-residual is tracked in #38. The offline city chooser remains outstanding under #3.
+"Coordinate display precision (2026-10-01)" below. The entry fields are seeded from the saved site
+(#53), so an unchanged Save needs no retyping and keeps the precision below the fourth decimal; that
+seeding landed with its interactive device checks unrun, folded into #42. The offline city chooser
+remains outstanding under #3.
 
 ## Saved-site timezone verification (#24)
 
@@ -278,8 +279,9 @@ coordinate entry convention recorded above. `formatCoordinate` rounds to four de
 formats with `Locale.ROOT`, so the readout has a uniform width and does not change with the phone's
 locale; the `Double.toString()` it replaces printed every digit the `Double` carries. `LocationStore`
 is untouched: `save()` still writes the full `Double`, so a stored coordinate keeps the precision it
-was entered with. Reading the rounded readout and retyping it is what now loses precision, because
-the entry fields are not seeded from the saved site; that residual is tracked in #38.
+was entered with. Reading the rounded readout and retyping it would lose precision, but the entry
+fields are seeded from the saved site (#53), so editing one coordinate leaves the other at full
+precision; the interactive device checks for that seeding are unrun, folded into #42.
 
 ## Orloj foundation verification (#4, #5)
 
