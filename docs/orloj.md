@@ -87,11 +87,12 @@ The Roman scale shows 24 civil hours: XII at the top, XXIV at the bottom, VI on 
 on the right. One hand follows saved-site civil time including DST. Its angle is independent of
 the zodiac's sidereal rotation; it is not a solar position marker.
 
-**Zodiac ring** and **Sun** default to enabled and persist across recreation. The first controls the
-rotating zodiac and its labels; the second controls the day/twilight/night shading together with the
-horizon and astronomical-night boundaries it draws — with it off the plate degrades to a clean
-instrument grid, keeping the tropics, the equator, and the outer rim. The solar marker itself
-arrives with #27, when this layer gains it. The toggle was renamed from "Day and night" to "Sun"
+**Zodiac ring**, **Sun**, and **Moon** default to enabled and persist across recreation. The first
+controls the rotating zodiac, 12 compartments, centered labels, and the 0° Aries star; the second controls
+the day/twilight/night shading together with the horizon and astronomical-night boundaries it draws — with
+it off the plate degrades to a clean instrument grid, keeping the tropics, the equator, and the outer rim,
+with the solar marker arriving with #27; the third controls the dual-toned astronomical Moon marker on the
+ecliptic ring and its illuminated phase (#28). The toggle was renamed from "Day and night" to "Sun"
 before release; a stored value under the old `day_and_night` key is ignored rather than migrated, so
 the layer returns to its enabled default. Without a saved site, only the civil clock is shown, using
 the phone timezone. Settings explains that an observing location is required for sky geometry.

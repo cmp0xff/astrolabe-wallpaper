@@ -10,6 +10,7 @@ import io.github.cosinekitty.astronomy.Time
 import io.github.cosinekitty.astronomy.Topocentric
 import io.github.cosinekitty.astronomy.Vector
 import io.github.cosinekitty.astronomy.constellation
+import io.github.cosinekitty.astronomy.eclipticGeoMoon
 import io.github.cosinekitty.astronomy.equator
 import io.github.cosinekitty.astronomy.horizon
 import io.github.cosinekitty.astronomy.illumination
@@ -54,11 +55,14 @@ internal class AstronomyEngineCalculator : AstronomyCalculator {
         // in the true equatorial frame. Use the public rotation API to recover true obliquity.
         val eclipticAxis = Vector(x = 0.0, y = 1.0, z = 0.0, t = engineTime)
         val equatorialAxis = rotationEctEqd(engineTime).rotate(eclipticAxis)
+        val moonEcliptic = eclipticGeoMoon(engineTime)
         return DialGeometry(
             localSiderealAngleDeg =
                 (siderealTime(engineTime) * DEGREES_PER_HOUR + location.longitude).mod(FULL_TURN_DEGREES),
             trueObliquityDeg = Math.toDegrees(atan2(y = equatorialAxis.z, x = equatorialAxis.y)),
             latitudeDeg = location.latitude,
+            moonLongitudeDeg = moonEcliptic.lon.mod(FULL_TURN_DEGREES),
+            moonPhaseLongitudeDeg = moonPhase(engineTime).mod(FULL_TURN_DEGREES),
         )
     }
 

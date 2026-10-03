@@ -79,6 +79,14 @@ class DialGeometryTest {
         for (latitude in listOf(-90.1, 90.1, Double.NaN, Double.POSITIVE_INFINITY)) {
             assertRejected { valid.copy(latitudeDeg = latitude) }
         }
+        for (angle in listOf(-0.1, 360.0, Double.NaN, Double.POSITIVE_INFINITY)) {
+            assertRejected { valid.copy(moonLongitudeDeg = angle) }
+            assertRejected { valid.copy(moonPhaseLongitudeDeg = angle) }
+        }
+        // Valid non-null values accepted
+        val withMoon = valid.copy(moonLongitudeDeg = 120.0, moonPhaseLongitudeDeg = 90.0)
+        assertEquals(120.0, withMoon.moonLongitudeDeg)
+        assertEquals(90.0, withMoon.moonPhaseLongitudeDeg)
     }
 
     private fun assertRejected(create: () -> DialGeometry) {
