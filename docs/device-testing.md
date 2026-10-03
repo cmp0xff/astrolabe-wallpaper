@@ -417,6 +417,15 @@ structure. The 2026-09-29 rows record 60 tick strokes (12 long, 48 short) for th
 dial; this dial draws 24 hour ticks, one per Roman numeral. After the pass the saved site was
 restored to the device's current location and the wallpaper was left applied.
 
+The follow-up commit that bounds the tick-loop failure log changes no rendering or scheduling
+behaviour, so the checks above were re-run against its APK (SHA-256
+3c3a5010f7b9c95ffe67173aaa6ef68e017f6d53dd105ada639ef89418a8ff7d). The home screen still drew its 24
+hour ticks at 1.000 Hz (6 producer frames in the 6 s trace window, deltas 0.998-1.002 s) with an empty
+renderer log. The throttling itself is not device-testable, because it needs a fault that repeats on
+every tick and a healthy device does not produce one; `RepeatedFailureLogTest` and
+`WallpaperFrameTest.repeatedDrawFailureLogsOnce` are its evidence, the same limitation as the
+resilience claim below.
+
 **Unresolved limitation.** The resilience claim itself is not device-testable: the contained failure
 is an injected first-frame `drawFrame()` exception, which cannot be produced on a healthy device
 without a debug hook this build does not carry. `WallpaperFrameTest` and `WallpaperFoundationTest`

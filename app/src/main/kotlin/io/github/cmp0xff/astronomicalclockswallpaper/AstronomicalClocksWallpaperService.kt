@@ -8,6 +8,7 @@ import android.service.wallpaper.WallpaperService
 import android.util.Log
 import android.view.SurfaceHolder
 import java.time.Clock
+import java.time.Instant
 import java.time.ZoneId
 
 /** An animated astronomical clock wallpaper. */
@@ -65,6 +66,20 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
         // onSurfaceChanged can decide whether to resume ticking without a framework-only getter.
         private var isEngineVisible = false
 
+        // Both of these faults recur once a second while they last, so they log the first occurrence
+        // and a periodic summary rather than a stack trace per tick.
+        private val renderFailureLog =
+            RepeatedFailureLog(
+                tag = TAG,
+                message = "unexpected error in drawFrame; keeping tick loop alive",
+            )
+        private val geometryFailureLog =
+            RepeatedFailureLog(
+                tag = TAG,
+                message = "geometry calculation failed; falling back to civil dial",
+                level = Log.WARN,
+            )
+
         init {
             // Keep a strong listener reference for this engine's lifetime. Updates only replace the
             // cached snapshot; hidden engines must not acquire a surface or schedule a tick.
@@ -81,7 +96,7 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             }
             isEngineVisible = visible
             if (visible) {
-                startTicking()
+                runTick()
             } else {
                 stopTicking()
             }
@@ -93,7 +108,7 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             // recreate the surface without a visibility change, and onSurfaceDestroyed cancels the
             // loop, so this is the only place that can resume it in that case.
             if (isEngineVisible) {
-                startTicking()
+                runTick()
             }
         }
 
@@ -111,21 +126,17 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             super.onDestroy()
         }
 
-        // Draw one frame and post the next tick. Safe to call repeatedly: scheduleNextTick clears any
-        // pending callback first, so the loop is never double-scheduled.
-        private fun startTicking() {
-            runTick()
-        }
-
-        // Draws a frame and posts the next tick. Handled argument/state failures return from drawFrame
-        // normally; unexpected exceptions are contained to preserve the tick loop, while severe VM
-        // errors still propagate.
+        // Draws a frame and posts the next tick. Safe to call repeatedly: scheduleNextTick clears any
+        // pending callback first, so the loop is never double-scheduled. Handled argument/state
+        // failures return from drawFrame normally; unexpected exceptions are contained to preserve the
+        // tick loop, while severe VM errors still propagate.
         @Suppress("TooGenericExceptionCaught")
         private fun runTick() {
             try {
                 drawFrame()
+                renderFailureLog.recordSuccess()
             } catch (e: Exception) {
-                Log.e(TAG, "unexpected error in drawFrame; keeping tick loop alive", e)
+                renderFailureLog.recordFailure(e)
             } finally {
                 scheduleNextTick()
             }
@@ -156,22 +167,29 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             return MILLIS_PER_SECOND - millisInSecond
         }
 
+        // Geometry failures degrade to the civil dial instead of blanking the frame. A fault that
+        // lasts is logged on its first tick and summarised, not repeated on every tick.
         @Suppress("TooGenericExceptionCaught")
+        private fun dialGeometryOrNull(instant: Instant, location: ObservingLocation?): DialGeometry? {
+            if (location == null) {
+                geometryFailureLog.recordSuccess()
+                return null
+            }
+            return try {
+                calculator.dialGeometry(instant, location).also { geometryFailureLog.recordSuccess() }
+            } catch (e: RuntimeException) {
+                geometryFailureLog.recordFailure(e)
+                null
+            }
+        }
+
         private fun drawFrame() {
             drawWallpaperFrame(frameHolder ?: surfaceHolder) { canvas ->
                 val instant = clock.instant()
                 val snapshot = settings
                 val location = snapshot.location
                 val civilTime = instant.atZone(location?.zoneId ?: deviceZone()).toLocalTime()
-                val geometry =
-                    location?.let { loc ->
-                        try {
-                            calculator.dialGeometry(instant, loc)
-                        } catch (e: RuntimeException) {
-                            Log.w(TAG, "geometry calculation failed; falling back to civil dial", e)
-                            null
-                        }
-                    }
+                val geometry = dialGeometryOrNull(instant, location)
                 draw(canvas, clockState(civilTime), geometry, snapshot.layers)
             }
         }

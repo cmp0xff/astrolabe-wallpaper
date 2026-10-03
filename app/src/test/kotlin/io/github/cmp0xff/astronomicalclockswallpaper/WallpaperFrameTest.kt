@@ -155,6 +155,22 @@ class WallpaperFrameTest {
     }
 
     @Test
+    fun repeatedDrawFailureLogsOnce() {
+        drawFailure = UnsupportedOperationException("persistent draw")
+        engine.onVisibilityChanged(true)
+        val looper = shadowOf(Looper.getMainLooper())
+        repeat(5) {
+            val delay = looper.nextScheduledTaskTime.toMillis() - SystemClock.uptimeMillis()
+            looper.idleFor(Duration.ofMillis(delay))
+        }
+        // Six failed ticks in total; only the first carries a stack trace.
+        assertEquals(6, drawnCanvases.size)
+        val errors = ShadowLog.getLogsForTag(SERVICE_TAG).filter { it.type == Log.ERROR }
+        assertEquals(1, errors.size)
+        assertEquals("unexpected error in drawFrame; keeping tick loop alive", errors.single().msg)
+    }
+
+    @Test
     fun hiddenEngineStopsDrawing() {
         engine.onVisibilityChanged(true)
         engine.onVisibilityChanged(false)
