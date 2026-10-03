@@ -20,10 +20,17 @@ A USB connection works too; the steps below are transport-independent.
 
 ## Install and launch
 
+The application ID changed from `io.github.cmp0xff.astronomicalclockswallpaper` to
+`io.github.godaniya.astronomicalclockswallpaper` in #47, so Android installs the new build as a
+separate app. Remove any pre-migration debug build first; otherwise both stay installed and the
+old wallpaper binding and saved data remain on the device. Saved site and dial settings do not
+carry over to the new package.
+
 ```sh
-adb install -r app-debug.apk   # replaces the previous debug build in place
+adb uninstall io.github.cmp0xff.astronomicalclockswallpaper.debug   # only if a pre-migration build is installed
+adb install -r app-debug.apk   # replaces a previous build of the same application ID in place
 adb shell am start -n \
-  io.github.cmp0xff.astronomicalclockswallpaper.debug/io.github.cmp0xff.astronomicalclockswallpaper.SettingsActivity
+  io.github.godaniya.astronomicalclockswallpaper.debug/io.github.godaniya.astronomicalclockswallpaper.SettingsActivity
 ```
 
 In **Astro Clocks**, tap **Open wallpaper preview**, then apply it to the home and lock screens.
@@ -32,7 +39,7 @@ In **Astro Clocks**, tap **Open wallpaper preview**, then apply it to the home a
 
 ```sh
 adb shell dumpsys wallpaper                            # active component and visibility
-adb shell pidof io.github.cmp0xff.astronomicalclockswallpaper.debug
+adb shell pidof io.github.godaniya.astronomicalclockswallpaper.debug
 adb logcat --pid=<pid> -v time                         # follow the running wallpaper process
 adb shell screenrecord /sdcard/clock.mp4               # record; press Ctrl-C to stop
 adb pull /sdcard/clock.mp4

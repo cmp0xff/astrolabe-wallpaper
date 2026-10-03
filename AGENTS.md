@@ -52,7 +52,7 @@ pinned toolchain, strict checking policy, and individually justified exceptions.
 
 - Use Kotlin, Canvas, and `WallpaperService` with a small settings app. Keep
   astronomy calculations separable from Android lifecycle and drawing code.
-- Use `io.github.cmp0xff.astronomicalclockswallpaper` as the stable release application ID.
+- Use `io.github.godaniya.astronomicalclockswallpaper` as the stable release application ID.
 - Use Astronomy Engine, pin its version or source revision, and retain its
   notices. Record provenance and licenses for all dependencies and bundled data
   or artwork. Draw original artwork; avoid proprietary SDKs.

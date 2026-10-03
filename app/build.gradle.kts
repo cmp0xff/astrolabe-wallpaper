@@ -8,12 +8,12 @@ plugins {
 }
 
 android {
-    namespace = "io.github.cmp0xff.astronomicalclockswallpaper"
+    namespace = "io.github.godaniya.astronomicalclockswallpaper"
     compileSdk = 37
     buildToolsVersion = "36.0.0"
 
     defaultConfig {
-        applicationId = "io.github.cmp0xff.astronomicalclockswallpaper"
+        applicationId = "io.github.godaniya.astronomicalclockswallpaper"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
@@ -127,6 +127,6 @@ tasks.register<Test>("exportRepresentativeImages") {
     testClassesDirs = unitTest.testClassesDirs
     classpath = unitTest.classpath
     filter {
-        setIncludePatterns("io.github.cmp0xff.astronomicalclockswallpaper.OrlojRepresentativeExport.*")
+        setIncludePatterns("io.github.godaniya.astronomicalclockswallpaper.OrlojRepresentativeExport.*")
     }
 }
