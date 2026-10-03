@@ -470,8 +470,9 @@ Host verification covers these paths across API 26 and 36 via Robolectric:
   feedback, and verifies that a stored `-0.0` coordinate does not take the edited branch.
 - `LocationStoreTest`: verifies that `load(repair = false)` does not persist repairs.
 
-**Physical-device status.** On 2026-10-03, the debug APK installed successfully on a connected
-Android 16 physical device. The device was locked at the system keyguard, so the settings UI could
-not be interacted with; the following interactive checks remain unrun: setting phone timezone away
-from the observing site, observing prefilled fields, performing an untouched Save, and editing one
-coordinate to confirm `(current)` versus `(manual)` provenance retention.
+**Physical-device status.** On 2026-10-03, the debug APK was installed and exercised on a connected
+Android 16 physical device. Using public Prague coordinates, manual Save showed `(manual)` and
+`Europe/Prague`; an untouched repeat Save visibly showed "Coordinates unchanged; nothing to save.";
+editing the longitude still showed `(manual)` and the edited site persisted through a force-stop and
+relaunch. The `CURRENT_COARSE` provenance-retention path was not exercised with the device's private
+location; Robolectric coverage verifies it, including preservation of a distinct geographic timezone.
