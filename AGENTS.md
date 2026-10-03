@@ -98,8 +98,8 @@ Every AI-authored commit must include a body recording:
 - Verification actually performed, with unrun checks and limitations stated.
 
 End each AI-authored commit with **one `Co-Authored-By` trailer per distinct
-contributor, never duplicated**. A trailer names the actual disclosed model and
-its provider's no-reply address, for example
+contributor, never duplicated**. For model contributors, a trailer names the
+actual disclosed model and its provider's no-reply address, for example
 `Co-Authored-By: deepseek-v4-flash-vision-exp <noreply@deepseek.com>`. Name the
 model itself, not the client, harness, or tool that drove it; the client identity
 is acceptable only when the model is unavailable. Inspect the complete message
@@ -114,7 +114,7 @@ Two cases legitimately add a further trailer:
   hardcoding a fixed identity. For the account that posts Copilot's reviews the
   GitHub API reports the id `175728472` for
   `copilot-pull-request-reviewer[bot]`, giving
-  `Co-authored-by: Copilot <175728472+copilot@users.noreply.github.com>`.
+  `Co-authored-by: Copilot <175728472+copilot-pull-request-reviewer[bot]@users.noreply.github.com>`.
   One trailer per addressed reviewer. A reviewer credited on one commit is not
   re-credited on unrelated commits in the same pull request.
 - **A commit that more than one model materially authored** — a rebase that
