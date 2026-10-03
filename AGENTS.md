@@ -9,8 +9,12 @@ pinned toolchain, strict checking policy, and individually justified exceptions.
 
 ## Working defaults
 
-- Preserve unrelated changes and existing signed history. Follow current user
-  instructions and repository configuration and CI requirements.
+- Preserve unrelated changes in the working tree, and the signed commits on the
+  branch you are working on. The default [squash merge](#merge-method) keeps
+  those commits on the pull request's head ref instead of `main`'s ancestry;
+  that is intended, not lost history, and not a reason to change the merge.
+  Follow current user instructions and repository configuration and CI
+  requirements.
 - After the initial bootstrap on `main`, develop on issue-linked branches in
   native-filesystem sibling worktrees named
   `astronomical-clocks-wallpaper-<issue-number>-<short-description>`. Use branch names such
@@ -101,11 +105,44 @@ is acceptable only when the model is unavailable. Inspect the complete message
 before committing to prevent duplicate trailers. Never invent model versions,
 tests, decisions, or review evidence.
 
+The "exactly one" rule governs the commits an agent authors. GitHub's squash
+merge consolidates `Co-authored-by:` trailers across squashed commits and appends
+a further line for the pull request author, so the commit that lands on `main`
+may carry multiple trailers (e.g. two for a single-model PR, or more when
+multiple models or contributors participated). That is expected and is not a
+duplicate-trailer defect to fix.
+
 Preserve Git signing. Do not disable signing to work around unavailable agent
-access. Confirm the created commit is signed and verify it before the handoff.
-The repository-local author identity is
-`cmp0xff <5564164+cmp0xff@users.noreply.github.com>`; do not replace it with an
-employer identity or change global Git settings.
+access. Confirm each commit you create is signed, and verify it before the
+handoff. Merge method does not change this: under the default [squash
+merge](#merge-method) the SSH-signed commits stay on the PR branch while `main`
+receives a single commit signed by GitHub's web-flow key. Treat that as the
+expected outcome, not as a signing failure. The repository-local author identity
+is `cmp0xff <5564164+cmp0xff@users.noreply.github.com>`; do not replace it with
+an employer identity or change global Git settings.
+
+## Merge method
+
+GitHub's **squash merge** is the default for this repository, and the owner
+merges through the GitHub UI. Do not use a merge commit or a rebase merge, and
+do not argue for one, unless the owner explicitly asks.
+
+- The squash merge lands one commit on `main`: with
+  `squash_merge_commit_title: COMMIT_OR_PR_TITLE`, the subject defaults to the
+  pull request title (with PR number) for multi-commit PRs, or to the single
+  commit's title for single-commit PRs. Under
+  `squash_merge_commit_message: COMMIT_MESSAGES`, original commit messages
+  (subject lines and bodies) are preserved — write every commit message to
+  stand alone, since it outlives its individual commit.
+- The squash commit is signed by GitHub's web-flow key (committer
+  `GitHub <noreply@github.com>`), not by the agent's SSH key. GitHub also appends
+  a `Co-authored-by:` line for the PR author, so the merged commit can carry
+  additional trailers. Both are expected.
+- The PR head commits remain reachable on GitHub at `refs/pull/<number>/head`;
+  they do not enter `main`'s ancestry. Cite them by SHA as usual. (To inspect
+  them in a local clone: `git fetch origin pull/<number>/head`).
+- The remote branch is not automatically deleted on merge
+  (`delete_branch_on_merge: false`); pruning is done manually by the owner.
 
 ## Pull requests and Accountability Index
 
@@ -121,17 +158,21 @@ Follow [.github/pull_request_template.md](.github/pull_request_template.md):
 - Update the index on every push and review round, in the same pass as the
   commit or reply: add one row for every commit pushed (the table must not stop
   at the opening commits), and replace the "Review decisions" line with links to
-  every resolved discussion thread. A table stuck at the opening commits or a
-  stale "none yet" line is itself a review finding. Link evidence without
-  copying extensive rationale. This project explicitly requires this per-commit
-  index, overriding the global default against one.
+  every resolved discussion thread. Those rows cite the PR's own commits, which
+  after the default [squash merge](#merge-method) remain on the PR head ref
+  rather than in `main`'s ancestry; citing them by SHA is still correct, and the
+  index is not expected to match `main` commit-for-commit. A table stuck at the
+  opening commits or a stale "none yet" line is itself a review finding. Link
+  evidence without copying extensive rationale. This project explicitly requires
+  this per-commit index, overriding the global default against one.
 - Link out-of-band evidence the PR depends on — issue-body edits above all — from
   the index too. When the Summary or Verification rests on edited issue bodies,
   reference each edited issue so its audited state is traceable from the PR
   record; verification that relies on such edits but links none of them is
   itself a review finding.
 - Finish with the same visible `Co-Authored-By` identity used for the source work.
-  This attribution does not claim it will survive squash merging.
+  This attribution is not a claim about the merged commit: see
+  [Merge method](#merge-method) for how the squash commit's trailers are formed.
 - Use native, unquoted GitHub references for issues, PRs, and commits: #5,
   `owner/repo#number`, or `owner/repo@sha` (substitute actual values and remove
   code formatting in published text). Use direct links to specific discussion
