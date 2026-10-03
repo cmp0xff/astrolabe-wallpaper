@@ -12,7 +12,6 @@ import android.view.SurfaceView
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -139,15 +138,20 @@ class WallpaperFrameTest {
     }
 
     @Test
-    fun unrelatedDrawFailurePropagates() {
+    fun unrelatedDrawFailureRecovers() {
         val failure = UnsupportedOperationException("unhandled draw")
         drawFailure = failure
-        assertSame(
-            failure,
-            assertThrows(UnsupportedOperationException::class.java) { engine.onVisibilityChanged(true) },
-        )
+        engine.onVisibilityChanged(true)
+        assertEquals(listOf(holder.canvas), drawnCanvases)
         assertEquals(listOf(holder.canvas), holder.postedCanvases)
-        assertTrue(ShadowLog.getLogsForTag(RENDER_TAG).isEmpty())
+        assertLog(
+            level = Log.ERROR,
+            tag = SERVICE_TAG,
+            message = "unexpected error in drawFrame; keeping tick loop alive",
+            failure = failure,
+        )
+        drawFailure = null
+        assertNextFrameSucceeds()
     }
 
     @Test

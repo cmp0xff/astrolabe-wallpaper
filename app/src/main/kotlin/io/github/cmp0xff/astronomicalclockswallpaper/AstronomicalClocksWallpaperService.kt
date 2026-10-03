@@ -114,8 +114,18 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
         // Draw one frame and post the next tick. Safe to call repeatedly: scheduleNextTick clears any
         // pending callback first, so the loop is never double-scheduled.
         private fun startTicking() {
+            runTick()
+        }
+
+        // Draws a frame and posts the next tick. Handled argument/state failures return from drawFrame
+        // normally; unexpected exceptions are contained to preserve the tick loop, while severe VM
+        // errors still propagate.
+        @Suppress("TooGenericExceptionCaught")
+        private fun runTick() {
             try {
                 drawFrame()
+            } catch (e: Exception) {
+                Log.e(TAG, "unexpected error in drawFrame; keeping tick loop alive", e)
             } finally {
                 scheduleNextTick()
             }
@@ -126,22 +136,11 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             handler.removeCallbacksAndMessages(null)
         }
 
-        // Handled argument/state failures return from drawFrame normally so the next tick is posted.
-        // Unexpected exceptions are contained to preserve the tick loop; severe VM errors still propagate.
-        @Suppress("TooGenericExceptionCaught")
         private fun scheduleNextTick() {
             handler.removeCallbacksAndMessages(null)
             val isScheduled =
                 handler.postDelayed(
-                    Runnable {
-                        try {
-                            drawFrame()
-                        } catch (e: Exception) {
-                            Log.e(TAG, "unexpected error in drawFrame; keeping tick loop alive", e)
-                        } finally {
-                            scheduleNextTick()
-                        }
-                    },
+                    Runnable { runTick() },
                     millisUntilNextWholeSecond(),
                 )
             if (!isScheduled) {

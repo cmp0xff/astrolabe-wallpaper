@@ -152,27 +152,13 @@ internal class DialRenderer {
 }
 
 /** Contains argument and canvas-state failures while preserving the scheduled per-second redraw. */
-internal fun containRenderFailure(stage: String? = null, draw: () -> Unit) {
+internal fun containRenderFailure(draw: () -> Unit) {
     try {
         draw()
     } catch (e: IllegalArgumentException) {
-        val detail = listOfNotNull(stage, e.message).joinToString(": ")
-        val message =
-            if (detail.isEmpty()) {
-                "skipping frame: invalid render argument"
-            } else {
-                "skipping frame: invalid render argument: $detail"
-            }
-        Log.e(TAG, message, e)
+        Log.e(TAG, "skipping frame: invalid render argument: ${e.message.orEmpty()}", e)
     } catch (e: IllegalStateException) {
-        val detail = listOfNotNull(stage, e.message).joinToString(": ")
-        val message =
-            if (detail.isEmpty()) {
-                "skipping frame: canvas in an invalid state"
-            } else {
-                "skipping frame: canvas in an invalid state: $detail"
-            }
-        Log.e(TAG, message, e)
+        Log.e(TAG, "skipping frame: canvas in an invalid state: ${e.message.orEmpty()}", e)
     }
 }
 

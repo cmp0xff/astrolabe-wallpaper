@@ -8,7 +8,6 @@ import android.view.SurfaceView
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -189,14 +188,15 @@ class WallpaperFoundationTest {
                 calculator = calculator,
             )
         engines.add(engine)
-        assertThrows(ArithmeticException::class.java) {
-            engine.onVisibilityChanged(true)
-        }
+        ShadowLog.clear()
+        engine.onVisibilityChanged(true)
         val looper = shadowOf(Looper.getMainLooper())
         assertTrue(
             "Next tick must be scheduled after initial draw error",
             looper.nextScheduledTaskTime > Duration.ZERO,
         )
+        val logs = ShadowLog.getLogsForTag("AstronomicalClocksWallpaperService")
+        assertTrue(logs.any { it.type == Log.ERROR && it.msg.contains("unexpected error in drawFrame") })
     }
 
     private fun engine(clock: Clock = Clock.fixed(instant, ZoneOffset.UTC)): WallpaperService.Engine {

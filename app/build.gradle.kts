@@ -118,6 +118,7 @@ tasks.withType<Test>().configureEach {
 tasks.register<Test>("exportRepresentativeImages") {
     description = "Exports representative Orloj dial Canvas PNGs to build/reports/orloj."
     group = "verification"
+    outputs.dir(layout.buildDirectory.dir("reports/orloj"))
     val testTask = tasks.named<Test>("testDebugUnitTest")
     testClassesDirs = files(testTask.map { it.testClassesDirs })
     classpath = files(testTask.map { it.classpath })

@@ -9,8 +9,9 @@ import kotlin.math.abs
  * Paints the geometric plate inside the sky boundary. The Sun layer adds the day/twilight/night
  * fills and draws their horizon and night contour strokes; the tropics, equator, and rim stay.
  *
- * Caches static plate geometry keyed by observer latitude and true obliquity, pre-allocating Path
- * objects so per-second ticks allocate zero heap objects.
+ * Caches the static plate geometry keyed by observer latitude and true obliquity, so steady-state
+ * ticks redraw pre-built Path objects instead of re-sampling contours or allocating new paths.
+ * Each frame still builds an OrlojProjection for the rotating zodiac ring.
  */
 internal class OrlojPlateRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)

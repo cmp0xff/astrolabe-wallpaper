@@ -186,12 +186,12 @@ class DialRendererTest {
     @Test
     fun renderFailuresAreContained() {
         ShadowLog.clear()
-        containRenderFailure("plate") { throw IllegalArgumentException("invalid argument") }
-        containRenderFailure("grid") { throw IllegalStateException("invalid state") }
+        containRenderFailure { throw IllegalArgumentException("invalid argument") }
+        containRenderFailure { throw IllegalStateException("invalid state") }
         val logs = ShadowLog.getLogsForTag("DialRenderer").filter { it.type == Log.ERROR }
         assertEquals(2, logs.size)
-        assertTrue(logs[0].msg.contains("invalid argument") && logs[0].msg.contains("plate"))
-        assertTrue(logs[1].msg.contains("invalid state") && logs[1].msg.contains("grid"))
+        assertTrue(logs[0].msg.contains("invalid argument"))
+        assertTrue(logs[1].msg.contains("invalid state"))
         var hasDrawn = false
         containRenderFailure { hasDrawn = true }
         assertTrue(hasDrawn)
