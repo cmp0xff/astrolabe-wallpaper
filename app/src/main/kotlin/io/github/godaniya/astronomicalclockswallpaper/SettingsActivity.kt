@@ -43,7 +43,7 @@ class SettingsActivity : Activity() {
         ).setOnClickListener { requestCurrentLocation(forceFresh = false) }
         findViewById<Button>(R.id.refresh_location).setOnClickListener { requestCurrentLocation(forceFresh = true) }
         findViewById<Button>(R.id.save_location).setOnClickListener { saveManualLocation() }
-        displayLocation(locationStore.load(), seedInputs = savedInstanceState == null)
+        displayLocation(locationStore.load(repair = false), seedInputs = savedInstanceState == null)
         bindDialLayers()
     }
 
@@ -105,7 +105,7 @@ class SettingsActivity : Activity() {
                         latitude = fix.latitude,
                         longitude = fix.longitude,
                         source = ObservingLocation.Source.CURRENT_COARSE,
-                        zoneId = locationStore.load()?.zoneId ?: ZoneId.systemDefault(),
+                        zoneId = locationStore.load(repair = false)?.zoneId ?: ZoneId.systemDefault(),
                     )
                 locationStore.save(location)
                 displayLocation(location, seedInputs = true)
@@ -126,6 +126,15 @@ class SettingsActivity : Activity() {
             return
         }
         locationProvider.cancel()
+        val stored = locationStore.load(repair = false)
+        val isUnchanged =
+            stored != null &&
+                latitudeInput.text.toString().trim() == formatSeedCoordinate(stored.latitude) &&
+                longitudeInput.text.toString().trim() == formatSeedCoordinate(stored.longitude)
+        if (isUnchanged) {
+            Toast.makeText(this, R.string.location_saved, Toast.LENGTH_SHORT).show()
+            return
+        }
         val location =
             ObservingLocation(
                 latitude = latitude,

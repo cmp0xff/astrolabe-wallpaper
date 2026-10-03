@@ -58,6 +58,41 @@ class SettingsActivityAcquisitionTest {
     }
 
     @Test
+    fun unchangedSaveKeepsAcquisition() {
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            activity.findViewById<Button>(R.id.refresh_location).performClick()
+            val listener = locationShadow.networkListeners().single()
+            listener.onLocationChanged(location())
+            shadowOf(Looper.getMainLooper()).idle()
+
+            val stored = requireNotNull(LocationStore(activity).load())
+            assertEquals(ObservingLocation.Source.CURRENT_COARSE, stored.source)
+
+            // Trigger another refresh so a network listener is active
+            activity.findViewById<Button>(R.id.refresh_location).performClick()
+            val refreshListener = locationShadow.networkListeners().single()
+
+            // Save without editing coordinates
+            activity.findViewById<Button>(R.id.save_location).performClick()
+            assertTrue(locationShadow.networkListeners().isEmpty())
+
+            // Queued fix does not overwrite
+            val lateFix = Location(LocationManager.NETWORK_PROVIDER)
+            lateFix.latitude = 50.0
+            lateFix.longitude = 14.0
+            refreshListener.onLocationChanged(lateFix)
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(11))
+
+            val afterSave = requireNotNull(LocationStore(activity).load())
+            assertEquals(ObservingLocation.Source.CURRENT_COARSE, afterSave.source)
+            assertEquals(stored.latitude, afterSave.latitude, 0.0)
+            assertEquals(stored.longitude, afterSave.longitude, 0.0)
+            assertTrue(activity.findViewById<TextView>(R.id.location_current).text.contains("(current)"))
+        }
+    }
+
+    @Test
     fun invalidInputKeepsAcquisition() {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
             val activity = controller.setup().get()

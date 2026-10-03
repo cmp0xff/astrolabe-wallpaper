@@ -449,3 +449,28 @@ without a debug hook this build does not carry. `WallpaperFrameTest` and `Wallpa
 remain its evidence, and this pass verifies only that the containment path leaves the rendered output
 and the 1 Hz tick loop unchanged. The cadence check still shows only that a frame is produced once
 per second; battery and frame-cost qualification remain #6.
+
+## Unchanged Save provenance and timezone retention (#42)
+
+The changes in `fix/42-unchanged-save-provenance` prevent an untouched **Save coordinates** action
+from silently converting a `CURRENT_COARSE` site to `MANUAL` and overwriting its preserved geographic
+timezone with the phone's system default timezone. It also makes `LocationStore.load(repair = false)`
+a pure read so that checking coordinates never triggers a repair write.
+
+Host verification covers these paths across API 26 and 36 via Robolectric:
+- `SettingsActivityTimezoneTest`: verifies that after acquiring a location on a site with a distinct
+  geographic timezone, tapping Save coordinates untouched preserves `CURRENT_COARSE` and its timezone;
+  verifies that cold-opening on a saved `CURRENT_COARSE` site and tapping Save coordinates without
+  edits preserves `CURRENT_COARSE` and its timezone; and verifies that edited coordinates still switch
+  to `MANUAL` and capture the device timezone.
+- `SettingsActivityAcquisitionTest`: verifies refresh-then-save preserves `CURRENT_COARSE` and cancels
+  in-flight location acquisition.
+- `SettingsActivityTest`: verifies that an unchanged Save produces zero SharedPreferences writes even
+  when an invalid timezone is present, and verifies that a stored `-0.0` coordinate does not take the
+  edited branch.
+- `LocationStoreTest`: verifies that `load(repair = false)` does not persist repairs.
+
+**Unrun physical-device checks.** Physical device interactive checks (setting phone timezone away
+from observing site via `cmd alarm set-timezone`, observing prefilled fields, performing an untouched
+Save, and editing one coordinate to confirm `(current)` vs `(manual)` provenance retention in
+`shared_prefs/observing_location.xml`) were not run during development and remain to be run on device.
