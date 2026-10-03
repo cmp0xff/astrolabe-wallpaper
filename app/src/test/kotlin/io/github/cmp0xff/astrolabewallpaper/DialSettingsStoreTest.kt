@@ -22,7 +22,7 @@ class DialSettingsStoreTest {
     @Test
     fun layersDefaultToEnabled() {
         assertEquals(
-            DialLayers(isZodiacRingEnabled = true, isDayAndNightEnabled = true),
+            DialLayers(isZodiacRingEnabled = true, isSunEnabled = true),
             DialSettingsStore(application)
                 .load(),
         )
@@ -31,11 +31,11 @@ class DialSettingsStoreTest {
     @Test
     fun choicesSurviveNewStore() {
         for (isZodiacEnabled in listOf(false, true)) {
-            for (isDayNightEnabled in listOf(false, true)) {
+            for (isSun in listOf(false, true)) {
                 val expected =
                     DialLayers(
                         isZodiacRingEnabled = isZodiacEnabled,
-                        isDayAndNightEnabled = isDayNightEnabled,
+                        isSunEnabled = isSun,
                     )
                 DialSettingsStore(application).save(expected)
                 assertEquals(expected, DialSettingsStore(application).load())
@@ -44,15 +44,27 @@ class DialSettingsStoreTest {
     }
 
     @Test
+    fun staleDayAndNightKeyIsIgnored() {
+        // The layer was renamed from day_and_night to sun before release, so a stored old key is
+        // simply unread and the toggle returns to its enabled default.
+        application
+            .getSharedPreferences("dial_settings", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("day_and_night", false)
+            .apply()
+        assertEquals(DialLayers(), DialSettingsStore(application).load())
+    }
+
+    @Test
     fun badSettingKeepsOtherChoice() {
         val preferences = application.getSharedPreferences("dial_settings", Context.MODE_PRIVATE)
         preferences
             .edit()
             .putString("zodiac_ring", "broken")
-            .putBoolean("day_and_night", false)
+            .putBoolean("sun", false)
             .apply()
         assertEquals(
-            DialLayers(isZodiacRingEnabled = true, isDayAndNightEnabled = false),
+            DialLayers(isZodiacRingEnabled = true, isSunEnabled = false),
             DialSettingsStore(application)
                 .load(),
         )
@@ -65,23 +77,23 @@ class DialSettingsStoreTest {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
             val activity = controller.setup().get()
             val zodiac = activity.findViewById<CheckBox>(R.id.zodiac_ring)
-            val dayNight = activity.findViewById<CheckBox>(R.id.day_and_night)
+            val sun = activity.findViewById<CheckBox>(R.id.sun_layer)
             assertTrue(zodiac.isChecked)
-            assertTrue(dayNight.isChecked)
+            assertTrue(sun.isChecked)
             zodiac.performClick()
             assertEquals(
-                DialLayers(isZodiacRingEnabled = false, isDayAndNightEnabled = true),
+                DialLayers(isZodiacRingEnabled = false, isSunEnabled = true),
                 DialSettingsStore(activity)
                     .load(),
             )
-            dayNight.performClick()
+            sun.performClick()
             controller.recreate()
             val recreated = controller.get()
             assertFalse(recreated.findViewById<CheckBox>(R.id.zodiac_ring).isChecked)
-            assertFalse(recreated.findViewById<CheckBox>(R.id.day_and_night).isChecked)
+            assertFalse(recreated.findViewById<CheckBox>(R.id.sun_layer).isChecked)
             recreated.findViewById<CheckBox>(R.id.zodiac_ring).performClick()
             assertEquals(
-                DialLayers(isZodiacRingEnabled = true, isDayAndNightEnabled = false),
+                DialLayers(isZodiacRingEnabled = true, isSunEnabled = false),
                 DialSettingsStore(activity)
                     .load(),
             )

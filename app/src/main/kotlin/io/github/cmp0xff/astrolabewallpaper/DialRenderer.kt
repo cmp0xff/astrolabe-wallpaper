@@ -48,7 +48,7 @@ internal class DialRenderer {
             canvas.scale(radius / OUTER_RADIUS, radius / OUTER_RADIUS)
             drawCivilScale(canvas)
             val projection = geometry?.let(::OrlojProjection)
-            plate.draw(canvas, projection, layers.isDayAndNightEnabled)
+            plate.draw(canvas, projection, layers.isSunEnabled)
             if (projection != null && layers.isZodiacRingEnabled) {
                 zodiac.draw(canvas, projection)
             }

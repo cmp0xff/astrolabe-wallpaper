@@ -1,5 +1,6 @@
 package io.github.cmp0xff.astrolabewallpaper
 
+import kotlin.math.abs
 import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.atan2
@@ -7,21 +8,37 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.tan
 
-/** Canvas-oriented coordinates, normalized to the outer Tropic of Cancer radius. */
+/** Canvas-oriented coordinates, normalized to the outer sky boundary (Cancer north, Capricorn south). */
 internal data class DialPoint(val x: Double, val y: Double)
 
 /** An exact projected circle in normalized dial coordinates. */
 internal data class DialCircle(val center: DialPoint, val radius: Double)
 
 /**
- * Prague's north-pole stereographic projection: Cancer outside, Capricorn inside.
- * Angles use the true equator/ecliptic of date; the reference plate is geometric and unrefracted.
- * See https://astro.cas.cz/bh2010/files/praha.pdf, printed pages 4–5.
+ * Stereographic projection of the sky onto the dial plane, taken from the celestial pole above the
+ * horizon: the north pole for a northern site, the south pole for a southern one. Angles use the
+ * true equator/ecliptic of date; the reference plate is geometric and unrefracted.
+ *
+ * On a northern plate Cancer (declination +obliquity) is the outer sky boundary, Capricorn the
+ * inner tropic, and the dial centre is the south celestial pole at altitude -latitude. A southern
+ * plate is the same construction viewed from the other pole: Capricorn becomes the outer boundary
+ * and Cancer the inner tropic, and the centre is the north celestial pole, still at altitude
+ * -|latitude|. Because the centre is always the pole below the horizon, the night disc nests inside
+ * the twilight disc in both hemispheres.
+ *
+ * The drawn circles and the altitude regions at latitude -|latitude| are numerically identical to
+ * those at +|latitude|; only the sky content moves, radially inverted through the equator circle.
+ * The zodiac ring is therefore point-reflected through the dial centre and jumps by 180 degrees as
+ * a site crosses the equator, while the shading does not.
+ *
+ * See https://astro.cas.cz/bh2010/files/praha.pdf, printed pages 4–5, for the north-pole plate.
  */
 internal class OrlojProjection(private val geometry: AstrolabeGeometry) {
     private val obliquityRad = Math.toRadians(geometry.trueObliquityDeg)
     private val siderealRad = Math.toRadians(geometry.localSiderealAngleDeg)
-    private val latitudeRad = Math.toRadians(geometry.latitudeDeg)
+    private val isSouthern = geometry.latitudeDeg < 0
+    private val zodiacCenterSign = if (isSouthern) 1.0 else -1.0
+    private val latitudeRad = Math.toRadians(abs(geometry.latitudeDeg))
     private val cancerRadius = tan(QUARTER_TURN_RAD / 2 + obliquityRad / 2)
 
     val equatorRadius: Double = 1 / cancerRadius
@@ -30,8 +47,8 @@ internal class OrlojProjection(private val geometry: AstrolabeGeometry) {
         DialCircle(
             center =
                 DialPoint(
-                    x = -(1 - capricornRadius) * cos(siderealRad) / 2,
-                    y = -(1 - capricornRadius) * sin(siderealRad) / 2,
+                    x = zodiacCenterSign * (1 - capricornRadius) * cos(siderealRad) / 2,
+                    y = zodiacCenterSign * (1 - capricornRadius) * sin(siderealRad) / 2,
                 ),
             radius = (1 + capricornRadius) / 2,
         )
@@ -41,7 +58,8 @@ internal class OrlojProjection(private val geometry: AstrolabeGeometry) {
         val equatorialX = cos(longitude)
         val equatorialY = sin(longitude) * cos(obliquityRad)
         val equatorialZ = sin(longitude) * sin(obliquityRad)
-        val scale = equatorRadius / (1 - equatorialZ)
+        val polarDistance = if (isSouthern) 1 + equatorialZ else 1 - equatorialZ
+        val scale = equatorRadius / polarDistance
         return DialPoint(
             x = (sin(siderealRad) * equatorialX - cos(siderealRad) * equatorialY) * scale,
             y = -(cos(siderealRad) * equatorialX + sin(siderealRad) * equatorialY) * scale,
@@ -89,7 +107,10 @@ private class AltitudeContour(
     }
 
     private val altitudeRad = Math.toRadians(altitudeDeg)
-    private val latitudeRad = Math.toRadians(geometry.latitudeDeg)
+
+    // Regions depend only on |latitude|: a south-pole plate at -phi is the mirror of a north-pole
+    // plate at +|phi|, so sampling the same sky circles reproduces the same drawn contours.
+    private val latitudeRad = Math.toRadians(abs(geometry.latitudeDeg))
     private val capDeclination = sin(Math.toRadians(geometry.trueObliquityDeg))
     private val centerDeclination = sin(altitudeRad) * sin(latitudeRad)
     private val declinationAmplitude = cos(altitudeRad) * cos(latitudeRad)

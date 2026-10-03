@@ -20,41 +20,59 @@ retain their earlier contracts; the foundation does not compute the full body/ev
 ## Projection
 
 The [Astronomical Institute's Prague guide](https://astro.cas.cz/bh2010/files/praha.pdf), printed
-pages 4–5 (PDF pages 4–5), describes the unusual north-pole projection: Cancer is the outer sky
-boundary, Capricorn the inner tropic, and the equator lies between them. The complete ecliptic is
-a rotating offset circle, including the part below the horizon. We preserve this projection
-worldwide and adapt the horizon to the saved latitude.
+pages 4–5 (PDF pages 4–5), describes the Prague instrument's unusual north-pole stereographic
+projection. The public descriptions of the clock in the Sources section below agree on it: Cancer
+is the outer sky boundary, Capricorn the inner tropic, and the equator lies between them. The
+complete ecliptic is a rotating offset circle, including the part below the horizon.
 
-For hour angle `H = local apparent sidereal angle − right ascension` and declination `δ`:
+The projection is taken from the celestial pole above the horizon: the north pole for a northern
+site, the south pole for a southern one. For hour angle
+`H = local apparent sidereal angle − right ascension` and declination `δ`:
 
 ```text
-r = tan(45° + δ/2)
+northern plate: r = tan(45° + δ/2)
+southern plate: r = tan(45° − δ/2)
 x = r sin(H)
 y = −r cos(H)
 ```
 
 Screen x increases rightward and y downward. Divide both coordinates by
-`tan(45° + trueObliquity/2)` so Cancer has radius 1. The equator radius is the inverse of that
-factor, and Capricorn is its square. Increasing sidereal angle rotates the projected sky clockwise.
-Ecliptic longitude is converted through the true obliquity into equatorial coordinates before
-projection; equal longitude intervals are not equal intervals around the offset circle. The twelve
-labels denote tropical zodiac signs, rather than the unequal IAU constellations.
+`tan(45° + trueObliquity/2)` so the outer sky boundary has radius 1. On a northern plate that
+boundary is Cancer (declination +obliquity) and Capricorn is the inner tropic; on a southern plate
+the two swap — **Capricorn is outside and Cancer inside** — because the south-pole plate is the
+radial inversion of the north-pole plate through the equator circle. The equator radius is the
+inverse of the normalizing factor and the inner tropic its square on both plates. Increasing
+sidereal angle rotates the projected sky clockwise. Ecliptic longitude is converted through the
+true obliquity into equatorial coordinates before projection; equal longitude intervals are not
+equal intervals around the offset circle. The twelve labels denote tropical zodiac signs, rather
+than the unequal IAU constellations.
 
-The plate is geometric and unrefracted. For raw projected coordinates before Cancer normalization,
-observer latitude `φ`, and `q = x² + y²`, its altitude satisfies:
+Because a southern plate is the point reflection of a northern one, the dial centre is always the
+celestial pole below the horizon — the south pole at altitude −latitude on a northern plate, the
+north pole at altitude −|latitude| on a southern one. The night disc therefore nests inside the
+twilight disc in both hemispheres, as on the Prague instrument. The sky content follows the
+projection rather than the shading: the zodiac ring is point-reflected and jumps by 180° as a site
+crosses the equator, while the shaded regions do not change. The published descriptions are all of
+the Prague instrument at 50°N; none discusses southern latitudes, so the south-pole construction —
+the Capricorn/Cancer swap, the point-reflected zodiac, and the night-inside-twilight nesting — is
+documented here explicitly rather than cited.
+
+The plate is geometric and unrefracted. For raw projected coordinates before normalizing, observer
+latitude magnitude `|φ|`, and `q = x² + y²`, its altitude satisfies:
 
 ```text
-sin(altitude) = [sin(φ) (q − 1) − 2 cos(φ) y] / (q + 1)
+sin(altitude) = [sin(|φ|) (q − 1) − 2 cos(|φ|) y] / (q + 1)
 ```
 
-Day is altitude ≥ 0°, twilight is −18° ≤ altitude < 0°, and astronomical night is below −18°.
-These are sky regions on the fixed plate, not a whole-screen tint based on the current Sun.
-Equatorial horizons are lines; polar horizons are circles. The projected horizon and night
-contours are bounded to the Cancer disk so nearly equatorial sites do not generate enormous
-Canvas coordinates. Contour samples are at most one degree apart on the sphere; for terrestrial
-obliquity below 24°, their chord error is below 0.25 pixels at a 500-pixel sky radius. The plate
-fills these sampled contours; which side of a threshold a point lies on is decided analytically
-instead. The zodiac remains complete over every plate region.
+The regions depend only on `|φ|`, so both hemispheres shade the same circles. Day is altitude ≥ 0°,
+twilight is −18° ≤ altitude < 0°, and astronomical night is below −18°. These are sky regions on
+the fixed plate, not a whole-screen tint based on the current Sun. Equatorial horizons are lines;
+polar horizons are circles. The projected horizon and night contours are bounded to the sky disk so
+nearly equatorial sites do not generate enormous Canvas coordinates. Contour samples are at most one
+degree apart on the sphere; for terrestrial obliquity below 24°, their chord error is below 0.25
+pixels at a 500-pixel sky radius. The plate fills these sampled contours; which side of a threshold
+a point lies on is decided analytically instead. The zodiac remains complete over every plate
+region.
 
 ## Clock, settings, and lifecycle
 
@@ -62,16 +80,38 @@ The Roman scale shows 24 civil hours: XII at the top, XXIV at the bottom, VI on 
 on the right. One hand follows saved-site civil time including DST. Its angle is independent of
 the zodiac's sidereal rotation; it is not a solar position marker.
 
-**Zodiac ring** and **Day and night** default to enabled and persist across recreation. The first
-controls the rotating zodiac and its labels; the second controls the plate's day/twilight/night
-colors. The reference horizon, night boundary, equator, and tropics remain visible when a site is
-saved. Without a saved site, only the civil clock is shown, using the phone timezone. Settings
-explains that an observing location is required for sky geometry.
+**Zodiac ring** and **Sun** default to enabled and persist across recreation. The first controls the
+rotating zodiac and its labels; the second controls the day/twilight/night shading together with the
+horizon and astronomical-night boundaries it draws — with it off the plate degrades to a clean
+instrument grid, keeping the tropics, the equator, and the outer rim. The solar marker itself
+arrives with #27, when this layer gains it. The toggle was renamed from "Day and night" to "Sun"
+before release; a stored value under the old `day_and_night` key is ignored rather than migrated, so
+the layer returns to its enabled default. Without a saved site, only the civil clock is shown, using
+the phone timezone. Settings explains that an observing location is required for sky geometry.
 
 Each engine listens for location and layer changes, maintains one immutable settings snapshot,
 and draws each frame from one instant. Updates take effect on the next visible tick. Hidden
 engines do not start rendering, and destroyed engines unregister both preference listeners.
 Rendering stays at one frame per second while visible.
+
+## Sources
+
+The projection, the day/twilight/night regions, and the night circle follow these descriptions of
+the Prague instrument:
+
+- Astronomical Institute of the Czech Academy of Sciences, guide to the Old Town Hall
+  astronomical clock — <https://astro.cas.cz/bh2010/files/praha.pdf>, printed pages 4–5.
+- Wikipedia, *Prague astronomical clock* —
+  <https://en.wikipedia.org/wiki/Prague_astronomical_clock>.
+- `orloj.org` — <https://orloj.org/>.
+- `orloj.cesnet.cz` — <https://orloj.cesnet.cz/>.
+- *Prague* at `wijzerweb.be` — <https://wijzerweb.be/prague.html>.
+- The `kshetline/prague-clock` simulator — <https://github.com/kshetline/prague-clock>.
+- The `drifted.in/horologium-app` astrolabe simulator — <https://drifted.in/horologium-app/>.
+
+All of them describe the Prague instrument at 50°N. None discusses southern latitudes; the
+south-pole construction this project uses for them is documented above and is not taken from these
+sources.
 
 ## Verification
 
@@ -83,7 +123,8 @@ The comparison tolerances (0.0001° sidereal angle, 0.00003° obliquity) describ
 those fixtures, not physical UT1 accuracy. Omitting measured DUT1 can shift sidereal angle by
 up to 13.5 arcseconds. Analytic projection
 tests cover equinoxes/solstices, circle tangencies, rotation direction, northern/southern sites,
-the equator, poles, and day/night classification. Robolectric tests cover layer persistence,
+the equator, poles, day/night classification, the southern mirror of the altitude field, and the
+point-reflected southern zodiac. Robolectric tests cover layer persistence,
 missing-location behavior, same-instant frame calculation, and hidden/destroyed engines.
 Canvas tests inspect representative renders and export PNGs under `app/build/reports/orloj`.
 

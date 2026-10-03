@@ -84,16 +84,22 @@ class DialRendererTest {
     }
 
     @Test
-    fun dayNightToggleKeepsPlainPlate() {
-        val bitmap =
-            render(
-                geometry = prague,
-                layers = DialLayers(isZodiacRingEnabled = false, isDayAndNightEnabled = false),
-            )
-        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = -0.8)))
-        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = -0.7, y = 0.2)))
-        assertFalse(containsColor(bitmap, DialStyle.SKY))
-        assertFalse(containsColor(bitmap, DialStyle.TWILIGHT))
+    fun sunToggleKeepsPlainPlate() {
+        val plain = DialLayers(isZodiacRingEnabled = false, isSunEnabled = false)
+        val off = render(geometry = prague, layers = plain)
+        assertEquals(DialStyle.NIGHT, pixelAt(off, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.NIGHT, pixelAt(off, DialPoint(x = -0.7, y = 0.2)))
+        assertFalse(containsColor(off, DialStyle.SKY))
+        assertFalse(containsColor(off, DialStyle.TWILIGHT))
+        // The toggle hides its own boundary strokes too, not just the fills. Probe contour points
+        // that stay clear of the equator and tropic grid circles, with the zodiac disabled.
+        val on = render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
+        val horizon = DialPoint(x = 0.79, y = 0.22)
+        val night = DialPoint(x = -0.57, y = 0.5)
+        assertTrue(containsColorNear(on, horizon, DialStyle.GOLD))
+        assertFalse(containsColorNear(off, horizon, DialStyle.GOLD))
+        assertTrue(containsColorNear(on, night, DialStyle.MUTED_GOLD))
+        assertFalse(containsColorNear(off, night, DialStyle.MUTED_GOLD))
     }
 
     @Test
@@ -212,6 +218,17 @@ class DialRendererTest {
         val pixels = IntArray(bitmap.width * bitmap.height)
         bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
         return color in pixels
+    }
+
+    private fun containsColorNear(bitmap: Bitmap, point: DialPoint, color: Int): Boolean {
+        val x = (CENTER + point.x * SKY_RADIUS).roundToInt()
+        val y = (CENTER + point.y * SKY_RADIUS).roundToInt()
+        for (dx in -PROBE_RADIUS..PROBE_RADIUS) {
+            for (dy in -PROBE_RADIUS..PROBE_RADIUS) {
+                if (bitmap.getPixel(x + dx, y + dy) == color) return true
+            }
+        }
+        return false
     }
 
     private fun textSpan(bitmap: Bitmap, normalizedY: Double): Int {

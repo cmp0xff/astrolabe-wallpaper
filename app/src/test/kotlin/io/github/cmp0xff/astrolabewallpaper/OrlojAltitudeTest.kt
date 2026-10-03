@@ -16,8 +16,26 @@ class OrlojAltitudeTest {
             val radius = projection.equatorRadius
             assertEquals(90 - abs(latitude), projection.altitudeDeg(DialPoint(x = 0.0, y = -radius)), ANGLE_TOLERANCE)
             assertEquals(abs(latitude) - 90, projection.altitudeDeg(DialPoint(x = 0.0, y = radius)), ANGLE_TOLERANCE)
-            assertEquals(-latitude, projection.altitudeDeg(DialPoint(x = 0.0, y = 0.0)), ANGLE_TOLERANCE)
+            assertEquals(-abs(latitude), projection.altitudeDeg(DialPoint(x = 0.0, y = 0.0)), ANGLE_TOLERANCE)
             assertEquals(0.0, projection.altitudeDeg(DialPoint(x = radius, y = 0.0)), ANGLE_TOLERANCE)
+        }
+    }
+
+    @Test
+    fun southernPlateMirrorsNorthern() {
+        // A south-pole plate at -phi draws the same altitude field over the same points as a
+        // north-pole plate at +phi, so both hemispheres nest night inside twilight inside day.
+        for (latitude in listOf(33.8688, 66.56, 90.0)) {
+            val north = projection(latitude)
+            val south = projection(-latitude)
+            for (point in GRID_POINTS) {
+                assertEquals(
+                    "latitude $latitude at $point",
+                    north.altitudeDeg(point),
+                    south.altitudeDeg(point),
+                    ANGLE_TOLERANCE,
+                )
+            }
         }
     }
 
@@ -40,21 +58,46 @@ class OrlojAltitudeTest {
             assertTrue(
                 boundary.all { abs(hypot(x = it.x, y = it.y) - projection.equatorRadius) < COORDINATE_TOLERANCE },
             )
-            assertEquals(latitude > 0, projection.isAboveAltitude(DialPoint(x = 0.9, y = 0.0), 0.0))
-            assertEquals(latitude < 0, projection.isAboveAltitude(DialPoint(x = 0.0, y = 0.0), 0.0))
+            // At either pole the pole below the horizon sits at the dial centre, so the centre is
+            // night and the outer sky is day.
+            assertFalse(projection.isAboveAltitude(DialPoint(x = 0.0, y = 0.0), 0.0))
+            assertTrue(projection.isAboveAltitude(DialPoint(x = 0.9, y = 0.0), 0.0))
         }
     }
 
     @Test
     fun polarDayNightClassification() {
-        val north = projection(90.0)
-        val south = projection(-90.0)
-        assertFalse(north.isAboveAltitude(DialPoint(x = 0.0, y = 0.0), -18.0))
-        assertTrue(south.isAboveAltitude(DialPoint(x = 0.0, y = 0.0), 0.0))
-        assertTrue(north.isAboveAltitude(DialPoint(x = 1.0, y = 0.0), 0.0))
-        assertFalse(south.isAboveAltitude(DialPoint(x = 1.0, y = 0.0), -18.0))
-        assertEquals(2, north.altitudeRegion(0.0).size)
-        assertEquals(1, south.altitudeRegion(0.0).size)
+        for (latitude in listOf(90.0, -90.0)) {
+            val projection = projection(latitude)
+            assertFalse(projection.isAboveAltitude(DialPoint(x = 0.0, y = 0.0), -18.0))
+            assertTrue(projection.isAboveAltitude(DialPoint(x = 0.5, y = 0.0), -18.0))
+            assertFalse(projection.isAboveAltitude(DialPoint(x = 0.5, y = 0.0), 0.0))
+            assertTrue(projection.isAboveAltitude(DialPoint(x = 0.7, y = 0.0), 0.0))
+            assertEquals(2, projection.altitudeRegion(0.0).size)
+            assertEquals(2, projection.altitudeRegion(-18.0).size)
+        }
+    }
+
+    @Test
+    fun southernBandsNestOutward() {
+        // Walking outward from the dial centre: night, then the twilight annulus, then day.
+        for (latitude in listOf(-33.8688, 90.0, -90.0)) {
+            val projection = projection(latitude)
+            val bands = mutableListOf<String>()
+            var radius = 0.0
+            while (radius <= 1.0) {
+                val altitude = projection.altitudeDeg(DialPoint(x = radius, y = 0.0))
+                val band =
+                    when {
+                        altitude >= 0.0 -> "day"
+                        altitude >= -18.0 -> "twilight"
+                        else -> "night"
+                    }
+                if (bands.lastOrNull() != band) bands.add(band)
+                radius += 0.005
+            }
+            assertEquals("latitude $latitude", listOf("night", "twilight", "day"), bands)
+        }
     }
 
     @Test

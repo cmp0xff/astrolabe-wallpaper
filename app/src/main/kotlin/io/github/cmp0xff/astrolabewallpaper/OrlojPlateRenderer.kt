@@ -4,21 +4,24 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 
-/** Paints the geometric plate inside the Cancer boundary, including equatorial and polar horizons. */
+/**
+ * Paints the geometric plate inside the sky boundary. The Sun layer adds the day/twilight/night
+ * fills and draws their horizon and night contour strokes; the tropics, equator, and rim stay.
+ */
 internal class OrlojPlateRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val path = Path()
 
-    fun draw(canvas: Canvas, projection: OrlojProjection?, isDayAndNightEnabled: Boolean) {
+    fun draw(canvas: Canvas, projection: OrlojProjection?, isSunEnabled: Boolean) {
         paint.style = Paint.Style.FILL
         paint.color = DialStyle.NIGHT
         canvas.drawCircle(0f, 0f, SKY_RADIUS, paint)
         if (projection != null) {
-            if (isDayAndNightEnabled) {
+            if (isSunEnabled) {
                 fillRegion(canvas, projection.altitudeRegion(NIGHT_ALTITUDE), DialStyle.TWILIGHT)
                 fillRegion(canvas, projection.altitudeRegion(HORIZON_ALTITUDE), DialStyle.SKY)
             }
-            drawGrid(canvas, projection)
+            drawGrid(canvas, projection, isSunEnabled)
         }
         paint.color = DialStyle.GOLD
         paint.style = Paint.Style.STROKE
@@ -38,15 +41,17 @@ internal class OrlojPlateRenderer {
         canvas.drawPath(path, paint)
     }
 
-    private fun drawGrid(canvas: Canvas, projection: OrlojProjection) {
+    private fun drawGrid(canvas: Canvas, projection: OrlojProjection, isSunEnabled: Boolean) {
         paint.style = Paint.Style.STROKE
         paint.color = DialStyle.MUTED_GOLD
         paint.strokeWidth = GRID_WIDTH
         canvas.drawCircle(0f, 0f, projection.capricornRadius.toFloat(), paint)
         paint.color = DialStyle.GOLD
         canvas.drawCircle(0f, 0f, projection.equatorRadius.toFloat(), paint)
-        drawBoundary(canvas, projection.altitudeBoundary(NIGHT_ALTITUDE), DialStyle.MUTED_GOLD)
-        drawBoundary(canvas, projection.altitudeBoundary(HORIZON_ALTITUDE), DialStyle.GOLD)
+        if (isSunEnabled) {
+            drawBoundary(canvas, projection.altitudeBoundary(NIGHT_ALTITUDE), DialStyle.MUTED_GOLD)
+            drawBoundary(canvas, projection.altitudeBoundary(HORIZON_ALTITUDE), DialStyle.GOLD)
+        }
     }
 
     private fun drawBoundary(canvas: Canvas, contours: List<List<DialPoint>>, color: Int) {

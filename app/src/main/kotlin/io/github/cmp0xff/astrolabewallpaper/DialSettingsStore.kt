@@ -12,7 +12,7 @@ internal class DialSettingsStore(context: Context) {
         val snapshot = preferences.all
         return DialLayers(
             isZodiacRingEnabled = enabled(snapshot, KEY_ZODIAC_RING),
-            isDayAndNightEnabled = enabled(snapshot, KEY_DAY_AND_NIGHT),
+            isSunEnabled = enabled(snapshot, KEY_SUN),
         )
     }
 
@@ -28,7 +28,7 @@ internal class DialSettingsStore(context: Context) {
         preferences
             .edit()
             .putBoolean(KEY_ZODIAC_RING, layers.isZodiacRingEnabled)
-            .putBoolean(KEY_DAY_AND_NIGHT, layers.isDayAndNightEnabled)
+            .putBoolean(KEY_SUN, layers.isSunEnabled)
             .apply()
     }
 
@@ -42,6 +42,6 @@ internal class DialSettingsStore(context: Context) {
 
     private companion object {
         const val KEY_ZODIAC_RING = "zodiac_ring"
-        const val KEY_DAY_AND_NIGHT = "day_and_night"
+        const val KEY_SUN = "sun"
     }
 }

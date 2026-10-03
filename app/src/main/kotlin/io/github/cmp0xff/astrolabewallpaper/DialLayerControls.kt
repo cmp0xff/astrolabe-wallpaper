@@ -7,14 +7,14 @@ import android.widget.CheckBox
 internal fun Activity.bindDialLayers() {
     val store = DialSettingsStore(applicationContext)
     val zodiac = findViewById<CheckBox>(R.id.zodiac_ring)
-    val dayNight = findViewById<CheckBox>(R.id.day_and_night)
+    val sun = findViewById<CheckBox>(R.id.sun_layer)
     val saved = store.load()
     zodiac.isChecked = saved.isZodiacRingEnabled
-    dayNight.isChecked = saved.isDayAndNightEnabled
+    sun.isChecked = saved.isSunEnabled
     zodiac.setOnCheckedChangeListener { _, checked ->
         store.save(store.load().copy(isZodiacRingEnabled = checked))
     }
-    dayNight.setOnCheckedChangeListener { _, checked ->
-        store.save(store.load().copy(isDayAndNightEnabled = checked))
+    sun.setOnCheckedChangeListener { _, checked ->
+        store.save(store.load().copy(isSunEnabled = checked))
     }
 }

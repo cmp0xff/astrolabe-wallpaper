@@ -64,8 +64,43 @@ class OrlojProjectionTest {
         assertEquals(12, signs.size)
     }
 
-    private fun projection(sidereal: Double): OrlojProjection {
-        val geometry = AstrolabeGeometry(localSiderealAngleDeg = sidereal, trueObliquityDeg = 30.0, latitudeDeg = 50.0)
+    @Test
+    fun southernRingIsPointReflected() {
+        val north = projection(sidereal = 37.0, latitude = 50.0)
+        val south = projection(sidereal = 37.0, latitude = -50.0)
+        assertPoint(
+            expected = DialPoint(x = -north.zodiacCircle.center.x, y = -north.zodiacCircle.center.y),
+            actual = south.zodiacCircle.center,
+        )
+        assertEquals(north.zodiacCircle.radius, south.zodiacCircle.radius, TOLERANCE)
+        // The south-pole projection is the radial inversion of the north one through the equator
+        // circle. That inversion maps the ecliptic ring to its point reflection and carries each
+        // ecliptic longitude to the reflection of the antipodal one. This pins the handedness.
+        for (longitude in 0 until 360 step 15) {
+            val reflected = north.eclipticPoint((longitude + 180).toDouble())
+            assertPoint(
+                expected = DialPoint(x = -reflected.x, y = -reflected.y),
+                actual = south.eclipticPoint(longitude.toDouble()),
+            )
+        }
+    }
+
+    @Test
+    fun southernTropicsAreSwapped() {
+        // At a 30-degree obliquity the equator radius is 1/sqrt(3) and the inner tropic 1/3.
+        // On a south plate Capricorn (declination -obliquity) is the outer sky boundary and
+        // Cancer (declination +obliquity) the inner one, the reverse of the Prague plate.
+        val southern = projection(sidereal = 0.0, latitude = -50.0)
+        assertPoint(expected = DialPoint(x = 1.0, y = 0.0), actual = southern.eclipticPoint(270.0))
+        assertPoint(expected = DialPoint(x = -1.0 / 3, y = 0.0), actual = southern.eclipticPoint(90.0))
+        // The equinoxes still lie on the equator circle, unchanged between the plates.
+        assertPoint(expected = DialPoint(x = 0.0, y = -1 / sqrt(3.0)), actual = southern.eclipticPoint(0.0))
+        assertPoint(expected = DialPoint(x = 0.0, y = 1 / sqrt(3.0)), actual = southern.eclipticPoint(180.0))
+    }
+
+    private fun projection(sidereal: Double, latitude: Double = 50.0): OrlojProjection {
+        val geometry =
+            AstrolabeGeometry(localSiderealAngleDeg = sidereal, trueObliquityDeg = 30.0, latitudeDeg = latitude)
         return OrlojProjection(geometry)
     }
 

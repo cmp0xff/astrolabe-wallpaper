@@ -41,7 +41,7 @@ class SettingsActivityLayoutTest {
                 R.id.longitude_input,
                 R.id.save_location,
                 R.id.zodiac_ring,
-                R.id.day_and_night,
+                R.id.sun_layer,
                 R.id.open_preview,
             ).forEach { id ->
                 val control = activity.findViewById<View>(id)
