@@ -147,10 +147,10 @@ Hipparcos reference data. They need no network and no device. See [astronomy.md]
 the frames, tolerances, and what remains unverified.
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`, with application ID
-`io.github.cmp0xff.astrolabewallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
+`io.github.cmp0xff.astronomicalclockswallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
 wallpaper declaration, that the only requested permission is `ACCESS_COARSE_LOCATION`, the debug flag
 and signature, and the complete bundled Astronomy Engine license, then records SHA-256.
-The stable release ID is `io.github.cmp0xff.astrolabewallpaper`; release signing belongs to #7.
+The stable release ID is `io.github.cmp0xff.astronomicalclockswallpaper`; release signing belongs to #7.
 Debug signing keys are disposable and local/CI APKs may require uninstalling the previous debug app.
 
 GitHub Actions runs on pull requests and pushes to `main`. Actions use immutable commit references,
@@ -159,6 +159,6 @@ and the job has only `contents: read`. Open the **Android quality gate** run and
 revision, recorded in the artifact name and `toolchain.txt`. Check reports upload even on failure;
 the APK uploads only after a successful gate and APK verification. No release credentials are used.
 
-Install a downloaded debug APK with `adb install -r app-debug.apk`, open **Astrolabe Wallpaper**, and
+Install a downloaded debug APK with `adb install -r app-debug.apk`, open **Astro Clocks**, and
 tap **Open wallpaper preview**. See [device-testing.md](device-testing.md) for the physical-device
 procedure and the #2 acceptance results.

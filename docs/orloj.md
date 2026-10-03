@@ -9,8 +9,8 @@ mechanical approximations remain outside this slice. It does not complete all of
 
 ## Astronomical frame
 
-`AstronomyCalculator.astrolabeGeometry(instant, location)` returns an Android-free
-`AstrolabeGeometry`: local apparent sidereal angle, true obliquity of date, and observer latitude,
+`AstronomyCalculator.dialGeometry(instant, location)` returns an Android-free
+`DialGeometry`: local apparent sidereal angle, true obliquity of date, and observer latitude,
 all in degrees. The pinned engine's `siderealTime` gives Greenwich apparent sidereal hours;
 multiplying by 15 and adding east-positive longitude gives the local angle. The public
 `rotationEctEqd` rotation of the ecliptic y-axis into the true equator of date gives true obliquity.
@@ -117,7 +117,7 @@ sources.
 
 The geometry reference tests use independently generated ERFA/SOFA fixtures with their generator,
 time-scale conventions, and tolerances documented in
-[`AstrolabeGeometryFixture.kt`](../app/src/test/kotlin/io/github/cmp0xff/astrolabewallpaper/AstrolabeGeometryFixture.kt).
+[`DialGeometryFixture.kt`](../app/src/test/kotlin/io/github/cmp0xff/astronomicalclockswallpaper/DialGeometryFixture.kt).
 They assume UT1 = UTC and TT − UTC = 69.184 seconds; the pinned engine uses modeled DeltaT.
 The comparison tolerances (0.0001° sidereal angle, 0.00003° obliquity) describe agreement with
 those fixtures, not physical UT1 accuracy. Omitting measured DUT1 can shift sidereal angle by

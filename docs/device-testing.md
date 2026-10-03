@@ -23,16 +23,16 @@ A USB connection works too; the steps below are transport-independent.
 ```sh
 adb install -r app-debug.apk   # replaces the previous debug build in place
 adb shell am start -n \
-  io.github.cmp0xff.astrolabewallpaper.debug/io.github.cmp0xff.astrolabewallpaper.SettingsActivity
+  io.github.cmp0xff.astronomicalclockswallpaper.debug/io.github.cmp0xff.astronomicalclockswallpaper.SettingsActivity
 ```
 
-In **Astrolabe Wallpaper**, tap **Open wallpaper preview**, then apply it to the home and lock screens.
+In **Astro Clocks**, tap **Open wallpaper preview**, then apply it to the home and lock screens.
 
 ## Inspecting state
 
 ```sh
 adb shell dumpsys wallpaper                            # active component and visibility
-adb shell pidof io.github.cmp0xff.astrolabewallpaper.debug
+adb shell pidof io.github.cmp0xff.astronomicalclockswallpaper.debug
 adb logcat --pid=<pid> -v time                         # follow the running wallpaper process
 adb shell screenrecord /sdcard/clock.mp4               # record; press Ctrl-C to stop
 adb pull /sdcard/clock.mp4
@@ -78,7 +78,7 @@ That three-hand, 60-tick renderer was superseded by the Orloj foundation, which 
 stand only as the record for the `feat/19-rendered-clock` build. See the Orloj foundation section
 below.
 
-`AstrolabeWallpaperServiceTest` covers resuming ticks after surface recreation. `WallpaperFrameTest`
+`AstronomicalClocksWallpaperServiceTest` covers resuming ticks after surface recreation. `WallpaperFrameTest`
 injects null/throwing acquisition, drawing failures, and posting failures through the engine's real
 frame operation. It verifies exception logging, one posting attempt for each acquired canvas, and a
 subsequent successful scheduled frame. Unrelated drawing exceptions still propagate after posting.
