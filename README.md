@@ -11,6 +11,12 @@ first dial, with geometry adapted to that site. See the
 The first release targets home and **lit** lock screens. Always On Display and
 interactive sky exploration are outside its scope.
 
+## Release plan
+
+The project is still in development; no public release has been published yet.
+The initial distribution plan is a personal APK. F-Droid distribution will be
+evaluated later.
+
 ## Build and checks
 
 Install the [pinned local toolchain](docs/development.md#local-setup), then run:
