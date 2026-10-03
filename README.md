@@ -33,8 +33,8 @@ explicitly format Kotlin source, tests, and Gradle scripts. CI never reformats f
 - [Physical-device procedures and evidence](docs/device-testing.md)
 - [Bootstrap verification](docs/bootstrap-verification.md)
 
-The [GitHub issues](https://github.com/cmp0xff/astronomical-clocks-wallpaper/issues) and
-[milestones](https://github.com/cmp0xff/astronomical-clocks-wallpaper/milestones) track
+The [GitHub issues](https://github.com/godaniya/astronomical-clocks-wallpaper/issues) and
+[milestones](https://github.com/godaniya/astronomical-clocks-wallpaper/milestones) track
 unfinished work and release planning.
 
 ## Contributing
@@ -48,5 +48,5 @@ personal locations from public reports.
 
 ## License
 
-Copyright 2026 cmp0xff and contributors. Licensed under [Apache-2.0](LICENSE).
+Copyright 2026 Godānīya contributors. Licensed under [Apache-2.0](LICENSE).
 Third-party dependencies and assets retain their own licenses and notices.

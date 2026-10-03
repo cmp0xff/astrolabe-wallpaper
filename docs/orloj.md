@@ -117,7 +117,7 @@ sources.
 
 The geometry reference tests use independently generated ERFA/SOFA fixtures with their generator,
 time-scale conventions, and tolerances documented in
-[`DialGeometryFixture.kt`](../app/src/test/kotlin/io/github/cmp0xff/astronomicalclockswallpaper/DialGeometryFixture.kt).
+[`DialGeometryFixture.kt`](../app/src/test/kotlin/io/github/godaniya/astronomicalclockswallpaper/DialGeometryFixture.kt).
 They assume UT1 = UTC and TT − UTC = 69.184 seconds; the pinned engine uses modeled DeltaT.
 The comparison tolerances (0.0001° sidereal angle, 0.00003° obliquity) describe agreement with
 those fixtures, not physical UT1 accuracy. Omitting measured DUT1 can shift sidereal angle by

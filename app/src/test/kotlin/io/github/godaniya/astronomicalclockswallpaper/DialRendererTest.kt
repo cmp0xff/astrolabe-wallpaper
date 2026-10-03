@@ -1,0 +1,318 @@
+package io.github.godaniya.astronomicalclockswallpaper
+
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.util.Log
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLog
+import java.time.LocalTime
+import kotlin.math.cos
+import kotlin.math.roundToInt
+import kotlin.math.sin
+
+/** Native bitmap probes anchor the 24-hour hand, geometric plate, and independent display layers. */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [26, 36])
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class DialRendererTest {
+    private val renderer = DialRenderer()
+    private val prague = DialGeometry(localSiderealAngleDeg = 0.0, trueObliquityDeg = 23.44, latitudeDeg = 50.08)
+
+    @Test
+    fun paletteIsPinnedToLiteralArgb() {
+        // The device's screenshot pipeline applies a colour transform, so a capture cannot
+        // adjudicate the exact gold (docs/device-testing.md). Every other pixel assertion in this
+        // class compares DialStyle to itself, so without this pin a palette edit passes the suite.
+        assertEquals(0xFF101923.toInt(), DialStyle.BACKGROUND)
+        assertEquals(0xFFD8B66A.toInt(), DialStyle.GOLD)
+        assertEquals(0xFF887347.toInt(), DialStyle.MUTED_GOLD)
+        assertEquals(0xFF1C2C39.toInt(), DialStyle.RIM)
+        assertEquals(0xFF286078.toInt(), DialStyle.SKY)
+        assertEquals(0xFF9C6438.toInt(), DialStyle.TWILIGHT)
+        assertEquals(0xFF152433.toInt(), DialStyle.NIGHT)
+        assertEquals(0xFFF4E5B8.toInt(), DialStyle.HAND)
+    }
+
+    @Test
+    fun southernZodiacRenders() {
+        val sydney = DialGeometry(localSiderealAngleDeg = 0.0, trueObliquityDeg = 23.44, latitudeDeg = -33.87)
+        val sydneyProjection = OrlojProjection(sydney)
+        val point = sydneyProjection.eclipticPoint(30.0)
+        val enabled = render(geometry = sydney)
+        val disabled = render(geometry = sydney, layers = DialLayers(isZodiacRingEnabled = false))
+        assertTrue(
+            "The zodiac ring must be drawn for a southern site",
+            changedPixelsNear(first = enabled, second = disabled, point = point) > 20,
+        )
+        val rotatedSydney = sydney.copy(localSiderealAngleDeg = 90.0)
+        val rotated = render(geometry = rotatedSydney)
+        assertTrue(
+            "The southern zodiac ring must rotate with sidereal time",
+            changedPixelsNear(first = enabled, second = rotated, point = point) > 20,
+        )
+    }
+
+    @Test
+    fun civilHandMatchesCardinalHours() {
+        val hours = listOf(12 to 0.0, 18 to 90.0, 0 to 180.0, 6 to 270.0)
+        for ((hour, angle) in hours) {
+            val bitmap = render(time = LocalTime.of(hour, 0))
+            for ((_, probeAngle) in hours) {
+                val color = if (probeAngle == angle) DialStyle.HAND else DialStyle.NIGHT
+                assertEquals(color, pixelAt(bitmap, radialPoint(angleDeg = probeAngle, radius = 0.35)))
+            }
+            assertTrue(pixelAt(bitmap, radialPoint(angleDeg = angle, radius = 1.13)) != DialStyle.HAND)
+        }
+    }
+
+    @Test
+    fun civilHandIncludesMinutes() {
+        val bitmap = render(time = LocalTime.of(15, 15, 36))
+        // 3h 15m 36s since noon is 48.9 degrees on the 24-hour scale.
+        assertEquals(DialStyle.HAND, pixelAt(bitmap, radialPoint(angleDeg = 48.9, radius = 0.35)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, radialPoint(angleDeg = 45.0, radius = 0.35)))
+    }
+
+    @Test
+    fun romanNumeralsKeepGlyphSpacing() {
+        val bitmap = render()
+        // XII and XXIV must occupy several glyph advances, even though the plate uses unit radii.
+        assertTrue(textSpan(bitmap, -1.205) > 24)
+        assertTrue(textSpan(bitmap, 1.205) > 40)
+    }
+
+    @Test
+    fun missingLocationOmitsGeometry() {
+        val bitmap = render()
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = -0.7, y = 0.2)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = 0.8)))
+        assertFalse(containsColor(bitmap, DialStyle.SKY))
+        assertFalse(containsColor(bitmap, DialStyle.TWILIGHT))
+    }
+
+    @Test
+    fun pragueHasDayTwilightAndNight() {
+        val bitmap = render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
+        // These interior points have geometric altitudes about +52, -6, and -27 degrees.
+        assertEquals(DialStyle.SKY, pixelAt(bitmap, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.TWILIGHT, pixelAt(bitmap, DialPoint(x = -0.7, y = 0.2)))
+        assertEquals(DialStyle.NIGHT, pixelAt(bitmap, DialPoint(x = 0.1, y = 0.8)))
+    }
+
+    @Test
+    fun sunToggleKeepsPlainPlate() {
+        val plain = DialLayers(isZodiacRingEnabled = false, isSunEnabled = false)
+        val off = render(geometry = prague, layers = plain)
+        assertEquals(DialStyle.NIGHT, pixelAt(off, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.NIGHT, pixelAt(off, DialPoint(x = -0.7, y = 0.2)))
+        assertFalse(containsColor(off, DialStyle.SKY))
+        assertFalse(containsColor(off, DialStyle.TWILIGHT))
+        // The toggle hides its own boundary strokes too, not just the fills. Probe contour points
+        // that stay clear of the equator and tropic grid circles, with the zodiac disabled.
+        val on = render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
+        val horizon = DialPoint(x = 0.79, y = 0.22)
+        val night = DialPoint(x = -0.57, y = 0.5)
+        assertTrue(containsColorNear(on, horizon, DialStyle.GOLD))
+        assertFalse(containsColorNear(off, horizon, DialStyle.GOLD))
+        assertTrue(containsColorNear(on, night, DialStyle.MUTED_GOLD))
+        assertFalse(containsColorNear(off, night, DialStyle.MUTED_GOLD))
+    }
+
+    @Test
+    fun sunOffFramesLeaveNoStalePlate() {
+        // The Sun-off path builds no plate at all, so the first Sun-on frame has to construct one.
+        // Renders that never enabled the Sun must not leave the cache in a state that half-draws.
+        val plain = DialLayers(isZodiacRingEnabled = false, isSunEnabled = false)
+        val lit = DialLayers(isZodiacRingEnabled = false)
+        val reused = DialRenderer()
+        val firstOff = drawWith(reused, prague, plain)
+        val secondOff = drawWith(reused, prague, plain)
+        assertTrue(firstOff.sameAs(secondOff))
+        assertTrue(drawWith(reused, prague, lit).sameAs(drawWith(DialRenderer(), prague, lit)))
+    }
+
+    @Test
+    fun zodiacRemainsBelowHorizon() {
+        val projection = OrlojProjection(prague)
+        val point = projection.eclipticPoint(210.0)
+        assertTrue(projection.altitudeDeg(point) < -18.0)
+        val enabled = render(geometry = prague)
+        val disabled = render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
+        assertTrue(
+            "The below-horizon sign must be drawn",
+            changedPixelsNear(first = enabled, second = disabled, point = point) > 20,
+        )
+    }
+
+    @Test
+    fun zodiacRotatesWithSiderealTime() {
+        val later = prague.copy(localSiderealAngleDeg = 90.0)
+        val original = render(geometry = prague)
+        val rotated = render(geometry = later)
+        val sign = OrlojProjection(prague).eclipticPoint(210.0)
+        assertTrue(changedPixelsNear(first = original, second = rotated, point = sign) > 20)
+        // The background plate depends on latitude and obliquity, not sidereal rotation.
+        assertTrue(
+            render(geometry = prague, layers = DialLayers(isZodiacRingEnabled = false))
+                .sameAs(render(geometry = later, layers = DialLayers(isZodiacRingEnabled = false))),
+        )
+    }
+
+    @Test
+    fun landscapeUsesShortestSide() {
+        val landscape = Bitmap.createBitmap(1200, SIZE, Bitmap.Config.ARGB_8888)
+        renderer.renderDial(
+            canvas = Canvas(landscape),
+            state = clockState(LocalTime.NOON),
+            geometry = prague,
+            layers = DialLayers(isZodiacRingEnabled = false),
+        )
+        val centered = Bitmap.createBitmap(landscape, 200, 0, SIZE, SIZE)
+        assertEquals(DialStyle.SKY, pixelAt(centered, DialPoint(x = 0.1, y = -0.8)))
+        assertEquals(DialStyle.TWILIGHT, pixelAt(centered, DialPoint(x = -0.7, y = 0.2)))
+        assertEquals(DialStyle.NIGHT, pixelAt(centered, DialPoint(x = 0.1, y = 0.8)))
+        assertEquals(DialStyle.RIM, pixelAt(centered, DialPoint(x = 1.32, y = 0.0)))
+        assertEquals(DialStyle.BACKGROUND, pixelAt(centered, DialPoint(x = 1.4, y = 0.0)))
+        assertEquals(DialStyle.BACKGROUND, landscape.getPixel(1, SIZE / 2))
+        assertEquals(DialStyle.BACKGROUND, landscape.getPixel(1198, SIZE / 2))
+    }
+
+    @Test
+    fun degenerateCanvasIsLogged() {
+        ShadowLog.clear()
+        renderer.renderDial(Canvas(), clockState(LocalTime.NOON))
+        val tiny = Bitmap.createBitmap(20, 20, Bitmap.Config.ARGB_8888)
+        renderer.renderDial(Canvas(tiny), clockState(LocalTime.NOON))
+        assertEquals(DialStyle.BACKGROUND, tiny.getPixel(10, 10))
+        assertEquals(2, ShadowLog.getLogsForTag("DialRenderer").count { it.type == Log.WARN })
+    }
+
+    @Test
+    fun renderFailuresAreContained() {
+        ShadowLog.clear()
+        containRenderFailure { throw IllegalArgumentException("invalid argument") }
+        containRenderFailure { throw IllegalStateException("invalid state") }
+        val logs = ShadowLog.getLogsForTag("DialRenderer").filter { it.type == Log.ERROR }
+        assertEquals(2, logs.size)
+        assertTrue(logs[0].msg.contains("invalid argument"))
+        assertTrue(logs[1].msg.contains("invalid state"))
+        var hasDrawn = false
+        containRenderFailure { hasDrawn = true }
+        assertTrue(hasDrawn)
+    }
+
+    @Test
+    fun unrelatedFailuresPropagate() {
+        assertThrows(UnsupportedOperationException::class.java) {
+            containRenderFailure { throw UnsupportedOperationException("not contained") }
+        }
+    }
+
+    @Test
+    fun rendererReuseIsIndependent() {
+        // A live engine keeps one DialRenderer for its lifetime while the saved site changes, and
+        // OrlojPlateRenderer caches static plate geometry, so frames must be independent and reusable.
+        val sydney = prague.copy(latitudeDeg = -33.87)
+        val reused = DialRenderer()
+        val firstPrague = drawInto(reused, prague)
+        val secondPrague = drawInto(reused, prague)
+        assertTrue(firstPrague.sameAs(secondPrague))
+        val sydneyPass = drawInto(reused, sydney)
+        assertTrue(firstPrague.sameAs(drawInto(DialRenderer(), prague)))
+        assertTrue(sydneyPass.sameAs(drawInto(DialRenderer(), sydney)))
+        assertTrue(firstPrague.sameAs(drawInto(reused, prague)))
+    }
+
+    private fun drawInto(target: DialRenderer, geometry: DialGeometry): Bitmap {
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        target.renderDial(canvas = Canvas(bitmap), state = clockState(LocalTime.NOON), geometry = geometry)
+        return bitmap
+    }
+
+    private fun render(
+        time: LocalTime = LocalTime.NOON,
+        geometry: DialGeometry? = null,
+        layers: DialLayers = DialLayers(),
+    ): Bitmap {
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        renderer.renderDial(canvas = Canvas(bitmap), state = clockState(time), geometry = geometry, layers = layers)
+        assertEquals(DialStyle.BACKGROUND, bitmap.getPixel(1, 1))
+        return bitmap
+    }
+
+    private fun drawWith(target: DialRenderer, geometry: DialGeometry, layers: DialLayers): Bitmap {
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        target
+            .renderDial(
+                canvas = Canvas(bitmap),
+                state = clockState(LocalTime.NOON),
+                geometry = geometry,
+                layers = layers,
+            )
+        return bitmap
+    }
+
+    private fun pixelAt(bitmap: Bitmap, point: DialPoint): Int =
+        bitmap.getPixel((CENTER + point.x * SKY_RADIUS).roundToInt(), (CENTER + point.y * SKY_RADIUS).roundToInt())
+
+    private fun radialPoint(angleDeg: Double, radius: Double): DialPoint {
+        val radians = Math.toRadians(angleDeg)
+        return DialPoint(x = sin(radians) * radius, y = -cos(radians) * radius)
+    }
+
+    private fun containsColor(bitmap: Bitmap, color: Int): Boolean {
+        val pixels = IntArray(bitmap.width * bitmap.height)
+        bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+        return color in pixels
+    }
+
+    private fun containsColorNear(bitmap: Bitmap, point: DialPoint, color: Int): Boolean {
+        val x = (CENTER + point.x * SKY_RADIUS).roundToInt()
+        val y = (CENTER + point.y * SKY_RADIUS).roundToInt()
+        for (dx in -PROBE_RADIUS..PROBE_RADIUS) {
+            for (dy in -PROBE_RADIUS..PROBE_RADIUS) {
+                if (bitmap.getPixel(x + dx, y + dy) == color) return true
+            }
+        }
+        return false
+    }
+
+    private fun textSpan(bitmap: Bitmap, normalizedY: Double): Int {
+        val baseline = (CENTER + normalizedY * SKY_RADIUS).roundToInt()
+        val columns =
+            (360..440).filter { x ->
+                (baseline - 20..baseline + 20).any { y -> bitmap.getPixel(x, y) == DialStyle.GOLD }
+            }
+        return if (columns.isEmpty()) 0 else columns.last() - columns.first() + 1
+    }
+
+    private fun changedPixelsNear(first: Bitmap, second: Bitmap, point: DialPoint): Int {
+        val x = (CENTER + point.x * SKY_RADIUS).roundToInt()
+        val y = (CENTER + point.y * SKY_RADIUS).roundToInt()
+        var changed = 0
+        for (dx in -PROBE_RADIUS..PROBE_RADIUS) {
+            for (dy in -PROBE_RADIUS..PROBE_RADIUS) {
+                if (first.getPixel(x + dx, y + dy) != second.getPixel(x + dx, y + dy)) {
+                    changed++
+                }
+            }
+        }
+        return changed
+    }
+
+    private companion object {
+        const val SIZE = 800
+        const val CENTER = 400.0
+        const val SKY_RADIUS = SIZE * 0.43 / 1.37
+        const val PROBE_RADIUS = 12
+    }
+}

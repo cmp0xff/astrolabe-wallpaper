@@ -1,6 +1,6 @@
 # Astronomy calculations
 
-[Astronomy Calculator](../app/src/main/kotlin/io/github/cmp0xff/astronomicalclockswallpaper/AstronomyCalculator.kt)
+[Astronomy Calculator](../app/src/main/kotlin/io/github/godaniya/astronomicalclockswallpaper/AstronomyCalculator.kt)
 answers one question: *what does the sky look like from a saved observing location at a given
 instant?* It implements part of #4: the Sun, the Moon with its phase, the seven planets visible
 from Earth, a bundled set of bright stars, and the day's sunrise, sunset, and twilights. It also
@@ -44,14 +44,14 @@ selected observing site. Projection mathematics belong in the [Orloj guide](orlo
 ### Current integration limits
 
 The wallpaper on `main` still reads the phone's civil time and does not render these
-astronomy results. [PR #29](https://github.com/cmp0xff/astronomical-clocks-wallpaper/pull/29)
+astronomy results. [PR #29](https://github.com/godaniya/astronomical-clocks-wallpaper/pull/29)
 adds saved-timezone infrastructure, but current-location and raw-coordinate saves
 capture the phone zone; migration also tags legacy coordinates with the phone zone.
 That does not establish the site's geographic timezone.
-[Issue #24](https://github.com/cmp0xff/astronomical-clocks-wallpaper/issues/24) owns the remaining
+[Issue #24](https://github.com/godaniya/astronomical-clocks-wallpaper/issues/24) owns the remaining
 gap across current location, raw coordinates, city selection, and correction of
 previously phone-tagged records. The offline city chooser is
-[issue #21](https://github.com/cmp0xff/astronomical-clocks-wallpaper/issues/21).
+[issue #21](https://github.com/godaniya/astronomical-clocks-wallpaper/issues/21).
 
 ## Coordinate frames
 

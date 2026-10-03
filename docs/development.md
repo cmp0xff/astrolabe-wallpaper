@@ -149,10 +149,10 @@ Hipparcos reference data. They need no network and no device. See [astronomy.md]
 the frames, tolerances, and what remains unverified.
 
 The debug APK is `app/build/outputs/apk/debug/app-debug.apk`, with application ID
-`io.github.cmp0xff.astronomicalclockswallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
+`io.github.godaniya.astronomicalclockswallpaper.debug`. `scripts/verify-apk.sh` checks its ID, SDK metadata,
 wallpaper declaration, that the only requested permission is `ACCESS_COARSE_LOCATION`, the debug flag
 and signature, and the complete bundled Astronomy Engine license, then records SHA-256.
-The stable release ID is `io.github.cmp0xff.astronomicalclockswallpaper`; release signing belongs to #7.
+The stable release ID is `io.github.godaniya.astronomicalclockswallpaper`; release signing belongs to #7.
 Debug signing keys are disposable and local/CI APKs may require uninstalling the previous debug app.
 
 GitHub Actions runs on pull requests and pushes to `main`. Actions use immutable commit references,
