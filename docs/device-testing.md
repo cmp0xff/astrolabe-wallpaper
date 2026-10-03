@@ -319,12 +319,13 @@ unpopulated on this API level, so it could not be used.
 
 The representative sites were entered by hand, never from the device's own position. With the zodiac
 ring off, the horizon took the shape the geometric altitude equation predicts, and the measured day,
-twilight, and night regions matched `OrlojProjection.altitudeDeg` at every site. The dial centre is
-the south celestial pole, whose altitude is the negative of the site latitude, so Prague (50.08) put
-the centre below the horizon and the night region enclosed it inside an outer day crescent, while
-Sydney (-33.87) inverted that picture: the centre was daylight and the night became the outer
-crescent. The equator put the horizon on a straight line through the hub, and the poles put it on
-concentric circles, with night inside day at the north pole and day inside night at the south pole.
+twilight, and night regions matched `OrlojProjection.altitudeDeg` at every site. At this revision the
+plate was always the Prague north-pole projection, whose dial centre is the south celestial pole at
+altitude -latitude: Prague (50.08) put the centre below the horizon with the night region inside an
+outer day crescent, and Sydney (-33.87) inverted that picture, the centre in daylight with night as
+the outer crescent. The equator put the horizon on a straight line through the hub, and the poles put
+it on concentric circles, with night inside day at the north pole and day inside night at the south
+pole. The southern inversion is the construction replaced in the next section.
 
 Clearing app data also drops the wallpaper binding, so the wallpaper had to be reapplied by hand
 afterwards; the device was left with the Orloj wallpaper applied and a current-location site
@@ -337,4 +338,34 @@ path, and tests, so the rendering output observed above is unchanged and the obs
 the pushed revision.
 
 No failure was observed, and no unresolved limitation remains from this pass. The cadence check
+shows only that a frame is produced once per second; battery and frame-cost qualification remain #6.
+
+## Southern plate and Sun layer (#4, #5)
+
+Test build: local debug `app-debug.apk` from `feat/4-orloj-foundation` at 96f972a (APK SHA-256
+a13cd926bab76cc72347dc5b09bfb6c489b5b4395ccdf02fbf8ffdac0a388eec), the artifact installed on the
+device below.
+
+Same physical device. Android version: 16 (API 36). Device locale `de-DE`, with no app-locale
+override. Firmware build: withheld (embeds the model identifier).
+
+The sites were entered by hand through Settings. Sydney, the south pole, and the equator were read
+from the home screen; the Sun-layer checks used the system live-wallpaper preview, which shows the
+dial unobstructed. The screenshot pipeline applies a colour transform (the hand reads back about
+`#F1E5BD`, not `#F4E5B8`), so these checks are structural rather than exact-colour, except the hand
+angle, which is a principal-axis measurement of the hand pixels.
+
+| Date | Check | Observed |
+| --- | --- | --- |
+| 2026-10-03 | southern nesting | Sydney (-33.87, 151.21) put night at the dial centre, a twilight annulus around it, and day outside; the zodiac ring stayed tangent to both tropics |
+| 2026-10-03 | south pole | (0, -90) gave concentric night, twilight, and day annuli, night innermost |
+| 2026-10-03 | equator | (0, 0) put the horizon on a straight line through the hub, day above and twilight then night below |
+| 2026-10-03 | Sun layer off | With the zodiac ring off, turning **Sun** off removed the sky and twilight fills and the horizon and night contour strokes, leaving only the tropics, the equator, and the outer rim |
+| 2026-10-03 | Sun layer on | Restoring it redrew the fills and both contour strokes on the next visible frame |
+| 2026-10-03 | repaint cadence, preview | 8 producer frames in 7.0 s, deltas 0.983-1.016 s, so 1.001 Hz |
+| 2026-10-03 | hand angle, preview | Measured hand angle 32.022 degrees against 32.029 degrees implied by the device clock, 0.007 degrees apart |
+
+The equator plate was observed both on the home screen and in the preview; the southern plates on the
+home screen. After the pass the saved site was restored to the device's current location
+(50.1081, 14.4695) and the wallpaper was left applied. No failure was observed. The cadence check
 shows only that a frame is produced once per second; battery and frame-cost qualification remain #6.
