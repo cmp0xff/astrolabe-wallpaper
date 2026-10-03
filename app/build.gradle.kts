@@ -108,4 +108,20 @@ tasks.withType<Test>().configureEach {
         "--add-opens=java.desktop/java.awt.font=ALL-UNNAMED",
         "--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
     )
+    if (name != "exportRepresentativeImages") {
+        filter {
+            excludeTestsMatching("*OrlojRepresentativeExport*")
+        }
+    }
+}
+
+tasks.register<Test>("exportRepresentativeImages") {
+    description = "Exports representative Orloj dial Canvas PNGs to build/reports/orloj."
+    group = "verification"
+    val testTask = tasks.named<Test>("testDebugUnitTest")
+    testClassesDirs = files(testTask.map { it.testClassesDirs })
+    classpath = files(testTask.map { it.classpath })
+    filter {
+        setIncludePatterns("io.github.cmp0xff.astronomicalclockswallpaper.OrlojRepresentativeExport.*")
+    }
 }

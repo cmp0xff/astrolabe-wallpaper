@@ -3,10 +3,12 @@ package io.github.cmp0xff.astronomicalclockswallpaper
 import android.content.Context
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
+import android.util.Log
 import android.view.SurfaceView
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -133,6 +135,70 @@ class WallpaperFoundationTest {
         assertTrue(ShadowLog.getLogsForTag("DialSettingsStore").isEmpty())
     }
 
+    @Test
+    fun geometryFailureDegrades() {
+        LocationStore(controller.get()).save(SITE)
+        calculator.failure = ArithmeticException("out of range")
+        ShadowLog.clear()
+        engine().onVisibilityChanged(true)
+        val frame = frames.single()
+        assertNull(frame.geometry)
+        assertEquals(clockState(LocalTime.of(13, 34, 56)), frame.clock)
+        val logs = ShadowLog.getLogsForTag("AstronomicalClocksWallpaperService")
+        assertTrue(logs.any { it.type == Log.WARN && it.msg.contains("geometry calculation failed") })
+    }
+
+    @Test
+    fun drawingErrorPreservesTicks() {
+        var isFailureTriggered = false
+        val engine =
+            controller.get().createEngine(
+                draw = { _, _, _, _ ->
+                    if (isFailureTriggered) {
+                        isFailureTriggered = false
+                        throw ArithmeticException("calculation overflow")
+                    }
+                },
+                holder = holder,
+                clock = Clock.fixed(instant, ZoneOffset.UTC),
+                deviceZone = { ZoneOffset.UTC },
+                calculator = calculator,
+            )
+        engines.add(engine)
+        engine.onVisibilityChanged(true)
+        isFailureTriggered = true
+        ShadowLog.clear()
+        tick()
+        val looper = shadowOf(Looper.getMainLooper())
+        assertTrue(
+            "Next tick must still be scheduled after drawing error",
+            looper.nextScheduledTaskTime > Duration.ZERO,
+        )
+        val logs = ShadowLog.getLogsForTag("AstronomicalClocksWallpaperService")
+        assertTrue(logs.any { it.type == Log.ERROR && it.msg.contains("unexpected error in drawFrame") })
+    }
+
+    @Test
+    fun initialDrawErrorPreservesTicks() {
+        val engine =
+            controller.get().createEngine(
+                draw = { _, _, _, _ -> throw ArithmeticException("initial draw overflow") },
+                holder = holder,
+                clock = Clock.fixed(instant, ZoneOffset.UTC),
+                deviceZone = { ZoneOffset.UTC },
+                calculator = calculator,
+            )
+        engines.add(engine)
+        assertThrows(ArithmeticException::class.java) {
+            engine.onVisibilityChanged(true)
+        }
+        val looper = shadowOf(Looper.getMainLooper())
+        assertTrue(
+            "Next tick must be scheduled after initial draw error",
+            looper.nextScheduledTaskTime > Duration.ZERO,
+        )
+    }
+
     private fun engine(clock: Clock = Clock.fixed(instant, ZoneOffset.UTC)): WallpaperService.Engine {
         val engine =
             controller.get().createEngine(
@@ -155,11 +221,13 @@ class WallpaperFoundationTest {
     private class RecordingCalculator : AstronomyCalculator {
         val calls = mutableListOf<Pair<Instant, ObservingLocation>>()
         val geometry = DialGeometry(localSiderealAngleDeg = 90.0, trueObliquityDeg = 23.4, latitudeDeg = 50.0)
+        var failure: RuntimeException? = null
 
         override fun sky(time: Instant, location: ObservingLocation): Sky = error("unexpected full sky call")
 
         override fun dialGeometry(time: Instant, location: ObservingLocation): DialGeometry {
             calls.add(time to location)
+            failure?.let { throw it }
             return geometry
         }
     }

@@ -76,12 +76,16 @@ internal class DialRenderer {
     private fun drawHours(canvas: Canvas) {
         val checkpoint = canvas.save()
         canvas.scale(1 / DialStyle.TEXT_UNITS, 1 / DialStyle.TEXT_UNITS)
-        paint.typeface = Typeface.create("serif", Typeface.NORMAL)
+        paint.typeface = HOURS_TYPEFACE
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = NUMERAL_SIZE * DialStyle.TEXT_UNITS
         val textOffset = -(paint.ascent() + paint.descent()) / CENTER_DIVISOR
         for ((index, numeral) in ROMAN_HOURS.withIndex()) {
-            val angle = Math.toRadians((index + 1) * DEGREES_PER_HOUR + MIDNIGHT_ANGLE)
+            val angle =
+                Math
+                    .toRadians(
+                        (index + 1) * CivilDialConstants.DEGREES_PER_HOUR + CivilDialConstants.MIDNIGHT_ANGLE_DEG,
+                    )
             val x = sin(angle).toFloat()
             val y = -cos(angle).toFloat()
             paint.color = DialStyle.GOLD
@@ -128,8 +132,6 @@ internal class DialRenderer {
         const val FINE_WIDTH = 0.003f
         const val NUMERAL_SIZE = 0.084f
         const val NUMERAL_RADIUS = 1.205f
-        const val DEGREES_PER_HOUR = 15.0
-        const val MIDNIGHT_ANGLE = 180.0
         const val HOUR_TICK_WIDTH = 0.005f
         const val TICK_INNER_RADIUS = 1.065f
         const val TICK_OUTER_RADIUS = 1.095f
@@ -140,6 +142,7 @@ internal class DialRenderer {
         const val HAND_TAIL = 0.13f
         const val HUB_RADIUS = 0.039f
         const val HUB_INNER_RADIUS = 0.018f
+        private val HOURS_TYPEFACE: Typeface = Typeface.create("serif", Typeface.NORMAL)
         val ROMAN_HOURS =
             listOf(
                 "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII",
@@ -149,13 +152,27 @@ internal class DialRenderer {
 }
 
 /** Contains argument and canvas-state failures while preserving the scheduled per-second redraw. */
-internal fun containRenderFailure(draw: () -> Unit) {
+internal fun containRenderFailure(stage: String? = null, draw: () -> Unit) {
     try {
         draw()
     } catch (e: IllegalArgumentException) {
-        Log.e(TAG, "skipping frame: invalid render argument", e)
+        val detail = listOfNotNull(stage, e.message).joinToString(": ")
+        val message =
+            if (detail.isEmpty()) {
+                "skipping frame: invalid render argument"
+            } else {
+                "skipping frame: invalid render argument: $detail"
+            }
+        Log.e(TAG, message, e)
     } catch (e: IllegalStateException) {
-        Log.e(TAG, "skipping frame: canvas in an invalid state", e)
+        val detail = listOfNotNull(stage, e.message).joinToString(": ")
+        val message =
+            if (detail.isEmpty()) {
+                "skipping frame: canvas in an invalid state"
+            } else {
+                "skipping frame: canvas in an invalid state: $detail"
+            }
+        Log.e(TAG, message, e)
     }
 }
 

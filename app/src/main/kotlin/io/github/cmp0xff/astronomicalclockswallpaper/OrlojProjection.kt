@@ -33,7 +33,7 @@ internal data class DialCircle(val center: DialPoint, val radius: Double)
  *
  * See https://astro.cas.cz/bh2010/files/praha.pdf, printed pages 4–5, for the north-pole plate.
  */
-internal class OrlojProjection(private val geometry: DialGeometry) {
+internal class OrlojProjection(val geometry: DialGeometry) {
     private val obliquityRad = Math.toRadians(geometry.trueObliquityDeg)
     private val siderealRad = Math.toRadians(geometry.localSiderealAngleDeg)
     private val isSouthern = geometry.latitudeDeg < 0

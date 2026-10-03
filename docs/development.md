@@ -113,6 +113,8 @@ PR. Removing a finding by lowering global severity or excluding production/test 
 | Lint `AndroidGradlePluginVersion` | Lint suggests Gradle 9.7.1 over 9.6.1. The explicit 9.6.1 pin follows the selected detekt compatibility family; network-discovered upgrade suggestions must not change this bootstrap's agreed toolchain. | Only `gradle/wrapper/gradle-wrapper.properties`, via `app/lint.xml` |
 | Lint `NewerVersionAvailable` | The check live-queries Maven Central on every run, so it errors the hermetic gate the moment a dependency ships a newer release (Robolectric 4.16.1 → 4.17 did exactly this). Upgrades are reviewed deliberately instead of on CI's clock. | All modules, via `app/lint.xml` |
 | Lint `GradleDependency` | Same network-discovered-upgrade category as `NewerVersionAvailable`; keeping it active would reintroduce the same non-hermetic failure. | All modules, via `app/lint.xml` |
+| detekt `TooGenericExceptionCaught` | `scheduleNextTick` catches `Exception` to keep the wallpaper tick loop alive across unexpected drawing exceptions while letting VM `Error` propagate. | Only `ClockEngine.scheduleNextTick`, annotated in source |
+| detekt `TooGenericExceptionCaught` | `drawFrame` catches `RuntimeException` around `dialGeometry` to fall back to the 24-hour civil dial rather than blanking the frame on geometry calculation failures. | Only `ClockEngine.drawFrame`, annotated in source |
 
 Upstream defaults remain the starting point, including per-rule defaults for test documentation and
 magic numbers. Tests are still compiled with the same strict compiler and analyzed with type resolution;

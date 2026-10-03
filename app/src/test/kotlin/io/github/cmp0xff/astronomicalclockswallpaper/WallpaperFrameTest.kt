@@ -106,12 +106,18 @@ class WallpaperFrameTest {
 
     @Test
     fun drawArgumentFailureRecovers() {
-        assertDrawFailure(IllegalArgumentException("draw argument"), "skipping frame: invalid render argument")
+        assertDrawFailure(
+            IllegalArgumentException("draw argument"),
+            "skipping frame: invalid render argument: draw argument",
+        )
     }
 
     @Test
     fun drawStateFailureRecovers() {
-        assertDrawFailure(IllegalStateException("draw state"), "skipping frame: canvas in an invalid state")
+        assertDrawFailure(
+            IllegalStateException("draw state"),
+            "skipping frame: canvas in an invalid state: draw state",
+        )
     }
 
     @Test

@@ -25,7 +25,7 @@ internal class ZodiacRenderer {
         canvas.scale(1 / DialStyle.TEXT_UNITS, 1 / DialStyle.TEXT_UNITS)
         paint.style = Paint.Style.FILL
         paint.color = DialStyle.HAND
-        paint.typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        paint.typeface = SIGNS_TYPEFACE
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = SIGN_SIZE * DialStyle.TEXT_UNITS
         val textOffset = -(paint.ascent() + paint.descent()) / CENTER_DIVISOR
@@ -48,5 +48,6 @@ internal class ZodiacRenderer {
         const val CENTER_DIVISOR = 2f
         const val DEGREES_PER_SIGN = 30.0
         val SIGNS = listOf("ARI", "TAU", "GEM", "CAN", "LEO", "VIR", "LIB", "SCO", "SAG", "CAP", "AQU", "PIS")
+        private val SIGNS_TYPEFACE: Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
     }
 }

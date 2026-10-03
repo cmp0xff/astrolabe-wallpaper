@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
+import android.util.Log
 import android.view.SurfaceHolder
 import java.time.Clock
 import java.time.ZoneId
@@ -113,8 +114,11 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
         // Draw one frame and post the next tick. Safe to call repeatedly: scheduleNextTick clears any
         // pending callback first, so the loop is never double-scheduled.
         private fun startTicking() {
-            drawFrame()
-            scheduleNextTick()
+            try {
+                drawFrame()
+            } finally {
+                scheduleNextTick()
+            }
         }
 
         // The handler is dedicated to ticks, so cancelling all messages stops the loop.
@@ -123,16 +127,29 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
         }
 
         // Handled argument/state failures return from drawFrame normally so the next tick is posted.
-        // Other failures propagate rather than being hidden by the scheduling loop.
+        // Unexpected exceptions are contained to preserve the tick loop; severe VM errors still propagate.
+        @Suppress("TooGenericExceptionCaught")
         private fun scheduleNextTick() {
             handler.removeCallbacksAndMessages(null)
-            handler.postDelayed(
-                Runnable {
-                    drawFrame()
-                    scheduleNextTick()
-                },
-                millisUntilNextWholeSecond(),
-            )
+            val isScheduled =
+                handler.postDelayed(
+                    Runnable {
+                        try {
+                            drawFrame()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "unexpected error in drawFrame; keeping tick loop alive", e)
+                        } finally {
+                            scheduleNextTick()
+                        }
+                    },
+                    millisUntilNextWholeSecond(),
+                )
+            if (!isScheduled) {
+                Log.w(
+                    TAG,
+                    "scheduleNextTick: postDelayed returned false; looper exiting or message queue shutting down",
+                )
+            }
         }
 
         private fun millisUntilNextWholeSecond(): Long {
@@ -140,13 +157,22 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
             return MILLIS_PER_SECOND - millisInSecond
         }
 
+        @Suppress("TooGenericExceptionCaught")
         private fun drawFrame() {
             drawWallpaperFrame(frameHolder ?: surfaceHolder) { canvas ->
                 val instant = clock.instant()
                 val snapshot = settings
                 val location = snapshot.location
                 val civilTime = instant.atZone(location?.zoneId ?: deviceZone()).toLocalTime()
-                val geometry = location?.let { calculator.dialGeometry(instant, it) }
+                val geometry =
+                    location?.let { loc ->
+                        try {
+                            calculator.dialGeometry(instant, loc)
+                        } catch (e: RuntimeException) {
+                            Log.w(TAG, "geometry calculation failed; falling back to civil dial", e)
+                            null
+                        }
+                    }
                 draw(canvas, clockState(civilTime), geometry, snapshot.layers)
             }
         }
@@ -154,5 +180,6 @@ class AstronomicalClocksWallpaperService : WallpaperService() {
 
     private companion object {
         const val MILLIS_PER_SECOND = 1000L
+        const val TAG = "AstronomicalClocksWallpaperService"
     }
 }
