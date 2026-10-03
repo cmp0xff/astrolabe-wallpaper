@@ -9,7 +9,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 
 /**
  * Generates representative Orloj dial Canvas PNGs for visual inspection.
@@ -35,17 +37,23 @@ class OrlojRepresentativeExport {
                 "north-pole" to 90.0,
                 "south-pole" to -90.0,
             )
+        val calculator = AstronomyEngineCalculator()
+        val exportInstant = Instant.parse("2026-10-04T15:15:36Z")
         for ((name, latitude) in sites) {
+            val zoneId = if (name == "sydney") ZoneId.of("Australia/Sydney") else ZoneId.of("Europe/Prague")
+            val longitude = if (name == "sydney") 151.21 else 14.42
+            val site =
+                ObservingLocation(
+                    latitude = latitude,
+                    longitude = longitude,
+                    source = ObservingLocation.Source.MANUAL,
+                    zoneId = zoneId,
+                )
             val bitmap = Bitmap.createBitmap(IMAGE_WIDTH, IMAGE_HEIGHT, Bitmap.Config.ARGB_8888)
             DialRenderer().renderDial(
                 canvas = Canvas(bitmap),
                 state = clockState(LocalTime.of(15, 15, 36)),
-                geometry =
-                    DialGeometry(
-                        localSiderealAngleDeg = 37.0,
-                        trueObliquityDeg = 23.44,
-                        latitudeDeg = latitude,
-                    ),
+                geometry = calculator.dialGeometry(exportInstant, site),
             )
             File(directory, "$name-api${Build.VERSION.SDK_INT}.png").outputStream().use { output ->
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
