@@ -252,6 +252,7 @@ class SettingsActivityTest {
             activity.findViewById<Button>(R.id.save_location).performClick()
 
             assertEquals(0, writes)
+            assertEquals(activity.getString(R.string.location_unchanged), ShadowToast.getTextOfLatestToast())
             store.unregisterListener(listener)
         }
     }

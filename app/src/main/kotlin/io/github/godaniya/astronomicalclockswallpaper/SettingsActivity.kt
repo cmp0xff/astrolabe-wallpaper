@@ -132,7 +132,7 @@ class SettingsActivity : Activity() {
                 latitudeInput.text.toString().trim() == formatSeedCoordinate(stored.latitude) &&
                 longitudeInput.text.toString().trim() == formatSeedCoordinate(stored.longitude)
         if (isUnchanged) {
-            Toast.makeText(this, R.string.location_saved, Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.location_unchanged, Toast.LENGTH_SHORT).show()
             return
         }
         val location =

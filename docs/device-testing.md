@@ -466,11 +466,12 @@ Host verification covers these paths across API 26 and 36 via Robolectric:
 - `SettingsActivityAcquisitionTest`: verifies refresh-then-save preserves `CURRENT_COARSE` and cancels
   in-flight location acquisition.
 - `SettingsActivityTest`: verifies that an unchanged Save produces zero SharedPreferences writes even
-  when an invalid timezone is present, and verifies that a stored `-0.0` coordinate does not take the
-  edited branch.
+  when an invalid timezone is present, shows the distinct "Coordinates unchanged; nothing to save."
+  feedback, and verifies that a stored `-0.0` coordinate does not take the edited branch.
 - `LocationStoreTest`: verifies that `load(repair = false)` does not persist repairs.
 
-**Unrun physical-device checks.** Physical device interactive checks (setting phone timezone away
-from observing site via `cmd alarm set-timezone`, observing prefilled fields, performing an untouched
-Save, and editing one coordinate to confirm `(current)` vs `(manual)` provenance retention in
-`shared_prefs/observing_location.xml`) were not run during development and remain to be run on device.
+**Physical-device status.** On 2026-10-03, the debug APK installed successfully on a connected
+Android 16 physical device. The device was locked at the system keyguard, so the settings UI could
+not be interacted with; the following interactive checks remain unrun: setting phone timezone away
+from the observing site, observing prefilled fields, performing an untouched Save, and editing one
+coordinate to confirm `(current)` versus `(manual)` provenance retention.

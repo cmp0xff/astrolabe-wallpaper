@@ -16,6 +16,7 @@
   <string name="location_permission_denied">Location permission denied. Enter coordinates manually.</string>
   <string name="location_invalid">Enter a valid latitude and longitude.</string>
   <string name="location_saved">Location saved.</string>
+  <string name="location_unchanged">Coordinates unchanged; nothing to save.</string>
   <string name="location_current_source">current</string>
   <string name="location_manual_source">manual</string>
   <string name="zodiac_ring">Zodiac ring</string>
