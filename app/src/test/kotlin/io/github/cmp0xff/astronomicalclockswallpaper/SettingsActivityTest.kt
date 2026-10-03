@@ -206,6 +206,30 @@ class SettingsActivityTest {
     }
 
     @Test
+    fun seededNegativeZeroRoundTrips() {
+        val application = RuntimeEnvironment.getApplication()
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = -0.0,
+                longitude = 14.4206,
+                source = ObservingLocation.Source.MANUAL,
+                zoneId = ZoneId.systemDefault(),
+            ),
+        )
+        assertEquals((-0.0).toRawBits(), requireNotNull(LocationStore(application).load()).latitude.toRawBits())
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            val latitudeInput = activity.findViewById<EditText>(R.id.latitude_input)
+            assertEquals("-0.0", latitudeInput.text.toString())
+
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            val savedLatitude = requireNotNull(LocationStore(activity).load()).latitude
+            assertEquals((-0.0).toRawBits(), savedLatitude.toRawBits())
+        }
+    }
+
+    @Test
     @SuppressLint("SetTextI18n")
     fun editingOnePreservesUntouched() {
         val application = RuntimeEnvironment.getApplication()

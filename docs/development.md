@@ -132,7 +132,9 @@ on its next visible frame. Each frame resolves civil time from one clock instant
 zone, falling back to the current phone zone only when no usable location is saved.
 
 The location preference now holds one version-1 JSON record containing latitude, longitude,
-source, and zone ID. Valid legacy flat records migrate once using the phone zone at migration;
+source, and zone ID. Coordinates are JSON numbers except negative zero, stored as the string
+`"-0.0"` because Android's JSON serializer otherwise writes it as integer `-0` and reloads it as
+positive zero. Valid legacy flat records migrate once using the phone zone at migration;
 a missing or invalid zone in a supported record is repaired without losing coordinates. Malformed
 records and unsupported versions are logged and left untouched until the user explicitly saves
 a replacement. A current-location acquisition on an already-saved site updates only its
