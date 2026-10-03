@@ -2,11 +2,33 @@ package io.github.godaniya.astronomicalclockswallpaper
 
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Typeface
+import kotlin.math.cos
+import kotlin.math.sin
 
 /** Complete ecliptic ring, including the part below the horizon, with tropical longitude labels. */
 internal class ZodiacRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val equinoxStarPath =
+        Path().apply {
+            val outerRadius = STAR_OUTER_RADIUS
+            val innerRadius = STAR_OUTER_RADIUS * STAR_INNER_RATIO
+            val angleStep = Math.PI / STAR_POINTS
+            val startAngle = -Math.PI / 2.0
+            for (i in 0 until STAR_VERTICES) {
+                val r = if (i % 2 == 0) outerRadius else innerRadius
+                val angle = startAngle + i * angleStep
+                val x = (r * cos(angle)).toFloat()
+                val y = (r * sin(angle)).toFloat()
+                if (i == 0) {
+                    moveTo(x, y)
+                } else {
+                    lineTo(x, y)
+                }
+            }
+            close()
+        }
 
     fun draw(canvas: Canvas, projection: OrlojProjection) {
         val circle = projection.zodiacCircle
@@ -17,7 +39,39 @@ internal class ZodiacRenderer {
         paint.color = DialStyle.NIGHT
         paint.strokeWidth = RING_INNER_WIDTH
         canvas.drawCircle(circle.center.x.toFloat(), circle.center.y.toFloat(), circle.radius.toFloat(), paint)
+        drawDividers(canvas, projection)
+        drawEquinoxStar(canvas, projection)
         drawSigns(canvas, projection)
+    }
+
+    private fun drawDividers(canvas: Canvas, projection: OrlojProjection) {
+        val circle = projection.zodiacCircle
+        paint.style = Paint.Style.STROKE
+        paint.color = DialStyle.GOLD
+        paint.strokeWidth = DIVIDER_WIDTH
+        val halfInner = RING_INNER_WIDTH / 2
+        for (index in SIGNS.indices) {
+            val point = projection.eclipticPoint(index * DEGREES_PER_SIGN)
+            val ux = (point.x - circle.center.x) / circle.radius
+            val uy = (point.y - circle.center.y) / circle.radius
+            canvas.drawLine(
+                (point.x - ux * halfInner).toFloat(),
+                (point.y - uy * halfInner).toFloat(),
+                (point.x + ux * halfInner).toFloat(),
+                (point.y + uy * halfInner).toFloat(),
+                paint,
+            )
+        }
+    }
+
+    private fun drawEquinoxStar(canvas: Canvas, projection: OrlojProjection) {
+        val point = projection.eclipticPoint(0.0)
+        val checkpoint = canvas.save()
+        canvas.translate(point.x.toFloat(), point.y.toFloat())
+        paint.style = Paint.Style.FILL
+        paint.color = DialStyle.GOLD
+        canvas.drawPath(equinoxStarPath, paint)
+        canvas.restoreToCount(checkpoint)
     }
 
     private fun drawSigns(canvas: Canvas, projection: OrlojProjection) {
@@ -30,7 +84,7 @@ internal class ZodiacRenderer {
         paint.textSize = SIGN_SIZE * DialStyle.TEXT_UNITS
         val textOffset = -(paint.ascent() + paint.descent()) / CENTER_DIVISOR
         for ((index, sign) in SIGNS.withIndex()) {
-            val point = projection.eclipticPoint(index * DEGREES_PER_SIGN)
+            val point = projection.eclipticPoint(index * DEGREES_PER_SIGN + SIGN_OFFSET_DEG)
             canvas.drawText(
                 sign,
                 point.x.toFloat() * DialStyle.TEXT_UNITS,
@@ -44,9 +98,15 @@ internal class ZodiacRenderer {
     private companion object {
         const val RING_OUTER_WIDTH = 0.09f
         const val RING_INNER_WIDTH = 0.075f
+        const val DIVIDER_WIDTH = 0.0075f
         const val SIGN_SIZE = 0.044f
         const val CENTER_DIVISOR = 2f
         const val DEGREES_PER_SIGN = 30.0
+        const val SIGN_OFFSET_DEG = 15.0
+        const val STAR_OUTER_RADIUS = 0.02f
+        const val STAR_INNER_RATIO = 0.4f
+        const val STAR_POINTS = 5
+        const val STAR_VERTICES = 10
         val SIGNS = listOf("ARI", "TAU", "GEM", "CAN", "LEO", "VIR", "LIB", "SCO", "SAG", "CAP", "AQU", "PIS")
         private val SIGNS_TYPEFACE: Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
     }

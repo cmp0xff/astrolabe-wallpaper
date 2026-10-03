@@ -61,6 +61,81 @@ class DialRendererTest {
     }
 
     @Test
+    fun zodiacLabelsAreCentred() {
+        val projection = OrlojProjection(prague)
+        for (index in 0 until 12) {
+            // Keep the civil hand away from the probed boundary and sign centre.
+            val time = if (index in 5..7) LocalTime.NOON else LocalTime.MIDNIGHT
+            val bitmap = render(time = time, geometry = prague)
+            val boundary = projection.eclipticPoint(index * 30.0)
+            val centre = projection.eclipticPoint(index * 30.0 + 15.0)
+            assertTrue(
+                "Label must be present near sign centre $index",
+                hasLabelPixelNear(bitmap, centre),
+            )
+            assertFalse(
+                "Label must be absent near boundary $index",
+                hasLabelPixelNear(bitmap, boundary),
+            )
+        }
+    }
+
+    @Test
+    fun zodiacDividersSplitRing() {
+        val projection = OrlojProjection(prague)
+        for (index in 0 until 12) {
+            // Keep the civil hand away from the probed boundary.
+            val time = if (index in 5..7) LocalTime.NOON else LocalTime.MIDNIGHT
+            val bitmap = render(time = time, geometry = prague)
+            val boundary = projection.eclipticPoint(index * 30.0)
+            val inside = projection.eclipticPoint(index * 30.0 + 5.0)
+            assertTrue(
+                "Divider must place a GOLD pixel at boundary $index",
+                containsColorNear(bitmap, boundary, DialStyle.GOLD),
+            )
+            assertTrue(
+                "Interior of compartment $index must show NIGHT background",
+                containsColorNear(bitmap, inside, DialStyle.NIGHT),
+            )
+        }
+    }
+
+    @Test
+    fun vernalEquinoxStarRotates() {
+        val bitmap = render(time = LocalTime.MIDNIGHT, geometry = prague)
+        val projection = OrlojProjection(prague)
+        val equinox = projection.eclipticPoint(0.0)
+        val rotatedPrague = prague.copy(localSiderealAngleDeg = 90.0)
+        val rotated = render(time = LocalTime.MIDNIGHT, geometry = rotatedPrague)
+        assertTrue(
+            "The vernal-equinox star must add GOLD area at eclipticPoint(0.0)",
+            goldAreaNear(bitmap, equinox) - goldAreaNear(rotated, equinox) > 20,
+        )
+        assertTrue(
+            "The vernal-equinox star must rotate with sidereal time",
+            changedPixelsNear(first = bitmap, second = rotated, point = equinox) > 20,
+        )
+    }
+
+    @Test
+    fun southernEquinoxStarRotates() {
+        val sydney = DialGeometry(localSiderealAngleDeg = 0.0, trueObliquityDeg = 23.44, latitudeDeg = -33.87)
+        val sydneyProjection = OrlojProjection(sydney)
+        val southernEquinox = sydneyProjection.eclipticPoint(0.0)
+        val sydneyBitmap = render(time = LocalTime.MIDNIGHT, geometry = sydney)
+        val rotatedSydney = sydney.copy(localSiderealAngleDeg = 90.0)
+        val rotated = render(time = LocalTime.MIDNIGHT, geometry = rotatedSydney)
+        assertTrue(
+            "The star must add GOLD area at southern eclipticPoint(0.0)",
+            goldAreaNear(sydneyBitmap, southernEquinox) - goldAreaNear(rotated, southernEquinox) > 20,
+        )
+        assertTrue(
+            "The southern vernal-equinox star must rotate with sidereal time",
+            changedPixelsNear(first = sydneyBitmap, second = rotated, point = southernEquinox) > 20,
+        )
+    }
+
+    @Test
     fun civilHandMatchesCardinalHours() {
         val hours = listOf(12 to 0.0, 18 to 90.0, 0 to 180.0, 6 to 270.0)
         for ((hour, angle) in hours) {
@@ -286,6 +361,42 @@ class DialRendererTest {
         return false
     }
 
+    private fun hasLabelPixelNear(bitmap: Bitmap, point: DialPoint): Boolean {
+        val px = (CENTER + point.x * SKY_RADIUS).roundToInt()
+        val py = (CENTER + point.y * SKY_RADIUS).roundToInt()
+        for (dx in -PROBE_RADIUS..PROBE_RADIUS) {
+            for (dy in -PROBE_RADIUS..PROBE_RADIUS) {
+                val c = bitmap.getPixel(px + dx, py + dy)
+                val blue = c and 0xFF
+                val red = c shr 16 and 0xFF
+                if (red > 200 && blue > 130) return true
+            }
+        }
+        return false
+    }
+
+    private fun goldAreaNear(bitmap: Bitmap, point: DialPoint, radius: Int = STAR_PROBE_RADIUS): Int {
+        val px = (CENTER + point.x * SKY_RADIUS).roundToInt()
+        val py = (CENTER + point.y * SKY_RADIUS).roundToInt()
+        var count = 0
+        for (dx in -radius..radius) {
+            for (dy in -radius..radius) {
+                val c = bitmap.getPixel(px + dx, py + dy)
+                if (isGoldPixel(c)) count++
+            }
+        }
+        return count
+    }
+
+    private fun isGoldPixel(c: Int): Boolean {
+        val red = c shr 16 and 0xFF
+        val green = c shr 8 and 0xFF
+        val blue = c and 0xFF
+        val isYellow = red > 120 && green > 100
+        val isWarm = red > blue && blue < 120
+        return isYellow && isWarm
+    }
+
     private fun textSpan(bitmap: Bitmap, normalizedY: Double): Int {
         val baseline = (CENTER + normalizedY * SKY_RADIUS).roundToInt()
         val columns =
@@ -314,5 +425,6 @@ class DialRendererTest {
         const val CENTER = 400.0
         const val SKY_RADIUS = SIZE * 0.43 / 1.37
         const val PROBE_RADIUS = 12
+        const val STAR_PROBE_RADIUS = 8
     }
 }
