@@ -12,6 +12,9 @@ import kotlin.math.abs
  * Caches the static plate geometry keyed by observer latitude and true obliquity, so steady-state
  * ticks redraw pre-built Path objects instead of re-sampling contours or allocating new paths.
  * Each frame still builds an OrlojProjection for the rotating zodiac ring.
+ *
+ * Every cached path belongs to the Sun layer, so it is built and drawn only while that layer is
+ * enabled; disabling the Sun therefore samples no contours, as it did before the paths were cached.
  */
 internal class OrlojPlateRenderer {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -22,15 +25,15 @@ internal class OrlojPlateRenderer {
         paint.color = DialStyle.NIGHT
         canvas.drawCircle(0f, 0f, SKY_RADIUS, paint)
         if (projection != null) {
-            val plate = getOrCreatePlate(projection)
-            if (isSunEnabled) {
+            val plate = if (isSunEnabled) getOrCreatePlate(projection) else null
+            if (plate != null) {
                 paint.style = Paint.Style.FILL
                 paint.color = DialStyle.TWILIGHT
                 canvas.drawPath(plate.paths.twilightFill, paint)
                 paint.color = DialStyle.SKY
                 canvas.drawPath(plate.paths.dayFill, paint)
             }
-            drawGrid(canvas, plate, isSunEnabled)
+            drawGrid(canvas, projection, plate)
         }
         paint.color = DialStyle.GOLD
         paint.style = Paint.Style.STROKE
@@ -39,21 +42,17 @@ internal class OrlojPlateRenderer {
     }
 
     private fun getOrCreatePlate(projection: OrlojProjection): CachedPlate {
+        val key = projection.plateKey
         val current = cachedPlate
-        if (current != null &&
-            current.matches(
-                latitude = projection.geometry.latitudeDeg,
-                obliquity = projection.geometry.trueObliquityDeg,
-            )
-        ) {
+        if (current != null && current.matches(key)) {
             return current
         }
-        val newPlate = buildPlate(projection)
+        val newPlate = buildPlate(projection, key)
         cachedPlate = newPlate
         return newPlate
     }
 
-    private fun buildPlate(projection: OrlojProjection): CachedPlate {
+    private fun buildPlate(projection: OrlojProjection, key: PlateKey): CachedPlate {
         val twilightPath = Path().apply { fillType = Path.FillType.EVEN_ODD }
         for (contour in projection.altitudeRegion(NIGHT_ALTITUDE)) {
             traceContour(twilightPath, contour)
@@ -77,8 +76,7 @@ internal class OrlojPlateRenderer {
         }
 
         return CachedPlate(
-            latitudeDeg = projection.geometry.latitudeDeg,
-            obliquityDeg = projection.geometry.trueObliquityDeg,
+            key = key,
             paths =
                 PlatePaths(
                     twilightFill = twilightPath,
@@ -86,19 +84,19 @@ internal class OrlojPlateRenderer {
                     nightBoundary = nightBoundaryPath,
                     horizonBoundary = horizonBoundaryPath,
                 ),
-            capricornRadius = projection.capricornRadius.toFloat(),
-            equatorRadius = projection.equatorRadius.toFloat(),
         )
     }
 
-    private fun drawGrid(canvas: Canvas, plate: CachedPlate, isSunEnabled: Boolean) {
+    // The two radii come straight off the projection and cost nothing, so they are not cached; only
+    // the boundaries need the plate, and they are drawn only when the Sun layer built it.
+    private fun drawGrid(canvas: Canvas, projection: OrlojProjection, plate: CachedPlate?) {
         paint.style = Paint.Style.STROKE
         paint.color = DialStyle.MUTED_GOLD
         paint.strokeWidth = GRID_WIDTH
-        canvas.drawCircle(0f, 0f, plate.capricornRadius, paint)
+        canvas.drawCircle(0f, 0f, projection.capricornRadius.toFloat(), paint)
         paint.color = DialStyle.GOLD
-        canvas.drawCircle(0f, 0f, plate.equatorRadius, paint)
-        if (isSunEnabled) {
+        canvas.drawCircle(0f, 0f, projection.equatorRadius.toFloat(), paint)
+        if (plate != null) {
             paint.color = DialStyle.MUTED_GOLD
             paint.strokeWidth = BOUNDARY_WIDTH
             canvas.drawPath(plate.paths.nightBoundary, paint)
@@ -124,15 +122,12 @@ internal class OrlojPlateRenderer {
         val horizonBoundary: Path,
     )
 
-    private class CachedPlate(
-        val latitudeDeg: Double,
-        val obliquityDeg: Double,
-        val paths: PlatePaths,
-        val capricornRadius: Float,
-        val equatorRadius: Float,
-    ) {
-        fun matches(latitude: Double, obliquity: Double): Boolean =
-            abs(latitudeDeg - latitude) < EPSILON_LATITUDE && abs(obliquityDeg - obliquity) < EPSILON_OBLIQUITY
+    private class CachedPlate(val key: PlateKey, val paths: PlatePaths) {
+        fun matches(other: PlateKey): Boolean {
+            val isLatitudeSame = abs(key.latitudeDeg - other.latitudeDeg) < EPSILON_LATITUDE
+            val isObliquitySame = abs(key.trueObliquityDeg - other.trueObliquityDeg) < EPSILON_OBLIQUITY
+            return isLatitudeSame && isObliquitySame
+        }
 
         private companion object {
             const val EPSILON_LATITUDE = 1e-7

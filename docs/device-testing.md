@@ -426,6 +426,14 @@ every tick and a healthy device does not produce one; `RepeatedFailureLogTest` a
 `WallpaperFrameTest.repeatedDrawFailureLogsOnce` are its evidence, the same limitation as the
 resilience claim below.
 
+The review-response commit that keeps the Sun-layer paths out of the cache while that layer is
+disabled changes no rendered output, and was checked on its own APK (SHA-256
+bbf298cf187c6153b6eac04ed48fbcd724c694fafcc91a5e523567fc9f821ca5). With the Sun on, the home screen
+drew 24 hour ticks at 1.000 Hz (6 producer frames in the 6 s trace window, deltas 0.999-1.001 s) with
+the day, twilight, and night fills present and an empty renderer log. With the Sun off, the twilight
+and day fills counted zero pixels while the tropic and equator grid circles stayed drawn, and
+re-enabling the Sun restored both fills and both boundary strokes on the next frame.
+
 **Unresolved limitation.** The resilience claim itself is not device-testable: the contained failure
 is an injected first-frame `drawFrame()` exception, which cannot be produced on a healthy device
 without a debug hook this build does not carry. `WallpaperFrameTest` and `WallpaperFoundationTest`

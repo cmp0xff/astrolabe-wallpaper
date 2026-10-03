@@ -119,9 +119,13 @@ tasks.register<Test>("exportRepresentativeImages") {
     description = "Exports representative Orloj dial Canvas PNGs to build/reports/orloj."
     group = "verification"
     outputs.dir(layout.buildDirectory.dir("reports/orloj"))
-    val testTask = tasks.named<Test>("testDebugUnitTest")
-    testClassesDirs = files(testTask.map { it.testClassesDirs })
-    classpath = files(testTask.map { it.classpath })
+    // Read the unit-test classes and runtime classpath off the configured test task rather than
+    // mapping a provider through it. `testTask.map { it.testClassesDirs }` registers the test task as
+    // a producer, so invoking the export would run the entire unit suite first; taking the
+    // collections keeps the compilation dependencies without the execution one.
+    val unitTest = tasks.named<Test>("testDebugUnitTest").get()
+    testClassesDirs = unitTest.testClassesDirs
+    classpath = unitTest.classpath
     filter {
         setIncludePatterns("io.github.cmp0xff.astronomicalclockswallpaper.OrlojRepresentativeExport.*")
     }

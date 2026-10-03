@@ -128,6 +128,19 @@ class DialRendererTest {
     }
 
     @Test
+    fun sunOffFramesLeaveNoStalePlate() {
+        // The Sun-off path builds no plate at all, so the first Sun-on frame has to construct one.
+        // Renders that never enabled the Sun must not leave the cache in a state that half-draws.
+        val plain = DialLayers(isZodiacRingEnabled = false, isSunEnabled = false)
+        val lit = DialLayers(isZodiacRingEnabled = false)
+        val reused = DialRenderer()
+        val firstOff = drawWith(reused, prague, plain)
+        val secondOff = drawWith(reused, prague, plain)
+        assertTrue(firstOff.sameAs(secondOff))
+        assertTrue(drawWith(reused, prague, lit).sameAs(drawWith(DialRenderer(), prague, lit)))
+    }
+
+    @Test
     fun zodiacRemainsBelowHorizon() {
         val projection = OrlojProjection(prague)
         val point = projection.eclipticPoint(210.0)
@@ -233,6 +246,18 @@ class DialRendererTest {
         val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
         renderer.renderDial(canvas = Canvas(bitmap), state = clockState(time), geometry = geometry, layers = layers)
         assertEquals(DialStyle.BACKGROUND, bitmap.getPixel(1, 1))
+        return bitmap
+    }
+
+    private fun drawWith(target: DialRenderer, geometry: DialGeometry, layers: DialLayers): Bitmap {
+        val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
+        target
+            .renderDial(
+                canvas = Canvas(bitmap),
+                state = clockState(LocalTime.NOON),
+                geometry = geometry,
+                layers = layers,
+            )
         return bitmap
     }
 
