@@ -1,6 +1,7 @@
 package io.github.godaniya.astronomicalclockswallpaper
 
 import android.annotation.SuppressLint
+import android.content.SharedPreferences
 import android.widget.Button
 import android.widget.EditText
 import org.junit.Assert.assertEquals
@@ -80,6 +81,37 @@ class SettingsActivityLocaleTest {
             initialLatitude = 50.1081234567,
             initialLongitude = 0.0001234,
         )
+    }
+
+    @Test
+    fun commaInputKeepsCurrentSite() {
+        val application = RuntimeEnvironment.getApplication()
+        val store = LocationStore(application)
+        store.save(
+            ObservingLocation(
+                latitude = 50.1081234567,
+                longitude = 14.4206019876,
+                source = ObservingLocation.Source.CURRENT_COARSE,
+                zoneId = ZoneId.of("Europe/Prague"),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            enterCoordinates(activity, latitude = "50,1081234567", longitude = "14,4206019876")
+            var writes = 0
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> writes++ }
+            store.registerListener(listener)
+
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            assertEquals(0, writes)
+            assertEquals(
+                ObservingLocation.Source.CURRENT_COARSE,
+                requireNotNull(LocationStore(activity).load()).source,
+            )
+            assertEquals(activity.getString(R.string.location_unchanged), ShadowToast.getTextOfLatestToast())
+            store.unregisterListener(listener)
+        }
     }
 
     @Test

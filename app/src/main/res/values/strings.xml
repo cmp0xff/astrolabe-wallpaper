@@ -6,7 +6,7 @@
   <string name="preview_unavailable">Wallpaper preview is unavailable on this device.</string>
   <string name="location_unset">No observing location set.</string>
   <string name="location_details">%1$s, %2$s (%3$s)\nTimezone: %4$s</string>
-  <string name="location_timezone_help">A saved site keeps its timezone. Refreshing the location updates the coordinates only; saving coordinates anew captures the phone’s timezone. Coordinates do not determine the timezone.</string>
+  <string name="location_timezone_help">A saved site keeps its timezone. Refreshing the location updates the coordinates only; saving edited coordinates captures the phone’s timezone. Coordinates do not determine the timezone.</string>
   <string name="use_current_location">Use current location</string>
   <string name="refresh_location">Refresh location</string>
   <string name="save_location">Save coordinates</string>
@@ -16,6 +16,7 @@
   <string name="location_permission_denied">Location permission denied. Enter coordinates manually.</string>
   <string name="location_invalid">Enter a valid latitude and longitude.</string>
   <string name="location_saved">Location saved.</string>
+  <string name="location_unchanged">Coordinates unchanged; nothing to save.</string>
   <string name="location_current_source">current</string>
   <string name="location_manual_source">manual</string>
   <string name="zodiac_ring">Zodiac ring</string>

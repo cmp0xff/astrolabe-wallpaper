@@ -1,6 +1,7 @@
 package io.github.godaniya.astronomicalclockswallpaper
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
 import android.location.LocationManager
@@ -98,7 +99,63 @@ class SettingsActivityTimezoneTest {
                 assertEquals(37.42, saved?.latitude)
                 assertEquals(-122.08, saved?.longitude)
                 assertEquals(ObservingLocation.Source.CURRENT_COARSE, saved?.source)
+
+                // Refresh-then-save untouched must preserve CURRENT_COARSE and Australia/Sydney
+                activity.findViewById<Button>(R.id.save_location).performClick()
+                assertSavedTimezone(activity, "Australia/Sydney")
+                val savedAfterSave = LocationStore(application).load()
+                assertEquals(37.42, savedAfterSave?.latitude)
+                assertEquals(-122.08, savedAfterSave?.longitude)
+                assertEquals(ObservingLocation.Source.CURRENT_COARSE, savedAfterSave?.source)
             }
+        }
+    }
+
+    @Test
+    fun coldOpenSavePreservesCurrent() {
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = 50.0875,
+                longitude = 14.4206,
+                source = ObservingLocation.Source.CURRENT_COARSE,
+                zoneId = ZoneId.of("Europe/Prague"),
+            ),
+        )
+        TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Auckland"))
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            assertSavedTimezone(activity, "Europe/Prague")
+            val saved = LocationStore(application).load()
+            assertEquals(ObservingLocation.Source.CURRENT_COARSE, saved?.source)
+            assertEquals(ZoneId.of("Europe/Prague"), saved?.zoneId)
+            assertTrue(activity.findViewById<TextView>(R.id.location_current).text.contains("(current)"))
+        }
+    }
+
+    @Test
+    @SuppressLint("SetTextI18n")
+    fun editedCoordsCaptureSaveZone() {
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = 50.0875,
+                longitude = 14.4206,
+                source = ObservingLocation.Source.CURRENT_COARSE,
+                zoneId = ZoneId.of("Europe/Prague"),
+            ),
+        )
+        TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Auckland"))
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            activity.findViewById<EditText>(R.id.latitude_input).setText("51.5074")
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            assertSavedTimezone(activity, "Pacific/Auckland")
+            val saved = LocationStore(application).load()
+            assertEquals(ObservingLocation.Source.MANUAL, saved?.source)
+            assertEquals(ZoneId.of("Pacific/Auckland"), saved?.zoneId)
+            assertTrue(activity.findViewById<TextView>(R.id.location_current).text.contains("(manual)"))
         }
     }
 

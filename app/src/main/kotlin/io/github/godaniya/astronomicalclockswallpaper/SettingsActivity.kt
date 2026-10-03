@@ -105,7 +105,7 @@ class SettingsActivity : Activity() {
                         latitude = fix.latitude,
                         longitude = fix.longitude,
                         source = ObservingLocation.Source.CURRENT_COARSE,
-                        zoneId = locationStore.load()?.zoneId ?: ZoneId.systemDefault(),
+                        zoneId = locationStore.load(repair = false)?.zoneId ?: ZoneId.systemDefault(),
                     )
                 locationStore.save(location)
                 displayLocation(location, seedInputs = true)
@@ -126,6 +126,15 @@ class SettingsActivity : Activity() {
             return
         }
         locationProvider.cancel()
+        val stored = locationStore.load(repair = false)
+        val isUnchanged =
+            stored != null &&
+                latitude == stored.latitude &&
+                longitude == stored.longitude
+        if (isUnchanged) {
+            Toast.makeText(this, R.string.location_unchanged, Toast.LENGTH_SHORT).show()
+            return
+        }
         val location =
             ObservingLocation(
                 latitude = latitude,

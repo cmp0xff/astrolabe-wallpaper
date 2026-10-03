@@ -14,13 +14,13 @@ internal class LocationStore(context: Context, private val deviceZone: () -> Zon
     private val preferences: SharedPreferences =
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
-    fun load(): ObservingLocation? {
+    fun load(repair: Boolean = true): ObservingLocation? {
         // One snapshot also avoids getString's ClassCastException for wrongly typed stored data.
         val stored = preferences.all
-        return if (KEY_RECORD in stored) loadRecord(stored[KEY_RECORD]) else loadLegacy(stored)
+        return if (KEY_RECORD in stored) loadRecord(stored[KEY_RECORD], repair) else loadLegacy(stored, repair)
     }
 
-    private fun loadRecord(raw: Any?): ObservingLocation? {
+    private fun loadRecord(raw: Any?, repair: Boolean = true): ObservingLocation? {
         val record = parseRecord(raw)
         return when {
             record == null || record.opt(KEY_VERSION) !is Int -> {
@@ -38,7 +38,7 @@ internal class LocationStore(context: Context, private val deviceZone: () -> Zon
                     rawLatitude = (record.opt(KEY_LATITUDE) as? Number)?.toDouble(),
                     rawLongitude = (record.opt(KEY_LONGITUDE) as? Number)?.toDouble(),
                     sourceText = record.opt(KEY_SOURCE) as? String,
-                ) { resolveZone(record) }
+                ) { resolveZone(record, repair) }
             }
         }
     }
@@ -54,28 +54,36 @@ internal class LocationStore(context: Context, private val deviceZone: () -> Zon
         }
     }
 
-    private fun resolveZone(record: JSONObject): ZoneId {
+    private fun resolveZone(record: JSONObject, repair: Boolean = true): ZoneId {
         val storedZone =
             try {
                 (record.opt(KEY_ZONE_ID) as? String)?.let(ZoneId::of)
             } catch (_: DateTimeException) {
                 null
             }
-        return storedZone ?: deviceZone().also { zone ->
-            record.put(KEY_ZONE_ID, zone.id)
+        if (storedZone != null) return storedZone
+        val fallback = deviceZone()
+        if (repair) {
+            record.put(KEY_ZONE_ID, fallback.id)
             persistRecord(record)
             Log.w(TAG, "repaired missing or invalid observing location timezone")
         }
+        return fallback
     }
 
-    private fun loadLegacy(stored: Map<String, *>): ObservingLocation? {
+    private fun loadLegacy(stored: Map<String, *>, repair: Boolean = true): ObservingLocation? {
         if (LEGACY_KEYS.none(stored::containsKey)) return null
-        return readLocation(
-            rawLatitude = (stored[KEY_LATITUDE] as? String)?.toDoubleOrNull(),
-            rawLongitude = (stored[KEY_LONGITUDE] as? String)?.toDoubleOrNull(),
-            sourceText = stored[KEY_SOURCE] as? String,
-            zone = deviceZone,
-        )?.also(::save)
+        val location =
+            readLocation(
+                rawLatitude = (stored[KEY_LATITUDE] as? String)?.toDoubleOrNull(),
+                rawLongitude = (stored[KEY_LONGITUDE] as? String)?.toDoubleOrNull(),
+                sourceText = stored[KEY_SOURCE] as? String,
+                zone = deviceZone,
+            )
+        if (repair && location != null) {
+            save(location)
+        }
+        return location
     }
 
     private fun readLocation(

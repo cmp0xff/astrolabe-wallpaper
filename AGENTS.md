@@ -195,5 +195,7 @@ the PR; do not add baselines or blanket suppressions.
 For Android work, run the documented checks appropriate to the change. Astronomy
 tests must cite independent reference data, units, coordinate frames, and
 tolerances, including hemisphere and polar cases. Device reports must distinguish
-physical-device results from emulator checks. Record limitations and unresolved
-failures in the issue and PR; do not silently weaken acceptance criteria.
+physical-device results from emulator checks and state the Android version, source
+revision, and SHA-256 of the tested APK. Keep device identifiers and precise private
+locations out of public reports. Record limitations and unresolved failures in the
+issue and PR; do not silently weaken acceptance criteria.

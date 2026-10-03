@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
@@ -12,6 +13,8 @@ import android.os.Looper
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import org.json.JSONObject
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -24,11 +27,19 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowToast
 import java.time.ZoneId
+import java.util.TimeZone
 
 /** Exercises launcher and preview behavior, permission results, and manual/current location persistence. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [26, 36])
 class SettingsActivityTest {
+    private val originalTimezone = TimeZone.getDefault()
+
+    @After
+    fun restoreTimezone() {
+        TimeZone.setDefault(originalTimezone)
+    }
+
     @Test
     fun previewTargetsWallpaper() {
         Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
@@ -225,6 +236,89 @@ class SettingsActivityTest {
             val saved = requireNotNull(LocationStore(activity).load())
             assertEquals(0.0, saved.latitude, 0.0)
             assertEquals(14.4206, saved.longitude, 0.0)
+        }
+    }
+
+    @Test
+    fun unchangedSaveDoesNotWrite() {
+        val application = RuntimeEnvironment.getApplication()
+        val store = LocationStore(application)
+        store.save(
+            ObservingLocation(
+                latitude = 50.0875,
+                longitude = 14.4206,
+                source = ObservingLocation.Source.CURRENT_COARSE,
+                zoneId = ZoneId.of("Europe/Prague"),
+            ),
+        )
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            var writes = 0
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> writes++ }
+            store.registerListener(listener)
+
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            assertEquals(0, writes)
+            assertEquals(activity.getString(R.string.location_unchanged), ShadowToast.getTextOfLatestToast())
+            store.unregisterListener(listener)
+        }
+    }
+
+    @Test
+    fun unchangedSaveSkipsRepeatRepair() {
+        val application = RuntimeEnvironment.getApplication()
+        val prefs = application.getSharedPreferences("observing_location", Context.MODE_PRIVATE)
+        val record =
+            JSONObject()
+                .put("version", 1)
+                .put("latitude", 50.0875)
+                .put("longitude", 14.4206)
+                .put("source", "CURRENT_COARSE")
+                .put("zoneId", "Invalid/Zone_Name")
+        prefs.edit().putString("location", record.toString()).apply()
+
+        val store = LocationStore(application)
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            var writes = 0
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ -> writes++ }
+            store.registerListener(listener)
+
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            assertEquals(0, writes)
+            store.unregisterListener(listener)
+            val raw = prefs.getString("location", null)
+            val json = JSONObject(requireNotNull(raw))
+            assertEquals(ZoneId.systemDefault().id, json.getString("zoneId"))
+            assertEquals("CURRENT_COARSE", json.getString("source"))
+        }
+    }
+
+    @Test
+    fun negativeZeroSkipsEditedBranch() {
+        val application = RuntimeEnvironment.getApplication()
+        LocationStore(application).save(
+            ObservingLocation(
+                latitude = -0.0,
+                longitude = 14.4206,
+                source = ObservingLocation.Source.CURRENT_COARSE,
+                zoneId = ZoneId.of("Europe/Prague"),
+            ),
+        )
+        TimeZone.setDefault(TimeZone.getTimeZone("Pacific/Auckland"))
+        Robolectric.buildActivity(SettingsActivity::class.java).use { controller ->
+            val activity = controller.setup().get()
+            assertEquals("0.0", activity.findViewById<EditText>(R.id.latitude_input).text.toString())
+
+            activity.findViewById<Button>(R.id.save_location).performClick()
+
+            val saved = requireNotNull(LocationStore(activity).load())
+            assertEquals(ObservingLocation.Source.CURRENT_COARSE, saved.source)
+            assertEquals(ZoneId.of("Europe/Prague"), saved.zoneId)
+            assertTrue(activity.findViewById<TextView>(R.id.location_current).text.contains("(current)"))
+            assertTrue(activity.findViewById<TextView>(R.id.location_current).text.contains("Europe/Prague"))
         }
     }
 

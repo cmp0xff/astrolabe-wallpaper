@@ -38,6 +38,34 @@ class LocationStoreTest {
     }
 
     @Test
+    fun loadPureDoesNotPersist() {
+        val record =
+            JSONObject()
+                .put("version", 1)
+                .put("latitude", 50.0)
+                .put("longitude", 14.0)
+                .put("source", "CURRENT_COARSE")
+                .put("zoneId", "Invalid/Zone")
+                .toString()
+        preferences().edit().putString("location", record).apply()
+
+        var zoneReads = 0
+        val store =
+            LocationStore(RuntimeEnvironment.getApplication()) {
+                zoneReads++
+                ZoneId.of("Europe/Prague")
+            }
+
+        val loaded = store.load(repair = false)
+        assertEquals(ZoneId.of("Europe/Prague"), loaded?.zoneId)
+        assertEquals(1, zoneReads)
+
+        val raw = preferences().getString("location", null)
+        val json = JSONObject(requireNotNull(raw))
+        assertEquals("Invalid/Zone", json.getString("zoneId"))
+    }
+
+    @Test
     fun savesOneVersionedRecord() {
         preferences()
             .edit()
